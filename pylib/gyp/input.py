@@ -232,6 +232,7 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes,
 
   if os.path.exists(build_file_path):
     build_file_contents = open(build_file_path).read()
+    mtime = os.path.getmtime(build_file_path)
   else:
     raise GypError("%s not found (cwd: %s)" % (build_file_path, os.getcwd()))
 
@@ -252,6 +253,7 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes,
   if type(build_file_data) is not dict:
     raise GypError("%s does not evaluate to a dictionary." % build_file_path)
 
+  build_file_data['mtime'] = mtime
   data[build_file_path] = build_file_data
   aux_data[build_file_path] = {}
 
@@ -456,6 +458,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes,
   dependencies = []
   if 'targets' in build_file_data:
     for target_dict in build_file_data['targets']:
+      target_dict['mtime'] = build_file_data['mtime']
       if 'dependencies' not in target_dict:
         continue
       for dependency in target_dict['dependencies']:
@@ -1277,7 +1280,7 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
   for key, value in the_dict.iteritems():
     # Skip "variables" and string values, which were already processed if
     # present.
-    if key == 'variables' or type(value) is str:
+    if key in ['variables', 'mtime'] or type(value) is str:
       continue
     if type(value) is dict:
       # Pass a copy of the variables dict so that subdicts can't influence
