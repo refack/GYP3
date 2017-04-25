@@ -112,6 +112,7 @@ class VisualStudioVersion(object):
         script_path = vcvarsall
       else:
         # Otherwise, the standard x86 compiler.
+        arg = ''
         script_path = JoinPath(self.path, 'Common7', 'Tools', 'vsvars32.bat')
       return [script_path, arg]
     elif target_arch == 'x64':
