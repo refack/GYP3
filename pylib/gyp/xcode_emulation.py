@@ -645,9 +645,10 @@ class XcodeSettings(object):
 
     cflags += self._Settings().get('WARNING_CFLAGS', [])
 
-    platform_root = self._XcodePlatformPath(configname)
-    if platform_root and self._IsXCTest():
-      cflags.append('-F' + platform_root + '/Developer/Library/Frameworks/')
+    if self._IsXCTest():
+      platform_root = self._XcodePlatformPath(configname)
+      if platform_root:
+        cflags.append('-F' + platform_root + '/Developer/Library/Frameworks/')
 
     if sdk_root:
       framework_root = sdk_root
@@ -913,10 +914,11 @@ class XcodeSettings(object):
     for directory in framework_dirs:
       ldflags.append('-F' + directory.replace('$(SDKROOT)', sdk_root))
 
-    platform_root = self._XcodePlatformPath(configname)
-    if sdk_root and platform_root and self._IsXCTest():
-      ldflags.append('-F' + platform_root + '/Developer/Library/Frameworks/')
-      ldflags.append('-framework XCTest')
+    if sdk_root:
+      platform_root = self._XcodePlatformPath(configname)
+      if platform_root and self._IsXCTest():
+        ldflags.append('-F' + platform_root + '/Developer/Library/Frameworks/')
+        ldflags.append('-framework XCTest')
 
     is_extension = self._IsIosAppExtension() or self._IsIosWatchKitExtension()
     if sdk_root and is_extension:
@@ -1448,7 +1450,6 @@ def GetStdout(cmdlist):
   job = subprocess.Popen(cmdlist, stdout=subprocess.PIPE)
   out = job.communicate()[0]
   if job.returncode != 0:
-    sys.stderr.write(out + '\n')
     raise GypError('Error %d running %s' % (job.returncode, cmdlist[0]))
   return out.rstrip('\n')
 
