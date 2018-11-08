@@ -1,0 +1,5 @@
+/out/
+/pylib/
+/test/
+*.pyc
+*.patch

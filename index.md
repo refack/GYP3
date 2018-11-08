@@ -2,13 +2,12 @@
 
 GYP is a Meta-Build system: a build system that generates other build systems.
 
-Source code: https://chromium.googlesource.com/external/gyp
+Source code: https://github.com/refack/GYP
 
 Mailing list:  http://groups.google.com/group/gyp-developer
 
 Build status:
-- Windows: [![Build status](https://ci.appveyor.com/api/projects/status/60c6eoat3e5lojly/branch/master?svg=true)](https://ci.appveyor.com/project/scottg/gyp/branch/master)
-- Linux and Mac: [![Build status](https://travis-ci.org/chromium/gyp.svg?branch=master)](https://travis-ci.org/chromium/gyp)
+- Travis: [![Build Status](https://travis-ci.com/refack/GYP.svg?branch=master)](https://travis-ci.com/refack/GYP)
 
 GYP is intended to support large projects that need to be built on multiple
 platforms (e.g., Mac, Windows, Linux), and where it is important that
