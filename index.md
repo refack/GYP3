@@ -25,3 +25,11 @@ building (which is usually much faster than the native build systems of the
 IDEs).
 
 For more information on GYP, click on the links above.
+
+* [User documentation](/docs/UserDocumentation.md)
+* [Input Format Reference](/docs/InputFormatReference.md)
+* [Language specification](/docs/LanguageSpecification.md)
+* [Hacking](/docs/Hacking.md)
+* [Testing](/docs/Testing.md)
+* [GYP vs. CMake](/docs/GypVsCMake.md)
+
