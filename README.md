@@ -5,4 +5,4 @@
 Generate You Projects
 ===================================
 
-Documentation is available at [gyp.gsrc.io](https://gyp.gsrc.io) (or at the `md-pages` branch).
+Documentation is available at [https://refack.github.io/GYP/](https://refack.github.io/GYP/) (or at the `md-pages` branch).
