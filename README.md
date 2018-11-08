@@ -5,4 +5,4 @@
 Generate You Projects
 ===================================
 
-Documentation is available at [http://gyp3.org/](http://gyp3.org/) (or at the `md-pages` branch).
+Documentation is available at [http://gyp3.org/](http://gyp3.org/) (or at the [`gh-pages`](https://github.com/refack/GYP/blob/gh-pages/index.md) branch).
