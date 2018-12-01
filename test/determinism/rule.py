@@ -1,3 +1,4 @@
 #!/usr/bin/env python
 
-print 'Hello World'
+from __future__ import print_function
+print('Hello World')
