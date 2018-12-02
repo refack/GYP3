@@ -18,6 +18,11 @@ from __future__ import print_function
 import sys
 import re
 
+try:
+    basestring         # Python 2
+except NameError:
+    basestring = str,  # Python 3
+
 # Dictionaries of settings validators. The key is the tool name, the value is
 # a dictionary mapping setting names to validation functions.
 _msvs_validators = {}

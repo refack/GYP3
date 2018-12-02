@@ -27,6 +27,10 @@ import traceback
 from gyp.common import GypError
 from gyp.common import OrderedSet
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 # A list of types that are treated as linkable.
 linkable_types = [

@@ -7,6 +7,14 @@ structures or complex types except for dicts and lists. This is
 because gyp copies so large structure that small copy overhead ends up
 taking seconds in a project the size of Chromium."""
 
+try:
+    long        # Python 2
+    unicode
+except NameError:
+    long = int  # Python 3
+    unicode = str
+
+
 class Error(Exception):
   pass
 

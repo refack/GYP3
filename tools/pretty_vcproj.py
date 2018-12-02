@@ -21,6 +21,8 @@ import sys
 from xml.dom.minidom import parse
 from xml.dom.minidom import Node
 
+from gyp.common import cmp
+
 REPLACEMENTS = dict()
 ARGUMENTS = None
 

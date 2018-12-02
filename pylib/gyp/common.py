@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from __future__ import with_statement
-
 import collections
 import errno
 import filecmp
@@ -11,6 +9,12 @@ import os.path
 import re
 import tempfile
 import sys
+
+try:
+  cmp = cmp       # Python 2
+except NameError:
+  def cmp(x, y):  # Python 3
+        return (x > y) - (x < y)
 
 
 # A minimal memoizing decorator. It'll blow up if the args aren't immutable,

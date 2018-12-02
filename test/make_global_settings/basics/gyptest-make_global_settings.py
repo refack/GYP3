@@ -7,12 +7,13 @@
 """
 Verifies make_global_settings.
 """
+from __future__ import print_function
 
 import os
 import sys
 import TestGyp
 
-print "This test is currently disabled: https://crbug.com/483696."
+print("This test is currently disabled: https://crbug.com/483696.")
 sys.exit(0)
 
 test_format = ['ninja']

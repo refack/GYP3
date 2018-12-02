@@ -143,6 +143,8 @@ import re
 import struct
 import sys
 
+from gyp.common import cmp
+
 # hashlib is supplied as of Python 2.5 as the replacement interface for sha
 # and other secure hashes.  In 2.6, sha is deprecated.  Import hashlib if
 # available, avoiding a deprecation warning under 2.6.  Import sha otherwise,
@@ -153,6 +155,15 @@ try:
 except ImportError:
   import sha
   _new_sha1 = sha.new
+
+try:
+  basestring       # Python 2
+  unicode
+  xrange
+except NameError:  # Python 3
+  basestring = str,
+  unicode = str
+  xrange = range
 
 
 # See XCObject._EncodeString.  This pattern is used to determine when a string
@@ -324,8 +335,7 @@ class XCObject(object):
           that._properties[key] = new_value
         else:
           that._properties[key] = value
-      elif isinstance(value, str) or isinstance(value, unicode) or \
-           isinstance(value, int):
+      elif isinstance(value, (basestring, int)):
         that._properties[key] = value
       elif isinstance(value, list):
         if is_strong:
@@ -788,8 +798,7 @@ class XCObject(object):
             self._properties[property] = value.Copy()
           else:
             self._properties[property] = value
-        elif isinstance(value, str) or isinstance(value, unicode) or \
-             isinstance(value, int):
+        elif isinstance(value, (basestring, int)):
           self._properties[property] = value
         elif isinstance(value, list):
           if is_strong:

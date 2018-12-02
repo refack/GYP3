@@ -7,6 +7,7 @@
 """
 Verifies make_global_settings works with the full toolchain.
 """
+from __future__ import print_function
 
 import os
 import sys
@@ -17,7 +18,7 @@ if sys.platform == 'win32':
   # and make not supported on windows at all.
   sys.exit(0)
 
-print "This test is currently disabled: https://crbug.com/483696."
+print("This test is currently disabled: https://crbug.com/483696.")
 sys.exit(0)
 
 test = TestGyp.TestGyp(formats=['ninja'])

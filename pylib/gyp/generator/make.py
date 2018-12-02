@@ -1543,9 +1543,9 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
       # Postbuilds expect to be run in the gyp file's directory, so insert an
       # implicit postbuild to cd to there.
       postbuilds.insert(0, gyp.common.EncodePOSIXShellList(['cd', self.path]))
-      for i in xrange(len(postbuilds)):
-        if not postbuilds[i].startswith('$'):
-          postbuilds[i] = EscapeShellArgument(postbuilds[i])
+      for i, postbuild in enumerate(postbuilds):
+        if not postbuild.startswith('$'):
+          postbuilds[i] = EscapeShellArgument(postbuild)
       self.WriteLn('%s: builddir := $(abs_builddir)' % QuoteSpaces(self.output))
       self.WriteLn('%s: POSTBUILDS := %s' % (
           QuoteSpaces(self.output), ' '.join(postbuilds)))

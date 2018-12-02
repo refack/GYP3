@@ -9,6 +9,7 @@ Verifies that msvs_configuration_attributes and
 msbuild_configuration_attributes are applied by using
 them to set the OutputDirectory.
 """
+from __future__ import print_function
 
 import TestGyp
 import os
@@ -16,7 +17,7 @@ import os
 import sys
 
 if sys.platform == 'win32':
-  print "This test is currently disabled: https://crbug.com/483696."
+  print("This test is currently disabled: https://crbug.com/483696.")
   sys.exit(0)
 
 

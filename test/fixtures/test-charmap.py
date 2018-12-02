@@ -2,7 +2,13 @@ from __future__ import print_function
 import sys
 import locale
 
+try:
+  reload           # Python 2
+except NameError:  # Python 3
+  from importlib import reload
+
 reload(sys)
+
 
 def main():
   encoding = locale.getdefaultlocale()[1]
