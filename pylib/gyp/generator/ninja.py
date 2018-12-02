@@ -456,8 +456,8 @@ class NinjaWriter(object):
     try:
       sources = extra_sources + spec.get('sources', [])
     except TypeError:
-      print 'extra_sources: ', str(extra_sources)
-      print 'spec.get("sources"): ', str(spec.get('sources'))
+      print('extra_sources: ', str(extra_sources))
+      print('spec.get("sources"): ', str(spec.get('sources')))
       raise
     if sources:
       if self.flavor == 'mac' and len(self.archs) > 1:
