@@ -15,11 +15,11 @@ matrix:
       script: flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
     - language: shell
       install:
-        - shellcheck --version
+        - shellcheck --version  # Travis defaults to v0.4.6
         - export scversion="stable"  # or "v0.6.0", or "latest"
         - wget "https://storage.googleapis.com/shellcheck/shellcheck-${scversion}.linux.x86_64.tar.xz"
         - tar --xz -xvf shellcheck-"${scversion}".linux.x86_64.tar.xz
-        - shellcheck-"${scversion}"/shellcheck --version
+        - shellcheck-"${scversion}"/shellcheck --version  # Current is v0.6.0
       script: bash -c 'shopt -s globstar ; shellcheck-"${scversion}"/shellcheck **/*.{sh,ksh,bash}'
   allow_failures:
     - python: 3.7
