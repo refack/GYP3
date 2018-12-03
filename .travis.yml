@@ -1,9 +1,8 @@
 language: cpp
-compiler:
- - clang
 matrix:
   include:
-    - before_install: ./buildbot/travis-checkout.sh
+    - compiler: clang
+      before_install: ./buildbot/travis-checkout.sh
       script: ./buildbot/travis-test.sh
     - python: 2.7
       language: python
@@ -14,8 +13,17 @@ matrix:
       dist: xenial  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
       install: pip install flake8
       script: flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+    - language: shell
+      install:
+        - shellcheck --version
+        - export scversion="stable"  # or "v0.6.0", or "latest"
+        - wget "https://storage.googleapis.com/shellcheck/shellcheck-${scversion}.linux.x86_64.tar.xz"
+        - tar --xz -xvf shellcheck-"${scversion}".linux.x86_64.tar.xz
+        - shellcheck-"${scversion}"/shellcheck --version
+      script: bash -c 'shopt -s globstar ; shellcheck-"${scversion}"/shellcheck **/*.{sh,ksh,bash}'
   allow_failures:
     - python: 3.7
+    - language: shell
 os:
   - linux
 branches:
