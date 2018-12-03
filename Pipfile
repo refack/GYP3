@@ -5,12 +5,13 @@ name = "pypi"
 
 [dev-packages]
 
-[packages]
+[packages.win]
 "pywin32" = "*"
+
+[packages]
 flake8 = "*"
 
 [requires]
-python_version = "2.7"
 
 [scripts]
 lint = "flake8 . --exclude=.venv --count --show-source --statistics --select=E901,E999,F821,F822,F823"

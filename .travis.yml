@@ -33,7 +33,7 @@ matrix:
       python: 2.7
       install: 
         - pip install pipenv
-        - pipenv install
+        - pipenv install --two
       script: pipenv run lint
 
     - name: lint-python3
@@ -42,7 +42,7 @@ matrix:
       python: 3.7
       install: 
         - pip install pipenv
-        - pipenv install
+        - pipenv install --three
       script: pipenv run lint
 
     - name: lint-shell
