@@ -31,14 +31,18 @@ matrix:
     - name: lint-python2
       language: python
       python: 2.7
-      install: pip install pipenv
+      install: 
+        - pip install pipenv
+        - pipenv install
       script: pipenv run lint
 
     - name: lint-python3
       dist: xenial  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
       language: python
       python: 3.7
-      install: pip install pipenv
+      install: 
+        - pip install pipenv
+        - pipenv install
       script: pipenv run lint
 
     - name: lint-shell
