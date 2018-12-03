@@ -14,8 +14,8 @@ matrix:
       before_install: ./buildbot/travis-checkout.sh
       script: ./buildbot/travis-test.sh
 
-    - name: tests-mac
-      os: mac
+    - name: tests-macos
+      os: osx
       language: cpp
       compiler: clang
       before_install: ./buildbot/travis-checkout.sh
