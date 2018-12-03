@@ -3,15 +3,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
-[dev-packages]
-
-[packages.win]
-"pywin32" = "*"
+# [dev-packages]
 
 [packages]
 flake8 = "*"
+# "pywin32" = "*"
 
-[requires]
+# [requires]
 
 [scripts]
 lint = "flake8 . --exclude=.venv --count --show-source --statistics --select=E901,E999,F821,F822,F823"

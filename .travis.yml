@@ -56,6 +56,6 @@ matrix:
   allow_failures:
     - python: 3.7
     - language: shell
-    - os: mac
+    - os: osx
     - os: windows
     
