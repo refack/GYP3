@@ -16,11 +16,9 @@ matrix:
     - language: shell
       install:
         - shellcheck --version  # Travis defaults to v0.4.6
-        - export scversion="stable"  # or "v0.6.0", or "latest"
-        - wget "https://storage.googleapis.com/shellcheck/shellcheck-${scversion}.linux.x86_64.tar.xz"
-        - tar --xz -xvf shellcheck-"${scversion}".linux.x86_64.tar.xz
-        - shellcheck-"${scversion}"/shellcheck --version  # Current is v0.6.0
-      script: bash -c 'shopt -s globstar ; shellcheck-"${scversion}"/shellcheck **/*.{sh,ksh,bash}'
+        - wget -qO- "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar xvz
+        - shellcheck-stable/shellcheck --version  # Current is v0.6.0
+      script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
   allow_failures:
     - python: 3.7
     - language: shell
