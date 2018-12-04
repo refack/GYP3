@@ -26,3 +26,6 @@ matrix:
   allow_failures:
     - python: 3.7
     - language: shell
+
+notifications:
+    slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
