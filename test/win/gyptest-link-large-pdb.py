@@ -7,6 +7,7 @@
 """
 Make sure msvs_large_pdb works correctly.
 """
+from __future__ import print_function
 
 import TestGyp
 
@@ -14,7 +15,7 @@ import struct
 import sys
 
 if sys.platform == 'win32':
-  print "This test is currently disabled: https://crbug.com/483696."
+  print("This test is currently disabled: https://crbug.com/483696.")
   sys.exit(0)
 
 
@@ -37,8 +38,8 @@ def CheckImageAndPdb(test, image_basename, expected_page_size,
   pdb_file.seek(32, 0)
   page_size = struct.unpack('<I', pdb_file.read(4))[0]
   if page_size != expected_page_size:
-    print "Expected page size of %d, got %d for PDB file `%s'." % (
-        expected_page_size, page_size, pdb_path)
+    print("Expected page size of %d, got %d for PDB file `%s'." % (
+        expected_page_size, page_size, pdb_path))
 
 
 if sys.platform == 'win32':

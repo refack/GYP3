@@ -5,6 +5,7 @@
 """
 TestMac.py:  a collection of helper function shared between test on Mac OS X.
 """
+from __future__ import print_function
 
 import re
 import subprocess
@@ -23,13 +24,13 @@ def CheckFileType(test, file, archs):
     pattern = re.compile('^Architectures in the fat file: (.*) are: (.*)$')
   match = pattern.match(o)
   if match is None:
-    print 'Ouput does not match expected pattern: %s' % (pattern.pattern)
+    print('Ouput does not match expected pattern: %s' % (pattern.pattern))
     test.fail_test()
   else:
     found_file, found_archs = match.groups()
     if found_file != file or set(found_archs.split()) != set(archs):
-      print 'Expected file %s with arch %s, got %s with arch %s' % (
-          file, ' '.join(archs), found_file, found_archs)
+      print('Expected file %s with arch %s, got %s with arch %s' % (
+          file, ' '.join(archs), found_file, found_archs))
       test.fail_test()
 
 

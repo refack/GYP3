@@ -197,6 +197,7 @@ version.
     TestCmd.where_is('foo', 'PATH1:PATH2')
     TestCmd.where_is('foo', 'PATH1;PATH2', '.suffix3;.suffix4')
 """
+from __future__ import print_function
 
 # Copyright 2000-2010 Steven Knight
 # This module is free software, and you may redistribute it and/or modify
@@ -980,7 +981,7 @@ class TestCmd(object):
             condition = self.condition
         if self._preserve[condition]:
             for dir in self._dirlist:
-                print "Preserved directory", dir
+                print("Preserved directory", dir)
         else:
             list = self._dirlist[:]
             list.reverse()
@@ -1027,17 +1028,17 @@ class TestCmd(object):
         difflib
     except NameError:
         def diff(self, a, b, name, *args, **kw):
-            print self.banner('Expected %s' % name)
-            print a
-            print self.banner('Actual %s' % name)
-            print b
+            print(self.banner('Expected %s' % name))
+            print(a)
+            print(self.banner('Actual %s' % name))
+            print(b)
     else:
         def diff(self, a, b, name, *args, **kw):
-            print self.banner(name)
+            print(self.banner(name))
             args = (a.splitlines(), b.splitlines()) + args
             lines = apply(self.diff_function, args, kw)
             for l in lines:
-                print l
+                print(l)
 
     def fail_test(self, condition = 1, function = None, skip = 0):
         """Cause the test to fail.
