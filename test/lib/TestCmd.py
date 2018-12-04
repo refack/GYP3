@@ -827,8 +827,7 @@ def send_all(p, data):
         sent = p.send(data)
         if sent is None:
             raise Exception(disconnect_message)
-        data = buffer(data, sent)
-
+        data = memoryview(data, sent)
 
 
 try:
