@@ -1,31 +1,40 @@
-cpp-steps: &cpp-steps
-  compiler: clang
-  before_install: ./buildbot/travis-checkout.sh
-  script: ./buildbot/travis-test.sh
-
-python-steps: &python-steps
+python-setup-steps: &python-setup-steps
   language: python
-  install: pip install flake8
-  script: flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+  install:
+    - pip install pipenv
+    - pipenv install --dev
+    - sudo apt-get install ninja-build
 
 matrix:
   include:
-    - language: cpp
-      <<: *cpp-steps
-    - python: 2.7
-      <<: *python-steps
-    - python: 3.7
+    - name: "test on python 2.7"
+      python: '2.7'
+      compiler: clang
+      <<: *python-setup-steps
+      script: pipenv run -v test-ninja
+
+    - name: "lint with python 2.7"
+      python: '2.7'
+      <<: *python-setup-steps
+      script: pipenv run -v lint
+
+    - name: "lint with python 3.7"
+      python: '3.7'
       dist: xenial  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
-      <<: *python-steps
-    - language: shell
+      <<: *python-setup-steps
+      script: pipenv run -v lint
+
+    - name: "lint shell scripts"
+      language: shell
       install:
         - shellcheck --version  # Travis defaults to v0.4.6
         - wget -qO- "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJv
         - shellcheck-stable/shellcheck --version  # Current is v0.6.0
       script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
+
   allow_failures:
-    - python: 3.7
+    - python: '3.7'
     - language: shell
 
 notifications:
-    slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
+  slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
