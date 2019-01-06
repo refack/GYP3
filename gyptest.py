@@ -7,8 +7,8 @@
 
 from __future__ import print_function
 
+# noinspection PyCompatibility
 import argparse
-import math
 import os
 import platform
 import subprocess
@@ -170,17 +170,12 @@ class Runner(object):
         self.run_test(test, fmt, i)
         i += 1
 
-    if self.isatty:
-      self.erase_current_line()
-
     self.took = time.time() - run_start
 
-  def run_test(self, test, fmt, i):
-    if self.isatty:
-      self.erase_current_line()
 
+  def run_test(self, test, fmt, i):
     msg = self.fmt_str % (i, self.num_tests, fmt, test)
-    self.print_(msg)
+    print(msg)
 
     start = time.time()
     cmd = [sys.executable, test] + self.gyp_options
@@ -199,7 +194,7 @@ class Runner(object):
     else:
       res = 'passed'
     res_msg = ' %s %.3fs' % (res, took)
-    self.print_(res_msg)
+    print(res_msg)
 
     if (stdout and
         not stdout.endswith('PASSED\n') and
@@ -209,20 +204,6 @@ class Runner(object):
         print('    %s' % l)
     elif not self.isatty:
       print()
-
-  def print_(self, msg):
-    print(msg, end='')
-    index = msg.rfind('\n')
-    if index == -1:
-      self.hpos += len(msg)
-    else:
-      self.hpos = len(msg) - index
-    sys.stdout.flush()
-
-  def erase_current_line(self):
-    print('\b' * self.hpos + ' ' * self.hpos + '\b' * self.hpos, end='')
-    sys.stdout.flush()
-    self.hpos = 0
 
   def print_results(self):
     num_failures = len(self.failures)
