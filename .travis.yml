@@ -7,11 +7,17 @@ python-setup-steps: &python-setup-steps
 
 matrix:
   include:
-    - name: "test on python 2.7"
+    - name: "test with ninja on python 2.7"
       python: '2.7'
       compiler: clang
       <<: *python-setup-steps
-      script: pipenv run -v test-ninja
+      script: pipenv run -v test -f ninja
+
+    - name: "test with make on python 2.7"
+      python: '2.7'
+      compiler: clang
+      <<: *python-setup-steps
+      script: pipenv run -v test -f make
 
     - name: "lint with python 2.7"
       python: '2.7'
