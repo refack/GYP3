@@ -5,22 +5,20 @@
 from __future__ import print_function
 
 import ast
-import gyp.common
-import gyp.simple_copy
-import multiprocessing
-import optparse
 import os.path
 import re
 import shlex
 import signal
 import subprocess
 import sys
-import threading
-import time
 import traceback
+import gyp.common
+import gyp.simple_copy
 from gyp.common import GypError
 from gyp.common import OrderedSet
 
+if not 'unicode' in __builtins__:
+  unicode = str
 
 # A list of types that are treated as linkable.
 linkable_types = [
@@ -210,13 +208,13 @@ def CheckNode(node, keypath):
     return children
   elif isinstance(node, ast.Str):
     return node.s
+  elif isinstance(node, ast.Num):
+    return node.n
   else:
-    raise TypeError("Unknown AST node at key path '" + '.'.join(keypath) +
-         "': " + repr(node))
+    raise TypeError("Unknown AST node at key path '" + '.'.join(keypath) + "': " + repr(node))
 
 
-def LoadOneBuildFile(build_file_path, data, aux_data, includes,
-                     is_target, check):
+def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
   if build_file_path in data:
     return data[build_file_path]
 
@@ -227,11 +225,7 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes,
 
   build_file_data = None
   try:
-    if check:
-      build_file_data = CheckedEval(build_file_contents)
-    else:
-      build_file_data = eval(build_file_contents, {'__builtins__': None},
-                             None)
+    build_file_data = CheckedEval(build_file_contents)
   except SyntaxError as e:
     e.filename = build_file_path
     raise
@@ -250,31 +244,26 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes,
       not build_file_data['skip_includes']):
     try:
       if is_target:
-        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data,
-                                      aux_data, includes, check)
+        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data, includes)
       else:
-        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data,
-                                      aux_data, None, check)
+        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data)
     except Exception as e:
-      gyp.common.ExceptionAppend(e,
-                                 'while reading includes of ' + build_file_path)
+      gyp.common.ExceptionAppend(e, 'while reading includes of ' + build_file_path)
       raise
 
   return build_file_data
 
 
-def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data,
-                                  includes, check):
+def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data, includes=None):
   includes_list = []
-  if includes != None:
+  if includes is not None:
     includes_list.extend(includes)
   if 'includes' in subdict:
     for include in subdict['includes']:
       # "include" is specified relative to subdict_path, so compute the real
       # path to include by appending the provided "include" to the directory
       # in which subdict_path resides.
-      relative_include = \
-          os.path.normpath(os.path.join(os.path.dirname(subdict_path), include))
+      relative_include = os.path.normpath(os.path.join(os.path.dirname(subdict_path), include))
       includes_list.append(relative_include)
     # Unhook the includes list, it's no longer needed.
     del subdict['includes']
@@ -288,27 +277,24 @@ def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data,
     gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Included File: '%s'", include)
 
     MergeDicts(subdict,
-               LoadOneBuildFile(include, data, aux_data, None, False, check),
+               LoadOneBuildFile(include, data, aux_data, None, False),
                subdict_path, include)
 
   # Recurse into subdictionaries.
   for k, v in subdict.items():
     if type(v) is dict:
-      LoadBuildFileIncludesIntoDict(v, subdict_path, data, aux_data,
-                                    None, check)
+      LoadBuildFileIncludesIntoDict(v, subdict_path, data, aux_data)
     elif type(v) is list:
-      LoadBuildFileIncludesIntoList(v, subdict_path, data, aux_data,
-                                    check)
+      LoadBuildFileIncludesIntoList(v, subdict_path, data, aux_data)
 
 
 # This recurses into lists so that it can look for dicts.
-def LoadBuildFileIncludesIntoList(sublist, sublist_path, data, aux_data, check):
+def LoadBuildFileIncludesIntoList(sublist, sublist_path, data, aux_data):
   for item in sublist:
     if type(item) is dict:
-      LoadBuildFileIncludesIntoDict(item, sublist_path, data, aux_data,
-                                    None, check)
+      LoadBuildFileIncludesIntoDict(item, sublist_path, data, aux_data)
     elif type(item) is list:
-      LoadBuildFileIncludesIntoList(item, sublist_path, data, aux_data, check)
+      LoadBuildFileIncludesIntoList(item, sublist_path, data, aux_data)
 
 # Processes toolsets in all the targets. This recurses into condition entries
 # since they can contain toolsets as well.
@@ -349,8 +335,7 @@ def ProcessToolsetsInDict(data):
 # TODO(mark): I don't love this name.  It just means that it's going to load
 # a build file that contains targets and is expected to provide a targets dict
 # that contains the targets...
-def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes,
-                        depth, check, load_dependencies):
+def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, depth, load_dependencies):
   # If depth is set, predefine the DEPTH variable to be a relative path from
   # this build file's directory to the directory identified by depth.
   if depth:
@@ -378,8 +363,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes,
   gyp.DebugOutput(gyp.DEBUG_INCLUDES,
                   "Loading Target Build File '%s'", build_file_path)
 
-  build_file_data = LoadOneBuildFile(build_file_path, data, aux_data,
-                                     includes, True, check)
+  build_file_data = LoadOneBuildFile(build_file_path, data, aux_data, includes, True)
 
   # Store DEPTH for later use in generators.
   build_file_data['_DEPTH'] = depth
@@ -455,8 +439,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes,
   if load_dependencies:
     for dependency in dependencies:
       try:
-        LoadTargetBuildFile(dependency, data, aux_data, variables,
-                            includes, depth, check, load_dependencies)
+        LoadTargetBuildFile(dependency, data, aux_data, variables, includes, depth, load_dependencies)
       except Exception as e:
         gyp.common.ExceptionAppend(
           e, 'while loading dependencies of %s' % build_file_path)
@@ -464,10 +447,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes,
   else:
     return (build_file_path, dependencies)
 
-def CallLoadTargetBuildFile(global_flags,
-                            build_file_path, variables,
-                            includes, depth, check,
-                            generator_input_info):
+def CallLoadTargetBuildFile(global_flags, build_file_path, variables, includes, depth, generator_input_info):
   """Wrapper around LoadTargetBuildFile for parallel processing.
 
      This wrapper is used when LoadTargetBuildFile is executed in
@@ -482,9 +462,7 @@ def CallLoadTargetBuildFile(global_flags,
       globals()[key] = value
 
     SetGeneratorGlobals(generator_input_info)
-    result = LoadTargetBuildFile(build_file_path, per_process_data,
-                                 per_process_aux_data, variables,
-                                 includes, depth, check, False)
+    result = LoadTargetBuildFile(build_file_path, per_process_data, per_process_aux_data, variables, includes, depth, False)
     if not result:
       return result
 
@@ -560,53 +538,6 @@ class ParallelState(object):
     self.condition.notify()
     self.condition.release()
 
-
-def LoadTargetBuildFilesParallel(build_files, data, variables, includes, depth,
-                                 check, generator_input_info):
-  parallel_state = ParallelState()
-  parallel_state.condition = threading.Condition()
-  # Make copies of the build_files argument that we can modify while working.
-  parallel_state.dependencies = list(build_files)
-  parallel_state.scheduled = set(build_files)
-  parallel_state.pending = 0
-  parallel_state.data = data
-
-  try:
-    parallel_state.condition.acquire()
-    while parallel_state.dependencies or parallel_state.pending:
-      if parallel_state.error:
-        break
-      if not parallel_state.dependencies:
-        parallel_state.condition.wait()
-        continue
-
-      dependency = parallel_state.dependencies.pop()
-
-      parallel_state.pending += 1
-      global_flags = {
-        'path_sections': globals()['path_sections'],
-        'non_configuration_keys': globals()['non_configuration_keys'],
-        'multiple_toolsets': globals()['multiple_toolsets']}
-
-      if not parallel_state.pool:
-        parallel_state.pool = multiprocessing.Pool(multiprocessing.cpu_count())
-      parallel_state.pool.apply_async(
-          CallLoadTargetBuildFile,
-          args = (global_flags, dependency,
-                  variables, includes, depth, check, generator_input_info),
-          callback = parallel_state.LoadTargetBuildFileCallback)
-  except KeyboardInterrupt as e:
-    parallel_state.pool.terminate()
-    raise e
-
-  parallel_state.condition.release()
-
-  parallel_state.pool.close()
-  parallel_state.pool.join()
-  parallel_state.pool = None
-
-  if parallel_state.error:
-    sys.exit(1)
 
 # Look for the bracket that matches the first bracket seen in a
 # string, and return the start and end as a tuple.  For example, if
@@ -896,24 +827,20 @@ def ExpandVariables(input, phase, variables, build_file):
                                  stdin=subprocess.PIPE,
                                  cwd=build_file_dir)
           except Exception as e:
-            raise GypError("%s while executing command '%s' in %s" %
-                           (e, contents, build_file))
+            raise GypError("%s while executing command '%s' in %s" % (e, contents, build_file))
 
           p_stdout, p_stderr = p.communicate('')
 
           if p.wait() != 0 or p_stderr:
-            sys.stderr.write(p_stderr)
+            sys.stderr.write(p_stderr.decode('utf-8'))
             # Simulate check_call behavior, since check_call only exists
             # in python 2.5 and later.
-            raise GypError("Call to '%s' returned exit status %d while in %s." %
-                           (contents, p.returncode, build_file))
-          replacement = p_stdout.rstrip()
+            raise GypError("Call to '%s' returned exit status %d while in %s." % (contents, p.returncode, build_file))
+          replacement = p_stdout.decode('utf-8').rstrip()
 
         cached_command_results[cache_key] = replacement
       else:
-        gyp.DebugOutput(gyp.DEBUG_VARIABLES,
-                        "Had cache value for command '%s' in directory '%s'",
-                        contents,build_file_dir)
+        gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Had cache value for command '%s' in directory '%s'", contents, build_file_dir)
         replacement = cached_value
 
     else:
@@ -938,19 +865,13 @@ def ExpandVariables(input, phase, variables, build_file):
     if type(replacement) is list:
       for item in replacement:
         if not contents[-1] == '/' and type(item) not in (str, int):
-          raise GypError('Variable ' + contents +
-                         ' must expand to a string or list of strings; ' +
-                         'list contains a ' +
-                         item.__class__.__name__)
+          raise GypError('Variable ' + contents + ' must expand to a string or list of strings; list contains a ' + item.__class__.__name__)
       # Run through the list and handle variable expansions in it.  Since
       # the list is guaranteed not to contain dicts, this won't do anything
       # with conditions sections.
-      ProcessVariablesAndConditionsInList(replacement, phase, variables,
-                                          build_file)
-    elif type(replacement) not in (str, int):
-          raise GypError('Variable ' + contents +
-                         ' must expand to a string or list of strings; ' +
-                         'found a ' + replacement.__class__.__name__)
+      ProcessVariablesAndConditionsInList(replacement, phase, variables, build_file)
+    elif type(replacement) not in (str, unicode, int):
+      raise GypError('Variable ' + contents + ' must expand to a string or list of strings; found a ' + replacement.__class__.__name__)
 
     if expand_to_list:
       # Expanding in list context.  It's guaranteed that there's only one
@@ -2740,8 +2661,8 @@ def SetGeneratorGlobals(generator_input_info):
   generator_filelist_paths = generator_input_info['generator_filelist_paths']
 
 
-def Load(build_files, variables, includes, depth, generator_input_info, check,
-         circular_check, duplicate_basename_check, parallel, root_targets):
+def Load(build_files, variables, includes, depth, generator_input_info,
+         circular_check, duplicate_basename_check, root_targets):
   SetGeneratorGlobals(generator_input_info)
   # A generator can have other lists (in addition to sources) be processed
   # for rules.
@@ -2758,18 +2679,13 @@ def Load(build_files, variables, includes, depth, generator_input_info, check,
   # Normalize paths everywhere.  This is important because paths will be
   # used as keys to the data dict and for references between input files.
   build_files = set(map(os.path.normpath, build_files))
-  if parallel:
-    LoadTargetBuildFilesParallel(build_files, data, variables, includes, depth,
-                                 check, generator_input_info)
-  else:
-    aux_data = {}
-    for build_file in build_files:
-      try:
-        LoadTargetBuildFile(build_file, data, aux_data,
-                            variables, includes, depth, check, True)
-      except Exception as e:
-        gyp.common.ExceptionAppend(e, 'while trying to load %s' % build_file)
-        raise
+  aux_data = {}
+  for build_file in build_files:
+    try:
+      LoadTargetBuildFile(build_file, data, aux_data, variables, includes, depth, True)
+    except Exception as e:
+      gyp.common.ExceptionAppend(e, 'while trying to load %s' % build_file)
+      raise
 
   # Build a dict to access each target's subdict by qualified name.
   targets = BuildTargetsDict(data)

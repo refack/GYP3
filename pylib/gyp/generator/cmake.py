@@ -112,8 +112,7 @@ def NormjoinPathForceCMakeSource(base_path, rel_path):
   if any([rel_path.startswith(var) for var in FULL_PATH_VARS]):
     return rel_path
   # TODO: do we need to check base_path for absolute variables as well?
-  return os.path.join('${CMAKE_CURRENT_LIST_DIR}',
-                      os.path.normpath(os.path.join(base_path, rel_path)))
+  return os.path.join('${CMAKE_CURRENT_LIST_DIR}', os.path.normpath(os.path.join(base_path, rel_path)))
 
 
 def NormjoinPath(base_path, rel_path):
@@ -249,8 +248,7 @@ def StringToCMakeTargetName(a):
   return a.translate(_maketrans(' /():."', '_______'))
 
 
-def WriteActions(target_name, actions, extra_sources, extra_deps,
-                 path_to_gyp, output):
+def WriteActions(target_name, actions, extra_sources, extra_deps, path_to_gyp, output):
   """Write CMake for the 'actions' in the target.
 
   Args:
@@ -267,12 +265,10 @@ def WriteActions(target_name, actions, extra_sources, extra_deps,
 
     inputs = action['inputs']
     inputs_name = action_target_name + '__input'
-    SetVariableList(output, inputs_name,
-        [NormjoinPathForceCMakeSource(path_to_gyp, dep) for dep in inputs])
+    SetVariableList(output, inputs_name, [NormjoinPathForceCMakeSource(path_to_gyp, dep) for dep in inputs])
 
     outputs = action['outputs']
-    cmake_outputs = [NormjoinPathForceCMakeSource(path_to_gyp, out)
-                     for out in outputs]
+    cmake_outputs = [NormjoinPathForceCMakeSource(path_to_gyp, out) for out in outputs]
     outputs_name = action_target_name + '__output'
     SetVariableList(output, outputs_name, cmake_outputs)
 
@@ -329,14 +325,13 @@ def WriteActions(target_name, actions, extra_sources, extra_deps,
 
 
 def NormjoinRulePathForceCMakeSource(base_path, rel_path, rule_source):
-  if rel_path.startswith(("${RULE_INPUT_PATH}","${RULE_INPUT_DIRNAME}")):
+  if rel_path.startswith(("${RULE_INPUT_PATH}", "${RULE_INPUT_DIRNAME}")):
     if any([rule_source.startswith(var) for var in FULL_PATH_VARS]):
       return rel_path
   return NormjoinPathForceCMakeSource(base_path, rel_path)
 
 
-def WriteRules(target_name, rules, extra_sources, extra_deps,
-               path_to_gyp, output):
+def WriteRules(target_name, rules, extra_sources, extra_deps, path_to_gyp, output):
   """Write CMake for the 'rules' in the target.
 
   Args:
@@ -352,8 +347,7 @@ def WriteRules(target_name, rules, extra_sources, extra_deps,
 
     inputs = rule.get('inputs', [])
     inputs_name = rule_name + '__input'
-    SetVariableList(output, inputs_name,
-        [NormjoinPathForceCMakeSource(path_to_gyp, dep) for dep in inputs])
+    SetVariableList(output, inputs_name, [NormjoinPathForceCMakeSource(path_to_gyp, dep) for dep in inputs])
     outputs = rule['outputs']
     var_outputs = []
 
@@ -377,9 +371,7 @@ def WriteRules(target_name, rules, extra_sources, extra_deps,
       these_outputs = []
       for output_index, out in enumerate(outputs):
         output_name = action_name + '_' + str(output_index)
-        SetVariable(output, output_name,
-                     NormjoinRulePathForceCMakeSource(path_to_gyp, out,
-                                                      rule_source))
+        SetVariable(output, output_name, NormjoinRulePathForceCMakeSource(path_to_gyp, out, rule_source))
         if int(rule.get('process_outputs_as_sources', False)):
           extra_sources.append(('${' + output_name + '}', out))
         these_outputs.append('${' + output_name + '}')
@@ -559,8 +551,7 @@ def WriteCopies(target_name, copies, extra_deps, path_to_gyp, output):
 
 def CreateCMakeTargetBaseName(qualified_target):
   """This is the name we would like the target to have."""
-  _, gyp_target_name, gyp_target_toolset = (
-      gyp.common.ParseQualifiedTarget(qualified_target))
+  _, gyp_target_name, gyp_target_toolset = (gyp.common.ParseQualifiedTarget(qualified_target))
   cmake_target_base_name = gyp_target_name
   if gyp_target_toolset and gyp_target_toolset != 'target':
     cmake_target_base_name += '_' + gyp_target_toolset
@@ -569,8 +560,7 @@ def CreateCMakeTargetBaseName(qualified_target):
 
 def CreateCMakeTargetFullName(qualified_target):
   """An unambiguous name for the target."""
-  gyp_file, gyp_target_name, gyp_target_toolset = (
-      gyp.common.ParseQualifiedTarget(qualified_target))
+  gyp_file, gyp_target_name, gyp_target_toolset = (gyp.common.ParseQualifiedTarget(qualified_target))
   cmake_target_full_name = gyp_file + ':' + gyp_target_name
   if gyp_target_toolset and gyp_target_toolset != 'target':
     cmake_target_full_name += '_' + gyp_target_toolset
@@ -597,6 +587,7 @@ class CMakeNamer(object):
   building. However, it also makes sense for an IDE, as it is possible for
   defines to be different.
   """
+
   def __init__(self, target_list):
     self.cmake_target_base_names_conficting = set()
 
@@ -616,9 +607,7 @@ class CMakeNamer(object):
     return base_name
 
 
-def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
-                options, generator_flags, all_qualified_targets, flavor,
-                output):
+def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use, options, generator_flags, all_qualified_targets, flavor, output):
   # The make generator does this always.
   # TODO: It would be nice to be able to tell CMake all dependencies.
   circular_libs = generator_flags.get('circular', True)
@@ -652,8 +641,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
 
   cmake_target_type = cmake_target_type_from_gyp_target_type.get(target_type)
   if cmake_target_type is None:
-    print('Target %s has unknown target type %s, skipping.' %
-          (        target_name,               target_type  ))
+    print('Target %s has unknown target type %s, skipping.' % (target_name, target_type))
     return
 
   SetVariable(output, 'TARGET', target_name)
@@ -666,18 +654,15 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
 
   # Actions must come first, since they can generate more OBJs for use below.
   if 'actions' in spec:
-    WriteActions(cmake_target_name, spec['actions'], extra_sources, extra_deps,
-                 path_from_cmakelists_to_gyp, output)
+    WriteActions(cmake_target_name, spec['actions'], extra_sources, extra_deps, path_from_cmakelists_to_gyp, output)
 
   # Rules must be early like actions.
   if 'rules' in spec:
-    WriteRules(cmake_target_name, spec['rules'], extra_sources, extra_deps,
-               path_from_cmakelists_to_gyp, output)
+    WriteRules(cmake_target_name, spec['rules'], extra_sources, extra_deps, path_from_cmakelists_to_gyp, output)
 
   # Copies
   if 'copies' in spec:
-    WriteCopies(cmake_target_name, spec['copies'], extra_deps,
-                path_from_cmakelists_to_gyp, output)
+    WriteCopies(cmake_target_name, spec['copies'], extra_deps, path_from_cmakelists_to_gyp, output)
 
   # Target and sources
   srcs = spec.get('sources', [])
@@ -756,8 +741,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
                  other_sources_name)
   if target_type == 'executable' and not has_sources:
     dummy_sources_name = cmake_target_name + '__dummy_srcs'
-    SetVariable(output, dummy_sources_name,
-                "${obj}.${TOOLSET}/${TARGET}/genc/dummy.c")
+    SetVariable(output, dummy_sources_name, "${obj}.${TOOLSET}/${TARGET}/genc/dummy.c")
     output.write('if(NOT EXISTS "')
     WriteVariable(output, dummy_sources_name)
     output.write('")\n')
@@ -765,7 +749,6 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     WriteVariable(output, dummy_sources_name)
     output.write('" "")\n')
     output.write("endif()\n")
-
 
   # CMake is opposed to setting linker directories and considers the practice
   # of setting linker directories dangerous. Instead, it favors the use of
@@ -807,13 +790,10 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
   output.write(')\n')
 
   # Let CMake know if the 'all' target should depend on this target.
-  exclude_from_all = ('TRUE' if qualified_target not in all_qualified_targets
-                             else 'FALSE')
-  SetTargetProperty(output, cmake_target_name,
-                      'EXCLUDE_FROM_ALL', exclude_from_all)
+  exclude_from_all = ('TRUE' if qualified_target not in all_qualified_targets else 'FALSE')
+  SetTargetProperty(output, cmake_target_name, 'EXCLUDE_FROM_ALL', exclude_from_all)
   for extra_target_name in extra_deps:
-    SetTargetProperty(output, extra_target_name,
-                        'EXCLUDE_FROM_ALL', exclude_from_all)
+    SetTargetProperty(output, extra_target_name, 'EXCLUDE_FROM_ALL', exclude_from_all)
 
   # Output name and location.
   if target_type != 'none':
@@ -843,19 +823,12 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
       elif spec.get('standalone_static_library', False):
         target_output_directory = generator_default_variables['PRODUCT_DIR']
       else:
-        base_path = gyp.common.RelativePath(os.path.dirname(gyp_file),
-                                            options.toplevel_dir)
+        base_path = gyp.common.RelativePath(os.path.dirname(gyp_file), options.toplevel_dir)
         target_output_directory = '${obj}.${TOOLSET}'
-        target_output_directory = (
-            os.path.join(target_output_directory, base_path))
+        target_output_directory = (os.path.join(target_output_directory, base_path))
 
-    cmake_target_output_directory = NormjoinPathForceCMakeSource(
-                                        path_from_cmakelists_to_gyp,
-                                        target_output_directory)
-    SetTargetProperty(output,
-        cmake_target_name,
-        cmake_target_type.property_modifier + '_OUTPUT_DIRECTORY',
-        cmake_target_output_directory)
+    cmake_target_output_directory = NormjoinPathForceCMakeSource(path_from_cmakelists_to_gyp, target_output_directory)
+    SetTargetProperty(output, cmake_target_name, cmake_target_type.property_modifier + '_OUTPUT_DIRECTORY', cmake_target_output_directory)
 
     # Output name
     default_product_prefix = ''
@@ -863,21 +836,18 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     default_product_ext = ''
     if target_type == 'static_library':
       static_library_prefix = generator_default_variables['STATIC_LIB_PREFIX']
-      default_product_name = RemovePrefix(default_product_name,
-                                          static_library_prefix)
+      default_product_name = RemovePrefix(default_product_name, static_library_prefix)
       default_product_prefix = static_library_prefix
       default_product_ext = generator_default_variables['STATIC_LIB_SUFFIX']
 
     elif target_type in ('loadable_module', 'shared_library'):
       shared_library_prefix = generator_default_variables['SHARED_LIB_PREFIX']
-      default_product_name = RemovePrefix(default_product_name,
-                                          shared_library_prefix)
+      default_product_name = RemovePrefix(default_product_name, shared_library_prefix)
       default_product_prefix = shared_library_prefix
       default_product_ext = generator_default_variables['SHARED_LIB_SUFFIX']
 
     elif target_type != 'executable':
-      print(('ERROR: What output file should be generated?',
-              'type', target_type, 'target', target_name))
+      print(('ERROR: What output file should be generated?', 'type', target_type, 'target', target_name))
 
     product_prefix = spec.get('product_prefix', default_product_prefix)
     product_name = spec.get('product_name', default_product_name)
@@ -888,15 +858,12 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
       product_ext = default_product_ext
 
     SetTargetProperty(output, cmake_target_name, 'PREFIX', product_prefix)
-    SetTargetProperty(output, cmake_target_name,
-                        cmake_target_type.property_modifier + '_OUTPUT_NAME',
-                        product_name)
+    SetTargetProperty(output, cmake_target_name, cmake_target_type.property_modifier + '_OUTPUT_NAME', product_name)
     SetTargetProperty(output, cmake_target_name, 'SUFFIX', product_ext)
 
     # Make the output of this target referenceable as a source.
     cmake_target_output_basename = product_prefix + product_name + product_ext
-    cmake_target_output = os.path.join(cmake_target_output_directory,
-                                       cmake_target_output_basename)
+    cmake_target_output = os.path.join(cmake_target_output_directory, cmake_target_output_basename)
     SetFileProperty(output, cmake_target_output, 'GENERATED', ['TRUE'], '')
 
     # Includes
@@ -904,9 +871,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     if includes:
       # This (target include directories) is what requires CMake 2.8.8
       includes_name = cmake_target_name + '__include_dirs'
-      SetVariableList(output, includes_name,
-          [NormjoinPathForceCMakeSource(path_from_cmakelists_to_gyp, include)
-           for include in includes])
+      SetVariableList(output, includes_name, [NormjoinPathForceCMakeSource(path_from_cmakelists_to_gyp, include) for include in includes])
       output.write('set_property(TARGET ')
       output.write(cmake_target_name)
       output.write(' APPEND PROPERTY INCLUDE_DIRECTORIES ')
@@ -916,11 +881,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     # Defines
     defines = config.get('defines')
     if defines is not None:
-      SetTargetProperty(output,
-                        cmake_target_name,
-                        'COMPILE_DEFINITIONS',
-                        defines,
-                        ';')
+      SetTargetProperty(output, cmake_target_name, 'COMPILE_DEFINITIONS', defines, ';')
 
     # Compile Flags - http://www.cmake.org/Bug/view.php?id=6493
     # CMake currently does not have target C and CXX flags.
@@ -943,9 +904,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     if xcode_settings:
       cflags = xcode_settings.GetCflags(config_to_use)
       cflags_c = xcode_settings.GetCflagsC(config_to_use)
-      cflags_cxx = xcode_settings.GetCflagsCC(config_to_use)
-      #cflags_objc = xcode_settings.GetCflagsObjC(config_to_use)
-      #cflags_objcc = xcode_settings.GetCflagsObjCC(config_to_use)
+      cflags_cxx = xcode_settings.GetCflagsCC(config_to_use)  # cflags_objc = xcode_settings.GetCflagsObjC(config_to_use)  # cflags_objcc = xcode_settings.GetCflagsObjCC(config_to_use)
 
     if (not cflags_c or not c_sources) and (not cflags_cxx or not cxx_sources):
       SetTargetProperty(output, cmake_target_name, 'COMPILE_FLAGS', cflags, ' ')
@@ -988,9 +947,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
     # XCode settings
     xcode_settings = config.get('xcode_settings', {})
     for xcode_setting, xcode_value in xcode_settings.viewitems():
-      SetTargetProperty(output, cmake_target_name,
-                        "XCODE_ATTRIBUTE_%s" % xcode_setting, xcode_value,
-                        '' if isinstance(xcode_value, str) else ' ')
+      SetTargetProperty(output, cmake_target_name, "XCODE_ATTRIBUTE_%s" % xcode_setting, xcode_value, '' if isinstance(xcode_value, str) else ' ')
 
   # Note on Dependencies and Libraries:
   # CMake wants to handle link order, resolving the link line up front.
@@ -1011,7 +968,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
 
     if dep_target_type == 'static_library':
       static_deps.append(dep_cmake_name)
-    elif dep_target_type ==  'shared_library':
+    elif dep_target_type == 'shared_library':
       shared_deps.append(dep_cmake_name)
     else:
       other_deps.append(dep_cmake_name)
@@ -1082,8 +1039,7 @@ def WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
   UnsetVariable(output, 'TARGET')
 
 
-def GenerateOutputForConfig(target_list, target_dicts, data,
-                            params, config_to_use):
+def GenerateOutputForConfig(target_list, target_dicts, data, params, config_to_use):
   options = params['options']
   generator_flags = params['generator_flags']
   flavor = gyp.common.GetFlavor(params)
@@ -1099,9 +1055,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data,
 
   # build_dir: relative path from source root to our output files.
   # e.g. "out/Debug"
-  build_dir = os.path.normpath(os.path.join(generator_dir,
-                                            output_dir,
-                                            config_to_use))
+  build_dir = os.path.normpath(os.path.join(generator_dir, output_dir, config_to_use))
 
   toplevel_build = os.path.join(options.toplevel_dir, build_dir)
 
@@ -1124,8 +1078,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data,
   cxx = None
 
   make_global_settings = data[gyp_file].get('make_global_settings', [])
-  build_to_top = gyp.common.InvertRelativePath(build_dir,
-                                               options.toplevel_dir)
+  build_to_top = gyp.common.InvertRelativePath(build_dir, options.toplevel_dir)
   for key, value in make_global_settings:
     if key == 'AR':
       ar = os.path.join(build_to_top, value)
@@ -1180,9 +1133,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data,
   # CMake has it's own implicit 'all' target, one is not created explicitly.
   all_qualified_targets = set()
   for build_file in params['build_files']:
-    for qualified_target in gyp.common.AllTargets(target_list,
-                                                  target_dicts,
-                                                  os.path.normpath(build_file)):
+    for qualified_target in gyp.common.AllTargets(target_list, target_dicts, os.path.normpath(build_file)):
       all_qualified_targets.add(qualified_target)
 
   for qualified_target in target_list:
@@ -1191,8 +1142,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data,
       spec = target_dicts[qualified_target]
       gyp.xcode_emulation.MergeGlobalXcodeSettingsToSpec(data[gyp_file], spec)
 
-    WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use,
-                options, generator_flags, all_qualified_targets, flavor, output)
+    WriteTarget(namer, qualified_target, target_dicts, build_dir, config_to_use, options, generator_flags, all_qualified_targets, flavor, output)
 
   output.close()
 
@@ -1211,9 +1161,7 @@ def PerformBuild(data, configurations, params):
   for config_name in configurations:
     # build_dir: relative path from source root to our output files.
     # e.g. "out/Debug"
-    build_dir = os.path.normpath(os.path.join(generator_dir,
-                                              output_dir,
-                                              config_name))
+    build_dir = os.path.normpath(os.path.join(generator_dir, output_dir, config_name))
     arguments = ['cmake', '-G', 'Ninja']
     print('Generating [%s]: %s' % (config_name, arguments))
     subprocess.check_call(arguments, cwd=build_dir)
@@ -1235,22 +1183,8 @@ def CallGenerateOutputForConfig(arglist):
 def GenerateOutput(target_list, target_dicts, data, params):
   user_config = params.get('generator_flags', {}).get('config', None)
   if user_config:
-    GenerateOutputForConfig(target_list, target_dicts, data,
-                            params, user_config)
+    GenerateOutputForConfig(target_list, target_dicts, data, params, user_config)
   else:
     config_names = target_dicts[target_list[0]]['configurations']
-    if params['parallel']:
-      try:
-        pool = multiprocessing.Pool(len(config_names))
-        arglists = []
-        for config_name in config_names:
-          arglists.append((target_list, target_dicts, data,
-                           params, config_name))
-          pool.map(CallGenerateOutputForConfig, arglists)
-      except KeyboardInterrupt as e:
-        pool.terminate()
-        raise e
-    else:
-      for config_name in config_names:
-        GenerateOutputForConfig(target_list, target_dicts, data,
-                                params, config_name)
+    for config_name in config_names:
+      GenerateOutputForConfig(target_list, target_dicts, data, params, config_name)

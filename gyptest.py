@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2012 Google Inc. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 """gyptest.py -- test runner for GYP tests."""
 
@@ -23,7 +22,7 @@ def is_test_name(f):
 def find_all_gyptest_files(directory):
   result = []
   for root, dirs, files in os.walk(directory):
-    result.extend([ os.path.join(root, f) for f in files if is_test_name(f) ])
+    result.extend([os.path.join(root, f) for f in files if is_test_name(f)])
   result.sort()
   return result
 
@@ -33,24 +32,15 @@ def main(argv=None):
     argv = sys.argv
 
   parser = argparse.ArgumentParser()
-  parser.add_argument("-a", "--all", action="store_true",
-      help="run all tests")
-  parser.add_argument("-C", "--chdir", action="store",
-      help="change to directory")
-  parser.add_argument("-f", "--format", action="store", default='',
-      help="run tests with the specified formats")
-  parser.add_argument("-G", '--gyp_option', action="append", default=[],
-      help="Add -G options to the gyp command line")
-  parser.add_argument("-l", "--list", action="store_true",
-      help="list available tests and exit")
-  parser.add_argument("-n", "--no-exec", action="store_true",
-      help="no execute, just print the command line")
-  parser.add_argument("--path", action="append", default=[],
-      help="additional $PATH directory")
-  parser.add_argument("-q", "--quiet", action="store_true",
-      help="quiet, don't print anything unless there are failures")
-  parser.add_argument("-v", "--verbose", action="store_true",
-      help="print configuration info and test results.")
+  parser.add_argument("-a", "--all", action="store_true", help="run all tests")
+  parser.add_argument("-C", "--chdir", action="store", help="change to directory")
+  parser.add_argument("-f", "--format", action="store", default='', help="run tests with the specified formats")
+  parser.add_argument("-G", '--gyp_option', action="append", default=[], help="Add -G options to the gyp command line")
+  parser.add_argument("-l", "--list", action="store_true", help="list available tests and exit")
+  parser.add_argument("-n", "--no-exec", action="store_true", help="no execute, just print the command line")
+  parser.add_argument("--path", action="append", default=[], help="additional $PATH directory")
+  parser.add_argument("-q", "--quiet", action="store_true", help="quiet, don't print anything unless there are failures")
+  parser.add_argument("-v", "--verbose", action="store_true", help="print configuration info and test results.")
   parser.add_argument('tests', nargs='*')
   args = parser.parse_args(argv[1:])
 
@@ -95,20 +85,18 @@ def main(argv=None):
     format_list = args.format.split(',')
   else:
     format_list = {
-      'aix5':     ['make'],
+      'aix5': ['make'],
       'freebsd7': ['make'],
       'freebsd8': ['make'],
       'openbsd5': ['make'],
-      'cygwin':   ['msvs'],
-      'win32':    ['msvs', 'ninja'],
-      'linux':    ['make', 'ninja'],
-      'linux2':   ['make', 'ninja'],
-      'linux3':   ['make', 'ninja'],
-
-      # TODO: Re-enable xcode-ninja.
-      # https://bugs.chromium.org/p/gyp/issues/detail?id=530
+      'cygwin': ['msvs'],
+      'win32': ['msvs', 'ninja'],
+      'linux': ['make', 'ninja'],
+      'linux2': ['make', 'ninja'],
+      'linux3': ['make', 'ninja'],
+      # TODO: Re-enable xcode-ninja. https://bugs.chromium.org/p/gyp/issues/detail?id=530
       # 'darwin':   ['make', 'ninja', 'xcode', 'xcode-ninja'],
-      'darwin':   ['make', 'ninja', 'xcode'],
+      'darwin': ['make', 'ninja', 'xcode'],
     }[sys.platform]
 
   gyp_options = []
@@ -138,11 +126,17 @@ def print_configuration_info():
     sys.path.append(os.path.abspath('pylib'))
     import gyp.MSVSVersion
     print('  Win %s %s\n' % platform.win32_ver()[0:2])
-    print('  MSVS %s' %
-          gyp.MSVSVersion.SelectVisualStudioVersion().Description())
+    print('  MSVS %s' % gyp.MSVSVersion.SelectVisualStudioVersion().Description())
   elif sys.platform in ('linux', 'linux2'):
-    print('  Linux %s' % ' '.join(platform.linux_distribution()))
-  print('  Python %s' % platform.python_version())
+    # noinspection PyBroadException
+    try:
+      with open('/etc/lsb-release', mode='r', encoding='utf-8') as f:
+        dist = f.read().strip()
+      print('  Linux %s' % dist)
+    except:
+      pass
+
+  print('  Python %s %s' % (sys.executable, platform.python_version()))
   print('  PYTHONPATH=%s' % os.environ['PYTHONPATH'])
   print()
 
@@ -155,55 +149,69 @@ class Runner(object):
     self.gyp_options = gyp_options
     self.failures = []
     self.num_tests = len(formats) * len(tests)
-    num_digits = len(str(self.num_tests))
-    self.fmt_str = '[%%%dd/%%%dd] (%%s) %%s' % (num_digits, num_digits)
     self.isatty = sys.stdout.isatty() and not self.verbose
     self.env = os.environ.copy()
     self.hpos = 0
 
   def run(self):
+    print('TAP version 13')
+    print('0..%d' % self.num_tests)
+
     run_start = time.time()
 
-    i = 1
-    for fmt in self.formats:
-      for test in self.tests:
-        self.run_test(test, fmt, i)
-        i += 1
+    tests = [(t, f) for t in self.tests for f in self.formats]
+    for i, (test, fmt) in enumerate(tests, 1):
+      if self.verbose:
+        print('# %s %s' % (test, fmt))
+      res, took, stdout, stderr = self.run_test(test, fmt)
+      print(res % (i, test + ' ' + fmt))
+      print('  ---')
+      print('  duration_ms: %.3f' % took)
+      if len(stdout):
+        print('  stdout: |-')
+        for l in stdout.splitlines():
+          print('   ', l)
+      if len(stderr) and stderr != 'PASSED':
+        print('  stderr: |-')
+        for l in stderr.splitlines():
+          print('   ', l)
+      print('  ...')
 
     self.took = time.time() - run_start
 
-
-  def run_test(self, test, fmt, i):
-    msg = self.fmt_str % (i, self.num_tests, fmt, test)
-    print(msg)
-
-    start = time.time()
+  def run_test(self, test, fmt):
     cmd = [sys.executable, test] + self.gyp_options
     self.env['TESTGYP_FORMAT'] = fmt
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, env=self.env)
-    proc.wait()
-    took = time.time() - start
 
-    stdout = proc.stdout.read().decode('utf8')
+    start = time.time()
+    if self.verbose:
+      self.env['TESTCMD_VERBOSE'] = '1'
+    proc = subprocess.Popen(cmd, bufsize=2**20, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env, universal_newlines=True)
+    if self.verbose:
+      err_lines = []
+      for l in proc.stderr:
+        l = l.strip()
+        print("# %s" % l, file=sys.stderr)
+        err_lines.append(l)
+      stderr = '\n'.join(err_lines)
+      proc.wait()
+      took = time.time() - start
+      stdout = proc.stdout.read().strip()
+    else:
+      proc.wait()
+      took = time.time() - start
+      stdout = proc.stdout.read().strip()
+      stderr = proc.stderr.read().strip()
+
+
     if proc.returncode == 2:
-      res = 'skipped'
+      res = 'not ok %d # skip %s'
     elif proc.returncode:
-      res = 'failed'
+      res = 'not ok %d %s'
       self.failures.append('(%s) %s' % (test, fmt))
     else:
-      res = 'passed'
-    res_msg = ' %s %.3fs' % (res, took)
-    print(res_msg)
-
-    if (stdout and
-        not stdout.endswith('PASSED\n') and
-        not (stdout.endswith('NO RESULT\n'))):
-      print()
-      for l in stdout.splitlines():
-        print('    %s' % l)
-    elif not self.isatty:
-      print()
+      res = 'ok %d %s'
+    return res, took, stdout, stderr
 
   def print_results(self):
     num_failures = len(self.failures)
@@ -215,8 +223,7 @@ class Runner(object):
         print("Failed the following %d tests:" % num_failures)
       print("\t" + "\n\t".join(sorted(self.failures)))
       print()
-    print('Ran %d tests in %.3fs, %d failed.' % (self.num_tests, self.took,
-                                                 num_failures))
+    print('Ran %d tests in %.3fs, %d failed.' % (self.num_tests, self.took, num_failures))
     print()
 
 
