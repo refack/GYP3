@@ -1244,4 +1244,4 @@ def TestGyp(*args, **kw):
   for format_class in format_class_list:
     if format == format_class.format:
       return format_class(*args, **kw)
-  raise Exception, "unknown format %r" % format
+  raise Exception("unknown format %r" % format)
