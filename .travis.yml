@@ -44,6 +44,7 @@ matrix:
       node_js: node
       install:
         - choco install python
+        - py -m pip install --upgrade pip
         - py -m pip install pipenv
         - py -m pipenv install --dev
       script:
