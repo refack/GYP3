@@ -15,6 +15,11 @@ import sys
 import traceback
 from gyp.common import GypError
 
+try:
+  xrange
+except NameError:
+  xrange = range
+
 # Default debug modes for GYP
 debug = {}
 

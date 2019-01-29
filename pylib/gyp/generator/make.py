@@ -1,4 +1,3 @@
-from __future__ import print_function
 # Copyright (c) 2013 Google Inc. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -22,6 +21,8 @@ from __future__ import print_function
 # toplevel Makefile.  It may make sense to generate some .mk files on
 # the side to keep the the files readable.
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -33,6 +34,11 @@ from gyp.common import GetEnvironFallback
 from gyp.common import GypError
 
 import hashlib
+
+try:
+  xrange
+except NameError:
+  xrange = range
 
 generator_default_variables = {
   'EXECUTABLE_PREFIX': '',

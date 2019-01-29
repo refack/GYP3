@@ -154,6 +154,10 @@ except ImportError:
   import sha
   _new_sha1 = sha.new
 
+try:
+  xrange
+except NameError:
+  xrange = range
 
 # See XCObject._EncodeString.  This pattern is used to determine when a string
 # can be printed unquoted.  Strings that match this pattern may be printed

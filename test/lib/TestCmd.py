@@ -197,7 +197,6 @@ version.
     TestCmd.where_is('foo', 'PATH1:PATH2')
     TestCmd.where_is('foo', 'PATH1;PATH2', '.suffix3;.suffix4')
 """
-from __future__ import print_function
 
 # Copyright 2000-2010 Steven Knight
 # This module is free software, and you may redistribute it and/or modify
@@ -214,6 +213,8 @@ from __future__ import print_function
 # PARTICULAR PURPOSE.  THE CODE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS,
 # AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
 # SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+from __future__ import print_function
 
 __author__ = "Steven Knight <knight at baldmt dot com>"
 __revision__ = "TestCmd.py 0.37.D001 2010/01/11 16:55:50 knight"
@@ -232,6 +233,11 @@ import time
 import traceback
 import types
 import UserList
+
+try:
+  xrange
+except NameError:
+  xrange = range
 
 __all__ = [
     'diff_re',
