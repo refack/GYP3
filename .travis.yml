@@ -41,6 +41,7 @@ matrix:
     - name: "test with make on windows"
       os: windows
       language: node_js  # 'python' is not yet supported
+      node_js: node
       install:
         - choco install python
         - py -m pip install pipenv
