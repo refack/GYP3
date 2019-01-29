@@ -1,30 +1,31 @@
 python-setup-steps: &python-setup-steps
   language: python
   install:
+    - pip install --upgrade pip
     - pip install pipenv
     - pipenv install --dev
     - sudo apt-get install ninja-build
 
 matrix:
   include:
-    - name: "test with ninja on python 2.7"
+    - name: "test with ninja on Python 2.7"
       python: '2.7'
       compiler: clang
       <<: *python-setup-steps
       script: pipenv run -v test -f ninja
 
-    - name: "test with make on python 2.7"
+    - name: "test with make on Python 2.7"
       python: '2.7'
       compiler: clang
       <<: *python-setup-steps
       script: pipenv run -v test -f make
 
-    - name: "lint with python 2.7"
+    - name: "lint with Python 2.7"
       python: '2.7'
       <<: *python-setup-steps
       script: pipenv run -v lint
 
-    - name: "lint with python 3.7"
+    - name: "lint with Python 3.7"
       python: '3.7'
       dist: xenial  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
       <<: *python-setup-steps
@@ -38,18 +39,30 @@ matrix:
         - shellcheck-stable/shellcheck --version  # Current is v0.6.0
       script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
 
-    - name: "test with make on windows"
-      os: windows
-      language: node_js  # 'python' is not yet supported
-      node_js: node
+    - name: "test with make on macOS"
+      os: osx
+      language: shell  # 'language: python' is not yet supported
+      before_install: brew upgrade python
       install:
-        - choco install python
         - py -m pip install --upgrade pip
         - py -m pip install pipenv
         - py -m pipenv install --dev
       script:
-        - py -m flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+        #- py -m flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
         - py -m pipenv run -v test -f make
+
+    - name: "test with make on Windows"
+      os: windows
+      language: shell  # 'language: python' is not yet supported
+      before_install: choco install python
+      install:
+        - py -m pip install --upgrade pip
+        - py -m pip install pipenv
+        - py -m pipenv install --dev
+      script:
+        #- py -m flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+        - py -m pipenv run -v test -f make
+
   allow_failures:
     - os: windows
     - language: shell
