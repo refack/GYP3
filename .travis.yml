@@ -42,7 +42,7 @@ matrix:
       os: windows
       language: node_js  # 'python' is not yet supported
       install:
-        - choco install python
+        - choco install nvs python
         - py -m pip install pipenv
         - py -m pipenv install --dev
       script:
