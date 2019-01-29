@@ -434,9 +434,9 @@ def match_re(lines = None, res = None):
         s = "^" + res[i] + "$"
         try:
             expr = re.compile(s)
-        except re.error, e:
+        except re.error as e:
             msg = "Regular expression error in %s: %s"
-            raise re.error, msg % (repr(s), e[0])
+            raise re.error(msg % (repr(s), e[0]))
         if not expr.search(lines[i]):
             return
     return 1
@@ -451,9 +451,9 @@ def match_re_dotall(lines = None, res = None):
     s = "^" + res + "$"
     try:
         expr = re.compile(s, re.DOTALL)
-    except re.error, e:
+    except re.error as e:
         msg = "Regular expression error in %s: %s"
-        raise re.error, msg % (repr(s), e[0])
+        raise re.error(msg % (repr(s), e[0]))
     if expr.match(lines):
         return 1
 
@@ -507,9 +507,9 @@ def diff_re(a, b, fromfile='', tofile='',
         s = "^" + aline + "$"
         try:
             expr = re.compile(s)
-        except re.error, e:
+        except re.error as e:
             msg = "Regular expression error in %s: %s"
-            raise re.error, msg % (repr(s), e[0])
+            raise re.error(msg % (repr(s), e[0]))
         if not expr.search(bline):
             result.append("%sc%s" % (i+1, i+1))
             result.append('< ' + repr(a[i]))
@@ -565,7 +565,7 @@ else:
                     st = os.stat(f)
                 except OSError:
                     continue
-                if stat.S_IMODE(st[stat.ST_MODE]) & 0111:
+                if stat.S_IMODE(st[stat.ST_MODE]) & 0o111:
                     return f
         return None
 
@@ -723,7 +723,7 @@ class Popen(subprocess.Popen):
                 (errCode, written) = WriteFile(x, input)
             except ValueError:
                 return self._close('stdin')
-            except (subprocess.pywintypes.error, Exception), why:
+            except (subprocess.pywintypes.error, Exception) as why:
                 if why[0] in (109, errno.ESHUTDOWN):
                     return self._close('stdin')
                 raise
@@ -744,7 +744,7 @@ class Popen(subprocess.Popen):
                     (errCode, read) = ReadFile(x, nAvail, None)
             except ValueError:
                 return self._close(which)
-            except (subprocess.pywintypes.error, Exception), why:
+            except (subprocess.pywintypes.error, Exception) as why:
                 if why[0] in (109, errno.ESHUTDOWN):
                     return self._close(which)
                 raise
@@ -763,7 +763,7 @@ class Popen(subprocess.Popen):
 
             try:
                 written = os.write(self.stdin.fileno(), input)
-            except OSError, why:
+            except OSError as why:
                 if why[0] == errno.EPIPE: #broken pipe
                     return self._close('stdin')
                 raise
@@ -1126,7 +1126,7 @@ class TestCmd(object):
         """
         file = self.canonicalize(file)
         if mode[0] != 'r':
-            raise ValueError, "mode must begin with 'r'"
+            raise ValueError("mode must begin with 'r'")
         with open(file, mode) as f:
             result = f.read()
         return result
@@ -1508,12 +1508,12 @@ class TestCmd(object):
                 def do_chmod(fname):
                     try: st = os.stat(fname)
                     except OSError: pass
-                    else: os.chmod(fname, stat.S_IMODE(st[stat.ST_MODE]|0200))
+                    else: os.chmod(fname, stat.S_IMODE(st[stat.ST_MODE]|0o200))
             else:
                 def do_chmod(fname):
                     try: st = os.stat(fname)
                     except OSError: pass
-                    else: os.chmod(fname, stat.S_IMODE(st[stat.ST_MODE]&~0200))
+                    else: os.chmod(fname, stat.S_IMODE(st[stat.ST_MODE]&~0o200))
 
         if os.path.isfile(top):
             do_chmod(top)
@@ -1586,7 +1586,7 @@ class TestCmd(object):
         """
         file = self.canonicalize(file)
         if mode[0] != 'w':
-            raise ValueError, "mode must begin with 'w'"
+            raise ValueError("mode must begin with 'w'")
         with open(file, mode) as f:
             f.write(content)
 
