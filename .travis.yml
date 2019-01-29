@@ -50,7 +50,6 @@ matrix:
         - py -m pipenv run -v test -f make
   allow_failures:
     - os: windows
-    - python: '3.7'
     - language: shell
 
 notifications:
