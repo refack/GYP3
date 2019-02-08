@@ -2067,7 +2067,8 @@ def GenerateOutput(target_list, target_dicts, data, params):
 
 
 def _GenerateMSBuildFiltersFile(filters_path, source_files,
-                                rule_dependencies, extension_to_rule_name):
+                                rule_dependencies, extension_to_rule_name,
+                                platforms):
   """Generate the filters file.
 
   This file is used by Visual Studio to organize the presentation of source
@@ -2081,7 +2082,8 @@ def _GenerateMSBuildFiltersFile(filters_path, source_files,
   filter_group = []
   source_group = []
   _AppendFiltersForMSBuild('', source_files, rule_dependencies,
-                           extension_to_rule_name, filter_group, source_group)
+                           extension_to_rule_name, platforms,
+                           filter_group, source_group)
   if filter_group:
     content = ['Project',
                {'ToolsVersion': '4.0',
@@ -2097,7 +2099,7 @@ def _GenerateMSBuildFiltersFile(filters_path, source_files,
 
 
 def _AppendFiltersForMSBuild(parent_filter_name, sources, rule_dependencies,
-                             extension_to_rule_name,
+                             extension_to_rule_name, platforms,
                              filter_group, source_group):
   """Creates the list of filters and sources to be added in the filter file.
 
@@ -2123,11 +2125,12 @@ def _AppendFiltersForMSBuild(parent_filter_name, sources, rule_dependencies,
       # Recurse and add its dependents.
       _AppendFiltersForMSBuild(filter_name, source.contents,
                                rule_dependencies, extension_to_rule_name,
-                               filter_group, source_group)
+                               platforms, filter_group, source_group)
     else:
       # It's a source.  Create a source entry.
       _, element = _MapFileToMsBuildSourceType(source, rule_dependencies,
-                                               extension_to_rule_name)
+                                               extension_to_rule_name,
+                                               platforms)
       source_entry = [element, {'Include': source}]
       # Specify the filter it is part of, if any.
       if parent_filter_name:
@@ -2136,7 +2139,7 @@ def _AppendFiltersForMSBuild(parent_filter_name, sources, rule_dependencies,
 
 
 def _MapFileToMsBuildSourceType(source, rule_dependencies,
-                                extension_to_rule_name):
+                                extension_to_rule_name, platforms):
   """Returns the group and element type of the source file.
 
   Arguments:
@@ -2162,6 +2165,9 @@ def _MapFileToMsBuildSourceType(source, rule_dependencies,
   elif ext == '.asm':
     group = 'masm'
     element = 'MASM'
+    for platform in platforms:
+      if platform.lower() in ['arm', 'arm64']:
+        element = 'MARMASM'
   elif ext == '.idl':
     group = 'midl'
     element = 'Midl'
@@ -3265,7 +3271,8 @@ def _AddSources2(spec, sources, exclusions, grouped_sources,
                 detail.append(['ForcedIncludeFiles', ''])
 
         group, element = _MapFileToMsBuildSourceType(source, rule_dependencies,
-                                                     extension_to_rule_name)
+                                                     extension_to_rule_name,
+                                                     _GetUniquePlatforms(spec))
         grouped_sources[group].append([element, {'Include': source}] + detail)
 
 
@@ -3348,7 +3355,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
 
   _GenerateMSBuildFiltersFile(project.path + '.filters', sources,
                               rule_dependencies,
-                              extension_to_rule_name)
+                              extension_to_rule_name, _GetUniquePlatforms(spec))
   missing_sources = _VerifySourcesExist(sources, project_dir)
 
   for configuration in configurations.values():
@@ -3368,6 +3375,12 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   import_masm_targets_section = [
       ['Import',
         {'Project': r'$(VCTargetsPath)\BuildCustomizations\masm.targets'}]]
+  import_marmasm_props_section = [
+      ['Import',
+        {'Project': r'$(VCTargetsPath)\BuildCustomizations\marmasm.props'}]]
+  import_marmasm_targets_section = [
+      ['Import',
+        {'Project': r'$(VCTargetsPath)\BuildCustomizations\marmasm.targets'}]]
   macro_section = [['PropertyGroup', {'Label': 'UserMacros'}]]
 
   content = [
@@ -3388,6 +3401,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
    content += _GetMSBuildLocalProperties(project.msbuild_toolset)
   content += import_cpp_props_section
   content += import_masm_props_section
+  content += import_marmasm_props_section
   content += _GetMSBuildExtensions(props_files_of_rules)
   content += _GetMSBuildPropertySheets(configurations)
   content += macro_section
@@ -3400,6 +3414,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   content += _GetMSBuildProjectReferences(project)
   content += import_cpp_targets_section
   content += import_masm_targets_section
+  content += import_marmasm_targets_section
   content += _GetMSBuildExtensionTargets(targets_files_of_rules)
 
   if spec.get('msvs_external_builder'):
