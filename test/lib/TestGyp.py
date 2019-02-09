@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import json
 
 from contextlib import contextmanager
 
@@ -700,70 +701,62 @@ def FindMSBuildInstallation(msvs_version = 'auto'):
 
 
 def FindVisualStudioInstallation():
-  """Returns appropriate values for .build_tool and .uses_msbuild fields
+  """
+  Returns appropriate values for .build_tool and .uses_msbuild fields
   of TestGypBase for Visual Studio.
 
   We use the value specified by GYP_MSVS_VERSION.  If not specified, we
-  search %PATH% and %PATHEXT% for a devenv.{exe,bat,...} executable.
-  Failing that, we search for likely deployment paths.
+  search for likely deployment paths.
   """
   override_build_tool = os.environ.get('GYP_BUILD_TOOL')
   if override_build_tool:
     return override_build_tool, True, override_build_tool
-
-  possible_roots = ['%s:\\Program Files%s' % (chr(drive), suffix)
-                    for drive in range(ord('C'), ord('Z') + 1)
-                    for suffix in ['', ' (x86)']]
-  possible_paths = {
-      '2017': r'Microsoft Visual Studio\2017',
-      '2015': r'Microsoft Visual Studio 14.0\Common7\IDE\devenv.com',
-      '2013': r'Microsoft Visual Studio 12.0\Common7\IDE\devenv.com',
-      '2012': r'Microsoft Visual Studio 11.0\Common7\IDE\devenv.com',
-      '2010': r'Microsoft Visual Studio 10.0\Common7\IDE\devenv.com',
-      '2008': r'Microsoft Visual Studio 9.0\Common7\IDE\devenv.com',
-      '2005': r'Microsoft Visual Studio 8\Common7\IDE\devenv.com'}
-
-  possible_roots = [ConvertToCygpath(r) for r in possible_roots]
 
   msvs_version = 'auto'
   for flag in (f for f in sys.argv if f.startswith('msvs_version=')):
     msvs_version = flag.split('=')[-1]
   msvs_version = os.environ.get('GYP_MSVS_VERSION', msvs_version)
 
-  if msvs_version in ['2017', 'auto']:
+  if msvs_version == 'auto' or msvs_version >= '2017':
     msbuild_exes = []
     try:
-      path = possible_paths['2017']
-      for r in possible_roots:
-        build_tool = os.path.join(r, path)
-        if os.path.exists(build_tool):
-          break;
-        else:
-          build_tool = None
-      if not build_tool:
-        args1 = ['reg', 'query',
-                    'HKLM\Software\Microsoft\VisualStudio\SxS\VS7',
-                    '/v', '15.0', '/reg:32']
-        build_tool = subprocess.check_output(args1).decode(
-            'utf-8', 'ignore').strip().split(b'\r\n').pop().split(b' ').pop()
-        build_tool = build_tool.decode('utf-8')
-      if build_tool:
+      args1 = [
+        r'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe',
+        '-latest', '-products', '*', '-prerelease', '-format', 'json',
+        '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+      ]
+      vswhere_json = subprocess.check_output(args1)
+      top_vs_info = json.loads(vswhere_json)[0]
+      if top_vs_info:
+        inst_path = top_vs_info['installationPath']
         args2 = ['cmd.exe', '/d', '/c',
-                'cd', '/d', build_tool,
-                '&', 'dir', '/b', '/s', 'msbuild.exe']
+                 'cd', '/d', inst_path,
+                 '&', 'dir', '/b', '/s', 'msbuild.exe']
         msbuild_exes = subprocess.check_output(args2).strip().split(b'\r\n')
         msbuild_exes = [m.decode('utf-8') for m in msbuild_exes]
       if len(msbuild_exes):
-        msbuild_Path = os.path.join(build_tool, msbuild_exes[0])
-        if os.path.exists(msbuild_Path):
-          os.environ['GYP_MSVS_VERSION'] = '2017'
-          os.environ['GYP_BUILD_TOOL'] = msbuild_Path
-          return msbuild_Path, True, msbuild_Path
-    except Exception as e:
+        msbuild_path = msbuild_exes[0]
+        os.environ['GYP_MSVS_VERSION'] = top_vs_info['catalog']['productLineVersion']
+        os.environ['GYP_BUILD_TOOL'] = msbuild_path
+        return msbuild_path, True, msbuild_path
+    except:
       pass
 
+  possible_roots = ['%s:\\Program Files%s' % (chr(drive), suffix)
+                    for drive in range(ord('C'), ord('Z') + 1)
+                    for suffix in ['', ' (x86)']]
+  possible_paths = {
+    '2015': r'Microsoft Visual Studio 14.0\Common7\IDE\devenv.com',
+    '2013': r'Microsoft Visual Studio 12.0\Common7\IDE\devenv.com',
+    '2012': r'Microsoft Visual Studio 11.0\Common7\IDE\devenv.com',
+    '2010': r'Microsoft Visual Studio 10.0\Common7\IDE\devenv.com',
+    '2008': r'Microsoft Visual Studio 9.0\Common7\IDE\devenv.com',
+    '2005': r'Microsoft Visual Studio 8\Common7\IDE\devenv.com'}
+
+  possible_roots = [ConvertToCygpath(r) for r in possible_roots]
+
+  # Check that the path to the specified GYP_MSVS_VERSION exists.
   if msvs_version in possible_paths:
-    # Check that the path to the specified GYP_MSVS_VERSION exists.
     path = possible_paths[msvs_version]
     for r in possible_roots:
       build_tool = os.path.join(r, path)
@@ -774,18 +767,9 @@ def FindVisualStudioInstallation():
     else:
       print('Warning: Environment variable GYP_MSVS_VERSION specifies "%s" '
             'but corresponding "%s" was not found.' % (msvs_version, path))
-  # Neither GYP_MSVS_VERSION nor the path help us out.  Iterate through
-  # the choices looking for a match.
-  for version in sorted(possible_paths, reverse=True):
-    path = possible_paths[version]
-    for r in possible_roots:
-      build_tool = os.path.join(r, path)
-      if os.path.exists(build_tool):
-        uses_msbuild = msvs_version >= '2010'
-        msbuild_path = FindMSBuildInstallation(msvs_version)
-        return build_tool, uses_msbuild, msbuild_path
-  print('Error: could not find devenv')
+  print('Error: could not find MSVS version %s' % msvs_version)
   sys.exit(1)
+
 
 class TestGypOnMSToolchain(TestGypBase):
   """
@@ -914,7 +898,7 @@ class TestGypMSVS(TestGypOnMSToolchain):
     Runs a Visual Studio build using the configuration generated
     from the specified gyp_file.
     """
-    if '15.0' in self.build_tool:
+    if '15.0' in self.build_tool or 'Current' in self.build_tool:
       configuration = '/p:Configuration=' + (
         self.configuration or self.configuration_buildname())
       build = '/t'
