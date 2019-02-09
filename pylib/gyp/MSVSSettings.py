@@ -548,6 +548,7 @@ _rc = _Tool('VCResourceCompilerTool', 'ResourceCompile')
 _lib = _Tool('VCLibrarianTool', 'Lib')
 _manifest = _Tool('VCManifestTool', 'Manifest')
 _masm = _Tool('MASM', 'MASM')
+_marmasm = _Tool('MARMASM', 'MARMASM')
 
 
 _AddTool(_compile)
@@ -557,6 +558,7 @@ _AddTool(_rc)
 _AddTool(_lib)
 _AddTool(_manifest)
 _AddTool(_masm)
+_AddTool(_marmasm)
 # Add sections only found in the MSBuild settings.
 _msbuild_validators[''] = {}
 _msbuild_validators['ProjectReference'] = {}
