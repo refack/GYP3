@@ -9,20 +9,22 @@ build systems, primarily ninja.
 
 import collections
 import os
+import pickle
 import re
 import subprocess
 import sys
+import time
+import hashlib
+import traceback
 
 from gyp.common import OrderedSet
 import gyp.MSVSUtil
 import gyp.MSVSVersion
-
-try:
-  # basestring was removed in python3.
-  basestring
-except NameError:
+from gyp import DebugOutput, DEBUG_GENERAL
+if 'basestring' not in __builtins__:
   basestring = str
 
+vcvars_cache = dict()
 windows_quoter_regex = re.compile(r'(\\*)"')
 
 
@@ -43,7 +45,7 @@ def QuoteForRspFile(arg):
   # For a literal quote, CommandLineToArgvW requires 2n+1 backslashes
   # preceding it, and results in n backslashes + the quote. So we substitute
   # in 2* what we match, +1 more, plus the quote.
-  arg = windows_quoter_regex.sub(lambda mo: 2 * mo.group(1) + '\\"', arg)
+  arg = windows_quoter_regex.sub(lambda mo: 2 * str(mo.group(1)) + '\\"', arg)
 
   # %'s also need to be doubled otherwise they're interpreted as batch
   # positional arguments. Also make sure to escape the % so that they're
@@ -90,7 +92,7 @@ def _AddPrefix(element, prefix):
   """Add |prefix| to |element| or each subelement if element is iterable."""
   if element is None:
     return element
-  if (isinstance(element, collections.Iterable) and not isinstance(element, basestring)):
+  if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
     return [prefix + e for e in element]
   else:
     return prefix + element
@@ -879,7 +881,7 @@ def ExpandMacros(string, expansions):
   return string
 
 
-def _ExtractImportantEnvironment(output_of_set):
+def _ExtractImportantEnvironment(output_of_set, arch):
   """Extracts environment variables required for the toolchain to run from
   a textual dump output by the cmd.exe 'set' command."""
   envvars_to_save = (
@@ -893,14 +895,20 @@ def _ExtractImportantEnvironment(output_of_set):
       'temp',
       'tmp',
       )
-  env = {}
+  env = collections.OrderedDict()
   # This occasionally happens and leads to misleading SYSTEMROOT error messages
   # if not caught here.
+  cl_find = 'cl.exe'
+  if 'Visual Studio 201' in output_of_set:
+    cl_find = arch + '.' + cl_find
   if output_of_set.count('=') == 0:
     raise Exception('Invalid output_of_set. Value is:\n%s' % output_of_set)
   for line in output_of_set.splitlines():
+    if re.search(cl_find, line, re.I):
+      env['GYP_CL_PATH'] = line
+      continue
     for envvar in envvars_to_save:
-      if re.match(envvar + '=', line.lower()):
+      if re.match(envvar + '=', line, re.I):
         var, setting = line.split('=', 1)
         if envvar == 'path':
           # Our own rules (for running gyp-win-tool) and other actions in
@@ -910,10 +918,10 @@ def _ExtractImportantEnvironment(output_of_set):
           setting = os.path.dirname(sys.executable) + os.pathsep + setting
         env[var.upper()] = setting
         break
+
   for required in ('SYSTEMROOT', 'TEMP', 'TMP'):
     if required not in env:
-      raise Exception('Environment variable "%s" '
-                      'required to be set to valid path' % required)
+      raise Exception('Environment variable "%s" required to be set to valid path' % required)
   return env
 
 
@@ -928,14 +936,6 @@ def _FormatAsEnvironmentBlock(envvar_dict):
   block += nul
   return block
 
-
-def _ExtractCLPath(output_of_where):
-  """Gets the path to cl.exe based on the output of calling the environment
-  setup batch file, followed by the equivalent of `where`."""
-  # Take the first line, as that's the first found in the PATH.
-  for line in output_of_where.strip().splitlines():
-    if line.startswith('LOC:'):
-      return line[len('LOC:'):].strip()
 
 
 def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags, system_includes, open_out):
@@ -962,11 +962,7 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags, system_include
   vs = GetVSVersion(generator_flags)
   cl_paths = {}
   for arch in archs:
-    # Extract environment variables for subprocesses.
-    args = vs.SetupScript(arch)
-    args.extend(('&&', 'set'))
-    variables = subprocess.check_output(args, shell=True).decode('utf-8')
-    env = _ExtractImportantEnvironment(variables)
+    env = _GetEnvironment(arch, vs, open_out)
 
     # Inject system includes from gyp files into INCLUDE.
     if system_includes:
@@ -978,12 +974,68 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags, system_include
     f.write(env_block)
     f.close()
 
-    # Find cl.exe location for this architecture.
-    args = vs.SetupScript(arch)
-    args.extend(('&&', 'for', '%i', 'in', '(cl.exe)', 'do', '@echo', 'LOC:%~$PATH:i'))
-    output = subprocess.check_output(args, shell=True).decode('utf-8')
-    cl_paths[arch] = _ExtractCLPath(output)
+    cl_paths[arch] = env['GYP_CL_PATH']
   return cl_paths
+
+
+def _GetEnvironment(arch, vs, open_out):
+  """
+  This function will run the VC environment setup script, retrieve variables,
+  and also the path on cl.exe.
+  It will then try to cache the values to disk, and on next run will try to
+  lookup the cache. The cache key is the path to the setup script (which is
+  embedded within each Visual Studio installed instance) + it's args.
+  Even after a cache hit we do some validation of the cached values,
+  since parts of the tool-set can be upgraded with in the installed lifecycle
+  so paths and version numbers may change.
+
+  Args:
+    arch: {string} target architecture
+    vs: VisualStudioVersion
+    open_out: file open wrapper
+
+  Returns: {dict} the important environment variables VC need to run
+
+  """
+  args = vs.SetupScript(arch)
+  args.extend(('&&', 'set', '&&', 'where', 'cl.exe'))
+  args_slug = ''.join(args).encode('utf-8')
+  args_hash = hashlib.md5(args_slug).hexdigest()
+  cache_key = 'gyp-env-cache-' + args_hash
+  # The default value for %TEMP% will make all cache look ups to safely miss
+  cache_dir = os.environ.get('GYP_TEMP', os.getcwd())
+  cache_keyed_file = os.path.join(cache_dir, cache_key)
+  if os.path.exists(cache_keyed_file):
+    try:
+      with open(cache_keyed_file, 'rb') as f:
+        env = pickle.load(f)
+    except Exception as e:
+      DebugOutput(DEBUG_GENERAL, "Failed to load env pickle: %s" % e)
+      DebugOutput(DEBUG_GENERAL, "args_slug=%s" % args_slug)
+      DebugOutput(DEBUG_GENERAL, "cache_keyed_file=%s" % cache_keyed_file)
+      DebugOutput(DEBUG_GENERAL, traceback.format_exc())
+    cl_path = env.get('GYP_CL_PATH', '')
+    if os.path.exists(cl_path):
+      return env
+    else:
+      # cache has become invalid (probably form a tool set update)
+      os.remove(cache_keyed_file)
+  start_time = time.clock()
+  # Extract environment variables for subprocesses.
+  std_out = subprocess.check_output(args, shell=True, stderr=subprocess.STDOUT).decode('utf-8')
+  end_time = time.clock()
+  if DEBUG_GENERAL in gyp.debug.keys():
+    DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
+  env = _ExtractImportantEnvironment(std_out, arch)
+  try:
+    with open_out(cache_keyed_file, mode='wb') as f:
+      pickle.dump(env, f)
+  except Exception as e:
+    DebugOutput(DEBUG_GENERAL, "Failed to save env pickle: %s" % e)
+    DebugOutput(DEBUG_GENERAL, "args_slug=%s" % args_slug)
+    DebugOutput(DEBUG_GENERAL, "cache_keyed_file=%s" % cache_keyed_file)
+    DebugOutput(DEBUG_GENERAL, traceback.format_exc())
+  return env
 
 
 def VerifyMissingSources(sources, build_dir, generator_flags, gyp_to_ninja):
