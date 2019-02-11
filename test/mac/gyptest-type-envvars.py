@@ -13,6 +13,9 @@ import TestGyp
 import sys
 
 if sys.platform == 'darwin':
+  print("This test is currently disabled: https://github.com/refack/GYP/pull/16")
+  sys.exit(0)
+
   test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'])
 
   test.run_gyp('test.gyp',

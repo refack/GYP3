@@ -72,8 +72,6 @@ matrix:
   allow_failures:
     - os: windows
     - language: shell
-    - os: osx
-    - os: windows
 
 notifications:
   slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
