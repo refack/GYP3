@@ -1096,7 +1096,7 @@ def _GetEnvironment(arch, vs, open_out):
   cache_keyed_file = os.path.join(cache_dir, cache_key)
   if os.path.exists(cache_keyed_file):
     try:
-      with file(cache_keyed_file) as f:
+      with open(cache_keyed_file, 'w') as f:
         env = pickle.load(f)
     except Exception:
       pass
