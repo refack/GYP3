@@ -98,7 +98,6 @@ __author__ = "Steven Knight <knight at baldmt dot com>"
 __revision__ = "TestCommon.py 0.37.D001 2010/01/11 16:55:50 knight"
 __version__ = "0.37"
 
-import copy
 import os
 import os.path
 import stat
