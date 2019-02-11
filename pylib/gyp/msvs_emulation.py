@@ -9,20 +9,24 @@ build systems, primarily ninja.
 
 import collections
 import os
+import pickle
 import re
 import subprocess
 import sys
+import time
+import hashlib
 
 from gyp.common import OrderedSet
 import gyp.MSVSUtil
 import gyp.MSVSVersion
-
+from gyp import DebugOutput, DEBUG_GENERAL
 try:
   # basestring was removed in python3.
   basestring
 except NameError:
   basestring = str
 
+vcvars_cache = dict()
 
 windows_quoter_regex = re.compile(r'(\\*)"')
 
@@ -138,8 +142,8 @@ def _FindDirectXInstallation():
   if not dxsdk_dir:
     # Setup params to pass to and attempt to launch reg.exe.
     cmd = ['reg.exe', 'query', r'HKLM\Software\Microsoft\DirectX', '/s']
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    for line in p.communicate()[0].splitlines():
+    p = subprocess.check_output(cmd, stderr=subprocess.PIPE).decode('utf-8')
+    for line in p.splitlines():
       if 'InstallPath' in line:
         dxsdk_dir = line.split('    ')[3] + "\\"
 
@@ -321,7 +325,7 @@ class MsvsSettings(object):
     # first level is globally for the configuration (this is what we consider
     # "the" config at the gyp level, which will be something like 'Debug' or
     # 'Release'), VS2015 and later only use this level
-    if self.vs_version.short_name >= 2015:
+    if self.vs_version.short_name >= '2015':
       return config
     # and a second target-specific configuration, which is an
     # override for the global one. |config| is remapped here to take into
@@ -485,7 +489,7 @@ class MsvsSettings(object):
         prefix='/arch:')
     cflags.extend(['/FI' + f for f in self._Setting(
         ('VCCLCompilerTool', 'ForcedIncludeFiles'), config, default=[])])
-    if self.vs_version.project_version >= 12.0:
+    if self.vs_version.project_version >= '12.0':
       # New flag introduced in VS2013 (project version 12.0) Forces writes to
       # the program database (PDB) to be serialized through MSPDBSRV.EXE.
       # https://msdn.microsoft.com/en-us/library/dn502518.aspx
@@ -965,7 +969,7 @@ def ExpandMacros(string, expansions):
       string = string.replace(old, new)
   return string
 
-def _ExtractImportantEnvironment(output_of_set):
+def _ExtractImportantEnvironment(output_of_set, arch):
   """Extracts environment variables required for the toolchain to run from
   a textual dump output by the cmd.exe 'set' command."""
   envvars_to_save = (
@@ -982,11 +986,17 @@ def _ExtractImportantEnvironment(output_of_set):
   env = {}
   # This occasionally happens and leads to misleading SYSTEMROOT error messages
   # if not caught here.
+  cl_find = 'cl.exe'
+  if 'Visual Studio 201' in output_of_set:
+    cl_find = arch + '.' + cl_find
   if output_of_set.count('=') == 0:
     raise Exception('Invalid output_of_set. Value is:\n%s' % output_of_set)
   for line in output_of_set.splitlines():
+    if re.search(cl_find, line, re.I):
+      env['GYP_CL_PATH'] = line
+      continue
     for envvar in envvars_to_save:
-      if re.match(envvar + '=', line.lower()):
+      if re.match(envvar + '=', line, re.I):
         var, setting = line.split('=', 1)
         if envvar == 'path':
           # Our own rules (for running gyp-win-tool) and other actions in
@@ -996,6 +1006,7 @@ def _ExtractImportantEnvironment(output_of_set):
           setting = os.path.dirname(sys.executable) + os.pathsep + setting
         env[var.upper()] = setting
         break
+
   for required in ('SYSTEMROOT', 'TEMP', 'TMP'):
     if required not in env:
       raise Exception('Environment variable "%s" '
@@ -1012,14 +1023,6 @@ def _FormatAsEnvironmentBlock(envvar_dict):
     block += key + '=' + value + nul
   block += nul
   return block
-
-def _ExtractCLPath(output_of_where):
-  """Gets the path to cl.exe based on the output of calling the environment
-  setup batch file, followed by the equivalent of `where`."""
-  # Take the first line, as that's the first found in the PATH.
-  for line in output_of_where.strip().splitlines():
-    if line.startswith('LOC:'):
-      return line[len('LOC:'):].strip()
 
 def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags,
                              system_includes, open_out):
@@ -1046,20 +1049,12 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags,
   vs = GetVSVersion(generator_flags)
   cl_paths = {}
   for arch in archs:
-    # Extract environment variables for subprocesses.
-    args = vs.SetupScript(arch)
-    args.extend(('&&', 'set'))
-    popen = subprocess.Popen(
-        args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    variables, _ = popen.communicate()
-    if popen.returncode != 0:
-      raise Exception('"%s" failed with error %d' % (args, popen.returncode))
-    env = _ExtractImportantEnvironment(variables)
+    env = _GetEnvironment(arch, vs, open_out)
 
     # Inject system includes from gyp files into INCLUDE.
     if system_includes:
       system_includes = system_includes | OrderedSet(
-                                              env.get('INCLUDE', '').split(';'))
+        env.get('INCLUDE', '').split(';'))
       env['INCLUDE'] = ';'.join(system_includes)
 
     env_block = _FormatAsEnvironmentBlock(env)
@@ -1067,14 +1062,64 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags,
     f.write(env_block)
     f.close()
 
-    # Find cl.exe location for this architecture.
-    args = vs.SetupScript(arch)
-    args.extend(('&&',
-      'for', '%i', 'in', '(cl.exe)', 'do', '@echo', 'LOC:%~$PATH:i'))
-    popen = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
-    output, _ = popen.communicate()
-    cl_paths[arch] = _ExtractCLPath(output)
+    cl_paths[arch] = env['GYP_CL_PATH']
   return cl_paths
+
+
+def _GetEnvironment(arch, vs, open_out):
+  """
+  This function will run the VC environment setup script, retrieve variables,
+  and also the path on cl.exe.
+  It will then try to cache the values to disk, and on next run will try to
+  lookup the cache. The cache key is the path to the setup script (which is
+  embedded within each Visual Studio installed instance) + it's args.
+  Even after a cache hit we do some validation of the cached values,
+  since parts of the tool-set can be upgraded with in the installed lifecycle
+  so paths and version numbers may change.
+
+  Args:
+    arch: {string} target architecture
+    vs: VisualStudioVersion
+    open_out: file open wrapper
+
+  Returns: {dict} the important environment variables VC need to run
+
+  """
+  env = {}
+  args = vs.SetupScript(arch)
+  args.extend(('&&', 'set', '&&', 'where', 'cl.exe'))
+  args_slug = ''.join(args).encode('utf-8')
+  args_hash = hashlib.md5(args_slug).hexdigest()
+  cache_key = 'gyp-env-cache-' + args_hash
+  # The default value for %TEMP% will make all cache look ups to safely miss
+  cache_dir = os.environ.get('GYP_TEMP', os.getcwd())
+  cache_keyed_file = os.path.join(cache_dir, cache_key)
+  if os.path.exists(cache_keyed_file):
+    try:
+      with file(cache_keyed_file) as f:
+        env = pickle.load(f)
+    except Exception:
+      pass
+    cl_path = env.get('GYP_CL_PATH', '')
+    if os.path.exists(cl_path):
+      return env
+    else:
+      # cache has become invalid (probably form a tool set update)
+      os.remove(cache_keyed_file)
+  start_time = time.clock()
+  # Extract environment variables for subprocesses.
+  std_out = subprocess.check_output(args, shell=True, stderr=subprocess.STDOUT).decode('utf-8')
+  end_time = time.clock()
+  if DEBUG_GENERAL in gyp.debug.keys():
+    DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
+  env = _ExtractImportantEnvironment(std_out, arch)
+  try:
+    with open_out(cache_keyed_file) as f:
+      pickle.dump(env, f)
+  except Exception as e:
+    print(e)
+  return env
+
 
 def VerifyMissingSources(sources, build_dir, generator_flags, gyp_to_ninja):
   """Emulate behavior of msvs_error_on_missing_sources present in the msvs
