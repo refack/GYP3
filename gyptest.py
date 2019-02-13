@@ -180,8 +180,12 @@ class Runner(object):
     start = time.time()
     cmd = [sys.executable, test] + self.gyp_options
     self.env['TESTGYP_FORMAT'] = fmt
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, env=self.env)
+    print('*****')
+    for k, v in self.env.items():
+      print('%s="%s"' % (k, v))
+    print('gyptest running ' + ' '.join(cmd))
+    print('*****')
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.env)
     proc.wait()
     took = time.time() - start
 

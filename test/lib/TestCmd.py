@@ -1007,7 +1007,9 @@ class TestCmd(object):
             if not interpreter:
                 interpreter = self.interpreter
         if not type(program) in [type([]), type(())]:
-            program = [program]
+          if os.path.splitext(program)[1] == '.py':
+            interpreter = self.interpreter
+          program = [program]
         cmd = list(program)
         if interpreter:
             if not type(interpreter) in [type([]), type(())]:
@@ -1055,7 +1057,7 @@ class TestCmd(object):
         """Set the program to be used to interpret the program
         under test as a script.
         """
-        self.interpreter = interpreter
+        self.interpreter = interpreter or sys.executable
 
     def match(self, lines, matches):
         """Compare actual and expected file contents.
