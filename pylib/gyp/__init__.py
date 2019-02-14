@@ -27,6 +27,7 @@ DEBUG_GENERAL = 'general'
 DEBUG_VARIABLES = 'variables'
 DEBUG_INCLUDES = 'includes'
 
+
 def DebugOutput(mode, message, *args):
   if 'all' in gyp.debug or mode in gyp.debug:
     ctx = ('unknown', 0, 'unknown')
@@ -38,8 +39,8 @@ def DebugOutput(mode, message, *args):
       pass
     if args:
       message %= args
-    print('%s:%s:%d:%s %s' % (mode.upper(), os.path.basename(ctx[0]),
-                              ctx[1], ctx[2], message))
+    print('%s:%s:%d:%s %s' % (mode.upper(), os.path.basename(ctx[0]), ctx[1], ctx[2], message))
+
 
 def FindBuildFiles():
   extension = '.gyp'
@@ -51,9 +52,7 @@ def FindBuildFiles():
   return build_files
 
 
-def Load(build_files, format, default_variables={},
-         includes=[], depth='.', params=None, check=False,
-         circular_check=True, duplicate_basename_check=True):
+def Load(build_files, format, default_variables={}, includes=[], depth='.', params=None, check=False, circular_check=True, duplicate_basename_check=True):
   """
   Loads one or more specified build files.
   default_variables and includes will be copied before use.
@@ -125,13 +124,14 @@ def Load(build_files, format, default_variables={},
                           duplicate_basename_check, params['root_targets'])
   return [generator] + result
 
+
 def NameValueListToDict(name_value_list):
   """
   Takes an array of strings of the form 'NAME=VALUE' and creates a dictionary
   of the pairs.  If a string is simply NAME, then the value in the dictionary
   is set to True.  If VALUE can be converted to an integer, it is.
   """
-  result = { }
+  result = {}
   for item in name_value_list:
     tokens = item.split('=', 1)
     if len(tokens) == 2:
@@ -147,16 +147,19 @@ def NameValueListToDict(name_value_list):
       result[tokens[0]] = True
   return result
 
+
 def ShlexEnv(env_name):
   flags = os.environ.get(env_name, [])
   if flags:
     flags = shlex.split(flags)
   return flags
 
+
 def FormatOpt(opt, value):
   if opt.startswith('--'):
     return '%s=%s' % (opt, value)
   return opt + value
+
 
 def RegenerateAppendFlag(flag, values, predicate, env_name, options):
   """Regenerate a list of command line flags, for an option of action='append'.
@@ -180,6 +183,7 @@ def RegenerateAppendFlag(flag, values, predicate, env_name, options):
       flags.append(FormatOpt(flag, predicate(flag_value)))
   return flags
 
+
 def RegenerateFlags(options):
   """Given a parsed options object, and taking the environment variables into
   account, returns a list of flags that should regenerate an equivalent options
@@ -190,6 +194,7 @@ def RegenerateFlags(options):
   The format flag is not included, as it is assumed the calling generator will
   set that as appropriate.
   """
+
   def FixPath(path):
     path = gyp.common.FixIfRelativePath(path, options.depth)
     if not path:
@@ -209,27 +214,22 @@ def RegenerateFlags(options):
     action = metadata['action']
     env_name = metadata['env_name']
     if action == 'append':
-      flags.extend(RegenerateAppendFlag(opt, value, value_predicate,
-                                        env_name, options))
+      flags.extend(RegenerateAppendFlag(opt, value, value_predicate, env_name, options))
     elif action in ('store', None):  # None is a synonym for 'store'.
       if value:
         flags.append(FormatOpt(opt, value_predicate(value)))
       elif options.use_environment and env_name and os.environ.get(env_name):
         flags.append(FormatOpt(opt, value_predicate(os.environ.get(env_name))))
     elif action in ('store_true', 'store_false'):
-      if ((action == 'store_true' and value) or
-          (action == 'store_false' and not value)):
+      if ((action == 'store_true' and value) or (action == 'store_false' and not value)):
         flags.append(opt)
       elif options.use_environment and env_name:
-        print(('Warning: environment regeneration unimplemented '
-                             'for %s flag %r env_name %r' % (action, opt,
-                                                             env_name)),
-                                                             file=sys.stderr)
+        print('Warning: environment regeneration unimplemented for %s flag %r env_name %r' % (action, opt, env_name), file=sys.stderr)
     else:
-      print(('Warning: regeneration unimplemented for action %r '
-                           'flag %r' % (action, opt)), file=sys.stderr)
+      print('Warning: regeneration unimplemented for action %r flag %r' % (action, opt), file=sys.stderr)
 
   return flags
+
 
 class RegeneratableOptionParser(optparse.OptionParser):
   def __init__(self):
@@ -259,11 +259,11 @@ class RegeneratableOptionParser(optparse.OptionParser):
         kw['type'] = 'string'
 
       self.__regeneratable_options[dest] = {
-          'action': kw.get('action'),
-          'type': type,
-          'env_name': env_name,
-          'opt': args[0],
-        }
+        'action': kw.get('action'),
+        'type': type,
+        'env_name': env_name,
+        'opt': args[0],
+      }
 
     optparse.OptionParser.add_option(self, *args, **kw)
 
@@ -272,45 +272,24 @@ class RegeneratableOptionParser(optparse.OptionParser):
     values._regeneration_metadata = self.__regeneratable_options
     return values, args
 
+
 def gyp_main(args):
   my_name = os.path.basename(sys.argv[0])
 
   parser = RegeneratableOptionParser()
   usage = 'usage: %s [options ...] [build_file ...]'
   parser.set_usage(usage.replace('%s', '%prog'))
-  parser.add_option('--build', dest='configs', action='append',
-                    help='configuration for build after project generation')
-  parser.add_option('--check', dest='check', action='store_true',
-                    help='check format of gyp files')
-  parser.add_option('--config-dir', dest='config_dir', action='store',
-                    env_name='GYP_CONFIG_DIR', default=None,
-                    help='The location for configuration files like '
-                    'include.gypi.')
-  parser.add_option('-d', '--debug', dest='debug', metavar='DEBUGMODE',
-                    action='append', default=[], help='turn on a debugging '
-                    'mode for debugging GYP.  Supported modes are "variables", '
-                    '"includes" and "general" or "all" for all of them.')
-  parser.add_option('-D', dest='defines', action='append', metavar='VAR=VAL',
-                    env_name='GYP_DEFINES',
-                    help='sets variable VAR to value VAL')
-  parser.add_option('--depth', dest='depth', metavar='PATH', type='path',
-                    help='set DEPTH gyp variable to a relative path to PATH')
-  parser.add_option('-f', '--format', dest='formats', action='append',
-                    env_name='GYP_GENERATORS', regenerate=False,
-                    help='output formats to generate')
-  parser.add_option('-G', dest='generator_flags', action='append', default=[],
-                    metavar='FLAG=VAL', env_name='GYP_GENERATOR_FLAGS',
-                    help='sets generator flag FLAG to VAL')
-  parser.add_option('--generator-output', dest='generator_output',
-                    action='store', default=None, metavar='DIR', type='path',
-                    env_name='GYP_GENERATOR_OUTPUT',
-                    help='puts generated build files under DIR')
-  parser.add_option('--ignore-environment', dest='use_environment',
-                    action='store_false', default=True, regenerate=False,
-                    help='do not read options from environment variables')
-  parser.add_option('-I', '--include', dest='includes', action='append',
-                    metavar='INCLUDE', type='path',
-                    help='files to include in all loaded .gyp files')
+  parser.add_option('--build', dest='configs', action='append', help='configuration for build after project generation')
+  parser.add_option('--check', dest='check', action='store_true', help='check format of gyp files')
+  parser.add_option('--config-dir', dest='config_dir', action='store', env_name='GYP_CONFIG_DIR', default=None, help='The location for configuration files like include.gypi.')
+  parser.add_option('-d', '--debug', dest='debug', metavar='DEBUGMODE', action='append', default=[], help='turn on a debugging mode for debugging GYP.  Supported modes are "variables", "includes" and "general" or "all" for all of them.')
+  parser.add_option('-D', dest='defines', action='append', metavar='VAR=VAL', env_name='GYP_DEFINES', help='sets variable VAR to value VAL')
+  parser.add_option('--depth', dest='depth', metavar='PATH', type='path', help='set DEPTH gyp variable to a relative path to PATH')
+  parser.add_option('-f', '--format', dest='formats', action='append', env_name='GYP_GENERATORS', regenerate=False, help='output formats to generate')
+  parser.add_option('-G', dest='generator_flags', action='append', default=[], metavar='FLAG=VAL', env_name='GYP_GENERATOR_FLAGS', help='sets generator flag FLAG to VAL')
+  parser.add_option('--generator-output', dest='generator_output', action='store', default=None, metavar='DIR', type='path', env_name='GYP_GENERATOR_OUTPUT', help='puts generated build files under DIR')
+  parser.add_option('--ignore-environment', dest='use_environment', action='store_false', default=True, regenerate=False, help='do not read options from environment variables')
+  parser.add_option('-I', '--include', dest='includes', action='append', metavar='INCLUDE', type='path', help='files to include in all loaded .gyp files')
   # --no-circular-check disables the check for circular relationships between
   # .gyp files.  These relationships should not exist, but they've only been
   # observed to be harmful with the Xcode generator.  Chromium's .gyp files
@@ -318,19 +297,14 @@ def gyp_main(args):
   # option allows the strict behavior to be used on Macs and the lenient
   # behavior to be used elsewhere.
   # TODO(mark): Remove this option when http://crbug.com/35878 is fixed.
-  parser.add_option('--no-circular-check', dest='circular_check',
-                    action='store_false', default=True, regenerate=False,
-                    help="don't check for circular relationships between files")
+  parser.add_option('--no-circular-check', dest='circular_check', action='store_false', default=True, regenerate=False, help="don't check for circular relationships between files")
   # --no-duplicate-basename-check disables the check for duplicate basenames
   # in a static_library/shared_library project. Visual C++ 2008 generator
   # doesn't support this configuration. Libtool on Mac also generates warnings
   # when duplicate basenames are passed into Make generator on Mac.
   # TODO(yukawa): Remove this option when these legacy generators are
   # deprecated.
-  parser.add_option('--no-duplicate-basename-check',
-                    dest='duplicate_basename_check', action='store_false',
-                    default=True, regenerate=False,
-                    help="don't check for duplicate basenames")
+  parser.add_option('--no-duplicate-basename-check', dest='duplicate_basename_check', action='store_false', default=True, regenerate=False, help="don't check for duplicate basenames")
   parser.add_option('--no-parallel', action='store_true', default=False, help='Disable multiprocessing')
   parser.add_option('-S', '--suffix', dest='suffix', default='', help='suffix to add to generated files')
   parser.add_option('--toplevel-dir', dest='toplevel_dir', action='store', default=None, metavar='DIR', type='path', help='directory to use as the root of the source tree')
@@ -406,8 +380,7 @@ def gyp_main(args):
   if not build_files:
     build_files = FindBuildFiles()
   if not build_files:
-    raise GypError((usage + '\n\n%s: error: no build_file') %
-                   (my_name, my_name))
+    raise GypError((usage + '\n\n%s: error: no build_file') % (my_name, my_name))
 
   # TODO(mark): Chromium-specific hack!
   # For Chromium, the gyp "depth" variable should always be a relative path
@@ -451,8 +424,7 @@ def gyp_main(args):
     defines += options.defines
   cmdline_default_variables = NameValueListToDict(defines)
   if DEBUG_GENERAL in gyp.debug:
-    DebugOutput(DEBUG_GENERAL,
-                "cmdline_default_variables: %s", cmdline_default_variables)
+    DebugOutput(DEBUG_GENERAL, "cmdline_default_variables: %s", cmdline_default_variables)
 
   # Set up includes.
   includes = []
@@ -495,9 +467,9 @@ def gyp_main(args):
 
     # Start with the default variables from the command line.
     [generator, flat_list, targets, data] = Load(
-        build_files, format, cmdline_default_variables, includes, options.depth,
-        params, options.check, options.circular_check,
-        options.duplicate_basename_check)
+      build_files, format, cmdline_default_variables, includes, options.depth,
+      params, options.check, options.circular_check, options.duplicate_basename_check
+    )
 
     # TODO(mark): Pass |data| for now because the generator needs a list of
     # build files that came in.  In the future, maybe it should just accept
@@ -526,9 +498,11 @@ def main(args):
     sys.stderr.write("gyp: %s\n" % e)
     return 1
 
+
 # NOTE: setuptools generated console_scripts calls function with no arguments
 def script_main():
   return main(sys.argv[1:])
+
 
 if __name__ == '__main__':
   sys.exit(script_main())
