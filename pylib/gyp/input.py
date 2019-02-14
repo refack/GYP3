@@ -30,7 +30,7 @@ linkable_types = [
 ]
 
 # A list of sections that contain links to other targets.
-dependency_sections = ['dependencies', 'export_dependent_settings']
+dependency_sections = ['dependencies', 'export_dependent_settings', ]
 
 # base_path_sections is a list of sections defined by GYP that contain
 # pathnames.  The generators can provide more keys, the two lists are merged
@@ -51,6 +51,7 @@ path_sections = set()
 # in parallel mode.
 per_process_data = {}
 per_process_aux_data = {}
+
 
 def IsPathSection(section):
   # If section ends in one of the '=+?!' characters, it's applied to a section
@@ -75,6 +76,7 @@ def IsPathSection(section):
     return tail[-4:] == '_dir'
 
   return False
+
 
 # base_non_configuration_keys is a list of key names that belong in the target
 # itself and should not be propagated into its configurations.  It is merged
@@ -134,6 +136,7 @@ multiple_toolsets = False
 # }
 generator_filelist_paths = None
 
+
 def GetIncludedBuildFiles(build_file_path, aux_data, included=None):
   """Return a list of all build files included into build_file_path.
 
@@ -192,9 +195,7 @@ def CheckNode(node, keypath):
       assert isinstance(key, ast.Str)
       key = key.s
       if key in dict:
-        raise GypError("Key '" + key + "' repeated at level " +
-              repr(len(keypath) + 1) + " with key path '" +
-              '.'.join(keypath) + "'")
+        raise GypError("Key '" + key + "' repeated at level " + repr(len(keypath) + 1) + " with key path '" + '.'.join(keypath) + "'")
       kp = list(keypath)  # Make a copy of the list for descending this node.
       kp.append(key)
       dict[key] = CheckNode(value, kp)
@@ -240,8 +241,7 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
   aux_data[build_file_path] = {}
 
   # Scan for includes and merge them in.
-  if ('skip_includes' not in build_file_data or
-      not build_file_data['skip_includes']):
+  if ('skip_includes' not in build_file_data or not build_file_data['skip_includes']):
     try:
       if is_target:
         LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data, includes)
@@ -276,9 +276,7 @@ def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data, include
 
     gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Included File: '%s'", include)
 
-    MergeDicts(subdict,
-               LoadOneBuildFile(include, data, aux_data, None, False),
-               subdict_path, include)
+    MergeDicts(subdict, LoadOneBuildFile(include, data, aux_data, None, False), subdict_path, include)
 
   # Recurse into subdictionaries.
   for k, v in subdict.items():
@@ -295,6 +293,7 @@ def LoadBuildFileIncludesIntoList(sublist, sublist_path, data, aux_data):
       LoadBuildFileIncludesIntoDict(item, sublist_path, data, aux_data)
     elif type(item) is list:
       LoadBuildFileIncludesIntoList(item, sublist_path, data, aux_data)
+
 
 # Processes toolsets in all the targets. This recurses into condition entries
 # since they can contain toolsets as well.
@@ -360,8 +359,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
       return False
     data['target_build_files'].add(build_file_path)
 
-  gyp.DebugOutput(gyp.DEBUG_INCLUDES,
-                  "Loading Target Build File '%s'", build_file_path)
+  gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Target Build File '%s'", build_file_path)
 
   build_file_data = LoadOneBuildFile(build_file_path, data, aux_data, includes, True)
 
@@ -378,9 +376,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
   for included_file in included:
     # included_file is relative to the current directory, but it needs to
     # be made relative to build_file_path's directory.
-    included_relative = \
-        gyp.common.RelativePath(included_file,
-                                os.path.dirname(build_file_path))
+    included_relative = gyp.common.RelativePath(included_file, os.path.dirname(build_file_path))
     build_file_data['included_files'].append(included_relative)
 
   # Do a first round of toolsets expansion so that conditions can be defined
@@ -388,8 +384,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
   ProcessToolsetsInDict(build_file_data)
 
   # Apply "pre"/"early" variable expansions and condition evaluations.
-  ProcessVariablesAndConditionsInDict(
-      build_file_data, PHASE_EARLY, variables, build_file_path)
+  ProcessVariablesAndConditionsInDict(build_file_data, PHASE_EARLY, variables, build_file_path)
 
   # Since some toolsets might have been defined conditionally, perform
   # a second round of toolsets expansion now.
@@ -399,8 +394,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
   # targets.
   if 'target_defaults' in build_file_data:
     if 'targets' not in build_file_data:
-      raise GypError("Unable to find targets in build file %s" %
-                     build_file_path)
+      raise GypError("Unable to find targets in build file %s" % build_file_path)
 
     index = 0
     while index < len(build_file_data['targets']):
@@ -412,10 +406,8 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
       # copy with the target-specific data merged into it as the replacement
       # target dict.
       old_target_dict = build_file_data['targets'][index]
-      new_target_dict = gyp.simple_copy.deepcopy(
-        build_file_data['target_defaults'])
-      MergeDicts(new_target_dict, old_target_dict,
-                 build_file_path, build_file_path)
+      new_target_dict = gyp.simple_copy.deepcopy(build_file_data['target_defaults'])
+      MergeDicts(new_target_dict, old_target_dict, build_file_path, build_file_path)
       build_file_data['targets'][index] = new_target_dict
       index += 1
 
@@ -433,19 +425,18 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
       if 'dependencies' not in target_dict:
         continue
       for dependency in target_dict['dependencies']:
-        dependencies.append(
-            gyp.common.ResolveTarget(build_file_path, dependency, None)[0])
+        dependencies.append(gyp.common.ResolveTarget(build_file_path, dependency, None)[0])
 
   if load_dependencies:
     for dependency in dependencies:
       try:
         LoadTargetBuildFile(dependency, data, aux_data, variables, includes, depth, load_dependencies)
       except Exception as e:
-        gyp.common.ExceptionAppend(
-          e, 'while loading dependencies of %s' % build_file_path)
+        gyp.common.ExceptionAppend(e, 'while loading dependencies of %s' % build_file_path)
         raise
   else:
     return (build_file_path, dependencies)
+
 
 def CallLoadTargetBuildFile(global_flags, build_file_path, variables, includes, depth, generator_input_info):
   """Wrapper around LoadTargetBuildFile for parallel processing.
@@ -475,9 +466,7 @@ def CallLoadTargetBuildFile(global_flags, build_file_path, variables, includes, 
 
     # This gets serialized and sent back to the main process via a pipe.
     # It's handled in LoadTargetBuildFileCallback.
-    return (build_file_path,
-            build_file_data,
-            dependencies)
+    return (build_file_path, build_file_data, dependencies)
   except GypError as e:
     sys.stderr.write("gyp: %s\n" % e)
     return None
@@ -544,8 +533,10 @@ class ParallelState(object):
 # the input is something like "<(foo <(bar)) blah", then it would
 # return (1, 13), indicating the entire string except for the leading
 # "<" and trailing " blah".
-LBRACKETS= set('{[(')
+LBRACKETS = set('{[(')
 BRACKETS = {'}': '{', ']': '[', ')': '('}
+
+
 def FindEnclosingBracketGroup(input_str):
   stack = []
   start = -1
@@ -590,24 +581,24 @@ def IsStrCanonicalInt(string):
 # "<!interpreter(arguments)", "<([list])", and even "<([)" and "<(<())".
 # In the last case, the inner "<()" is captured in match['content'].
 early_variable_re = re.compile(
-    r'(?P<replace>(?P<type><(?:(?:!?@?)|\|)?)'
-    r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
-    r'\((?P<is_array>\s*\[?)'
-    r'(?P<content>.*?)(\]?)\))')
+  r'(?P<replace>(?P<type><(?:(?:!?@?)|\|)?)'
+  r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
+  r'\((?P<is_array>\s*\[?)'
+  r'(?P<content>.*?)(\]?)\))')
 
 # This matches the same as early_variable_re, but with '>' instead of '<'.
 late_variable_re = re.compile(
-    r'(?P<replace>(?P<type>>(?:(?:!?@?)|\|)?)'
-    r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
-    r'\((?P<is_array>\s*\[?)'
-    r'(?P<content>.*?)(\]?)\))')
+  r'(?P<replace>(?P<type>>(?:(?:!?@?)|\|)?)'
+  r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
+  r'\((?P<is_array>\s*\[?)'
+  r'(?P<content>.*?)(\]?)\))')
 
 # This matches the same as early_variable_re, but with '^' instead of '<'.
 latelate_variable_re = re.compile(
-    r'(?P<replace>(?P<type>[\^](?:(?:!?@?)|\|)?)'
-    r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
-    r'\((?P<is_array>\s*\[?)'
-    r'(?P<content>.*?)(\]?)\))')
+  r'(?P<replace>(?P<type>[\^](?:(?:!?@?)|\|)?)'
+  r'(?P<command_string>[-a-zA-Z0-9_.]+)?'
+  r'\((?P<is_array>\s*\[?)'
+  r'(?P<content>.*?)(\]?)\))')
 
 # Global cache of results from running commands so they don't have to be run
 # more then once.
@@ -709,8 +700,7 @@ def ExpandVariables(input, phase, variables, build_file):
       processed_variables = gyp.simple_copy.deepcopy(variables)
       ProcessListFiltersInDict(contents, processed_variables)
       # Recurse to expand variables in the contents
-      contents = ExpandVariables(contents, phase,
-                                 processed_variables, build_file)
+      contents = ExpandVariables(contents, phase, processed_variables, build_file)
     else:
       # Recurse to expand variables in the contents
       contents = ExpandVariables(contents, phase, variables, build_file)
@@ -787,9 +777,7 @@ def ExpandVariables(input, phase, variables, build_file):
       cache_key = (str(contents), build_file_dir)
       cached_value = cached_command_results.get(cache_key, None)
       if cached_value is None:
-        gyp.DebugOutput(gyp.DEBUG_VARIABLES,
-                        "Executing command '%s' in directory '%s'",
-                        contents, build_file_dir)
+        gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Executing command '%s' in directory '%s'", contents, build_file_dir)
 
         replacement = ''
 
@@ -808,15 +796,13 @@ def ExpandVariables(input, phase, variables, build_file):
             try:
               py_module = __import__(parsed_contents[0])
             except ImportError as e:
-              raise GypError("Error importing pymod_do_main"
-                             "module (%s): %s" % (parsed_contents[0], e))
+              raise GypError("Error importing pymod_do_main module (%s): %s" % (parsed_contents[0], e))
             replacement = str(py_module.DoMain(parsed_contents[1:])).rstrip()
           finally:
             os.chdir(oldwd)
           assert replacement != None
         elif command_string:
-          raise GypError("Unknown command string '%s' in '%s'." %
-                         (command_string, contents))
+          raise GypError("Unknown command string '%s' in '%s'." % (command_string, contents))
         else:
           # Fix up command with platform specific workarounds.
           contents = FixupPlatformCommand(contents)
@@ -857,8 +843,7 @@ def ExpandVariables(input, phase, variables, build_file):
           # ],
           replacement = []
         else:
-          raise GypError('Undefined variable ' + contents +
-                         ' in ' + build_file)
+          raise GypError('Undefined variable ' + contents + ' in ' + build_file)
       else:
         replacement = variables[contents]
 
@@ -899,16 +884,12 @@ def ExpandVariables(input, phase, variables, build_file):
       else:
         encoded_replacement = replacement
 
-      output = output[:replace_start] + str(encoded_replacement) + \
-               output[replace_end:]
+      output = output[:replace_start] + str(encoded_replacement) + output[replace_end:]
     # Prepare for the next match iteration.
     input_str = output
 
   if output == input:
-    gyp.DebugOutput(gyp.DEBUG_VARIABLES,
-                    "Found only identity matches on %r, avoiding infinite "
-                    "recursion.",
-                    output)
+    gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Found only identity matches on %r, avoiding infinite recursion.", output)
   else:
     # Look for more matches now that we've replaced some, to deal with
     # expanding local variables (variables defined in the same
@@ -922,8 +903,7 @@ def ExpandVariables(input, phase, variables, build_file):
       else:
         new_output = []
         for item in output:
-          new_output.append(
-              ExpandVariables(item, phase, variables, build_file))
+          new_output.append(ExpandVariables(item, phase, variables, build_file))
         output = new_output
     else:
       output = ExpandVariables(output, phase, variables, build_file)
@@ -938,9 +918,11 @@ def ExpandVariables(input, phase, variables, build_file):
 
   return output
 
+
 # The same condition is often evaluated over and over again so it
 # makes sense to cache as much as possible between evaluations.
 cached_conditions_asts = {}
+
 
 def EvalCondition(condition, conditions_key, phase, variables, build_file):
   """Returns the dict that should be used or None if the result was
@@ -950,8 +932,7 @@ def EvalCondition(condition, conditions_key, phase, variables, build_file):
   if len(condition) < 2:
     # It's possible that condition[0] won't work in which case this
     # attempt will raise its own IndexError.  That's probably fine.
-    raise GypError(conditions_key + ' ' + condition[0] +
-                   ' must be at least length 2, not ' + str(len(condition)))
+    raise GypError(conditions_key + ' ' + condition[0] + ' must be at least length 2, not ' + str(len(condition)))
 
   i = 0
   result = None
@@ -959,38 +940,31 @@ def EvalCondition(condition, conditions_key, phase, variables, build_file):
     cond_expr = condition[i]
     true_dict = condition[i + 1]
     if type(true_dict) is not dict:
-      raise GypError('{} {} must be followed by a dictionary, not {}'.format(
-        conditions_key, cond_expr, type(true_dict)))
+      raise GypError('{} {} must be followed by a dictionary, not {}'.format(conditions_key, cond_expr, type(true_dict)))
     if len(condition) > i + 2 and type(condition[i + 2]) is dict:
       false_dict = condition[i + 2]
       i = i + 3
       if i != len(condition):
-        raise GypError('{} {} has {} unexpected trailing items'.format(
-          conditions_key, cond_expr, len(condition) - i))
+        raise GypError('{} {} has {} unexpected trailing items'.format(conditions_key, cond_expr, len(condition) - i))
     else:
       false_dict = None
       i = i + 2
     if result == None:
-      result = EvalSingleCondition(
-          cond_expr, true_dict, false_dict, phase, variables, build_file)
+      result = EvalSingleCondition(cond_expr, true_dict, false_dict, phase, variables, build_file)
 
   return result
 
 
-def EvalSingleCondition(
-    cond_expr, true_dict, false_dict, phase, variables, build_file):
+def EvalSingleCondition(cond_expr, true_dict, false_dict, phase, variables, build_file):
   """Returns true_dict if cond_expr evaluates to true, and false_dict
   otherwise."""
   # Do expansions on the condition itself.  Since the conditon can naturally
   # contain variable references without needing to resort to GYP expansion
   # syntax, this is of dubious value for variables, but someone might want to
   # use a command expansion directly inside a condition.
-  cond_expr_expanded = ExpandVariables(cond_expr, phase, variables,
-                                       build_file)
+  cond_expr_expanded = ExpandVariables(cond_expr, phase, variables, build_file)
   if type(cond_expr_expanded) not in (str, int):
-    raise ValueError(
-          'Variable expansion in this context permits str and int ' + \
-            'only, found ' + cond_expr_expanded.__class__.__name__)
+    raise ValueError('Variable expansion in this context permits str and int only, found ' + cond_expr_expanded.__class__.__name__)
 
   try:
     if cond_expr_expanded in cached_conditions_asts:
@@ -1002,14 +976,10 @@ def EvalSingleCondition(
       return true_dict
     return false_dict
   except SyntaxError as e:
-    syntax_error = SyntaxError('%s while evaluating condition \'%s\' in %s '
-                               'at character %d.' %
-                               (str(e.args[0]), e.text, build_file, e.offset),
-                               e.filename, e.lineno, e.offset, e.text)
+    syntax_error = SyntaxError('%s while evaluating condition \'%s\' in %s at character %d.' % (str(e.args[0]), e.text, build_file, e.offset), e.filename, e.lineno, e.offset, e.text)
     raise syntax_error
   except NameError as e:
-    gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' %
-                               (cond_expr_expanded, build_file))
+    gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' % (cond_expr_expanded, build_file))
     raise GypError(e)
 
 
@@ -1047,14 +1017,12 @@ def ProcessConditionsInDict(the_dict, phase, variables, build_file):
   del the_dict[conditions_key]
 
   for condition in conditions_list:
-    merge_dict = EvalCondition(condition, conditions_key, phase, variables,
-                               build_file)
+    merge_dict = EvalCondition(condition, conditions_key, phase, variables, build_file)
 
     if merge_dict != None:
       # Expand variables and nested conditinals in the merge_dict before
       # merging it.
-      ProcessVariablesAndConditionsInDict(merge_dict, phase,
-                                          variables, build_file)
+      ProcessVariablesAndConditionsInDict(merge_dict, phase, variables, build_file)
 
       MergeDicts(the_dict, merge_dict, build_file, build_file)
 
@@ -1095,8 +1063,7 @@ def LoadVariablesFromVariablesDict(variables, the_dict, the_dict_key):
     variables[variable_name] = value
 
 
-def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
-                                        build_file, the_dict_key=None):
+def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in, build_file, the_dict_key=None):
   """Handle all variable and command expansion and conditional evaluation.
 
   This function is the public entry point for all variable expansions and
@@ -1122,8 +1089,7 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
     # Pass a copy of the variables dict to avoid having it be tainted.
     # Otherwise, it would have extra automatics added for everything that
     # should just be an ordinary variable in this scope.
-    ProcessVariablesAndConditionsInDict(the_dict['variables'], phase,
-                                        variables, build_file, 'variables')
+    ProcessVariablesAndConditionsInDict(the_dict['variables'], phase, variables, build_file, 'variables')
 
   LoadVariablesFromVariablesDict(variables, the_dict, the_dict_key)
 
@@ -1132,9 +1098,7 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
     if key != 'variables' and type(value) is str:
       expanded = ExpandVariables(value, phase, variables, build_file)
       if type(expanded) not in (str, int):
-        raise ValueError(
-              'Variable expansion in this context permits str and int ' + \
-              'only, found ' + expanded.__class__.__name__ + ' for ' + key)
+        raise ValueError('Variable expansion in this context permits str and int only, found ' + expanded.__class__.__name__ + ' for ' + key)
       the_dict[key] = expanded
 
   # Variable expansion may have resulted in changes to automatics.  Reload.
@@ -1193,22 +1157,18 @@ def ProcessVariablesAndConditionsInDict(the_dict, phase, variables_in,
     if type(value) is dict:
       # Pass a copy of the variables dict so that subdicts can't influence
       # parents.
-      ProcessVariablesAndConditionsInDict(value, phase, variables,
-                                          build_file, key)
+      ProcessVariablesAndConditionsInDict(value, phase, variables, build_file, key)
     elif type(value) is list:
       # The list itself can't influence the variables dict, and
       # ProcessVariablesAndConditionsInList will make copies of the variables
       # dict if it needs to pass it to something that can influence it.  No
       # copy is necessary here.
-      ProcessVariablesAndConditionsInList(value, phase, variables,
-                                          build_file)
+      ProcessVariablesAndConditionsInList(value, phase, variables, build_file)
     elif type(value) is not int:
-      raise TypeError('Unknown type ' + value.__class__.__name__ + \
-                      ' for ' + key)
+      raise TypeError('Unknown type ' + value.__class__.__name__ + ' for ' + key)
 
 
-def ProcessVariablesAndConditionsInList(the_list, phase, variables,
-                                        build_file):
+def ProcessVariablesAndConditionsInList(the_list, phase, variables, build_file):
   # Iterate using an index so that new values can be assigned into the_list.
   index = 0
   while index < len(the_list):
@@ -1224,20 +1184,16 @@ def ProcessVariablesAndConditionsInList(the_list, phase, variables,
       if type(expanded) in (str, int):
         the_list[index] = expanded
       elif type(expanded) is list:
-        the_list[index:index+1] = expanded
+        the_list[index:index + 1] = expanded
         index += len(expanded)
 
         # index now identifies the next item to examine.  Continue right now
         # without falling into the index increment below.
         continue
       else:
-        raise ValueError(
-              'Variable expansion in this context permits strings and ' + \
-              'lists only, found ' + expanded.__class__.__name__ + ' at ' + \
-              index)
+        raise ValueError('Variable expansion in this context permits strings and lists only, found ' + expanded.__class__.__name__ + ' at ' + index)
     elif type(item) is not int:
-      raise TypeError('Unknown type ' + item.__class__.__name__ + \
-                      ' at index ' + index)
+      raise TypeError('Unknown type ' + item.__class__.__name__ + ' at index ' + index)
     index = index + 1
 
 
@@ -1257,9 +1213,7 @@ def BuildTargetsDict(data):
   targets = {}
   for build_file in data['target_build_files']:
     for target in data[build_file].get('targets', []):
-      target_name = gyp.common.QualifiedTarget(build_file,
-                                               target['target_name'],
-                                               target['toolset'])
+      target_name = gyp.common.QualifiedTarget(build_file, target['target_name'], target['toolset'])
       if target_name in targets:
         raise GypError('Duplicate target definitions for ' + target_name)
       targets[target_name] = target
@@ -1278,9 +1232,7 @@ def QualifyDependencies(targets):
   similar dict.
   """
 
-  all_dependency_sections = [dep + op
-                             for dep in dependency_sections
-                             for op in ('', '!', '/')]
+  all_dependency_sections = [dep + op for dep in dependency_sections for op in ('', '!', '/')]
 
   for target, target_dict in targets.items():
     target_build_file = gyp.common.BuildFile(target)
@@ -1288,22 +1240,17 @@ def QualifyDependencies(targets):
     for dependency_key in all_dependency_sections:
       dependencies = target_dict.get(dependency_key, [])
       for index, dep in enumerate(dependencies):
-        dep_file, dep_target, dep_toolset = gyp.common.ResolveTarget(
-            target_build_file, dep, toolset)
+        dep_file, dep_target, dep_toolset = gyp.common.ResolveTarget(target_build_file, dep, toolset)
         if not multiple_toolsets:
           # Ignore toolset specification in the dependency if it is specified.
           dep_toolset = toolset
-        dependency = gyp.common.QualifiedTarget(dep_file,
-                                                dep_target,
-                                                dep_toolset)
+        dependency = gyp.common.QualifiedTarget(dep_file, dep_target, dep_toolset)
         dependencies[index] = dependency
 
         # Make sure anything appearing in a list other than "dependencies" also
         # appears in the "dependencies" list.
-        if dependency_key != 'dependencies' and \
-           dependency not in target_dict['dependencies']:
-          raise GypError('Found ' + dependency + ' in ' + dependency_key +
-                         ' of ' + target + ', but not in dependencies')
+        if dependency_key != 'dependencies' and dependency not in target_dict['dependencies']:
+          raise GypError('Found ' + dependency + ' in ' + dependency_key + ' of ' + target + ', but not in dependencies')
 
 
 def ExpandWildcardDependencies(targets, data):
@@ -1332,8 +1279,7 @@ def ExpandWildcardDependencies(targets, data):
       # because the dependencies list will be modified within the loop body.
       index = 0
       while index < len(dependencies):
-        (dependency_build_file, dependency_target, dependency_toolset) = \
-            gyp.common.ParseQualifiedTarget(dependencies[index])
+        (dependency_build_file, dependency_target, dependency_toolset) = gyp.common.ParseQualifiedTarget(dependencies[index])
         if dependency_target != '*' and dependency_toolset != '*':
           # Not a wildcard.  Keep it moving.
           index = index + 1
@@ -1342,8 +1288,7 @@ def ExpandWildcardDependencies(targets, data):
         if dependency_build_file == target_build_file:
           # It's an error for a target to depend on all other targets in
           # the same file, because a target cannot depend on itself.
-          raise GypError('Found wildcard in ' + dependency_key + ' of ' +
-                         target + ' referring to same build file')
+          raise GypError('Found wildcard in ' + dependency_key + ' of ' + target + ' referring to same build file')
 
         # Take the wildcard out and adjust the index so that the next
         # dependency in the list will be processed the next time through the
@@ -1359,16 +1304,12 @@ def ExpandWildcardDependencies(targets, data):
           if int(dependency_target_dict.get('suppress_wildcard', False)):
             continue
           dependency_target_name = dependency_target_dict['target_name']
-          if (dependency_target != '*' and
-              dependency_target != dependency_target_name):
+          if (dependency_target != '*' and dependency_target != dependency_target_name):
             continue
           dependency_target_toolset = dependency_target_dict['toolset']
-          if (dependency_toolset != '*' and
-              dependency_toolset != dependency_target_toolset):
+          if (dependency_toolset != '*' and dependency_toolset != dependency_target_toolset):
             continue
-          dependency = gyp.common.QualifiedTarget(dependency_build_file,
-                                                  dependency_target_name,
-                                                  dependency_target_toolset)
+          dependency = gyp.common.QualifiedTarget(dependency_build_file, dependency_target_name, dependency_target_toolset)
           index = index + 1
           dependencies.insert(index, dependency)
 
@@ -1420,8 +1361,7 @@ def RemoveLinkDependenciesFromNoneTargets(targets):
         for t in dependencies:
           if target_dict.get('type', None) == 'none':
             if targets[t].get('variables', {}).get('link_dependency', 0):
-              target_dict[dependency_key] = \
-                  Filter(target_dict[dependency_key], t)
+              target_dict[dependency_key] = Filter(target_dict[dependency_key], t)
 
 
 class DependencyGraphNode(object):
@@ -1476,8 +1416,7 @@ class DependencyGraphNode(object):
         # TODO: We want to check through the
         # node_dependent.dependencies list but if it's long and we
         # always start at the beginning, then we get O(n^2) behaviour.
-        for node_dependent_dependency in (sorted(node_dependent.dependencies,
-                                                 key=ExtractNodeRef)):
+        for node_dependent_dependency in (sorted(node_dependent.dependencies, key=ExtractNodeRef)):
           if not node_dependent_dependency.ref in flat_list:
             # The dependent one or more dependencies not in flat_list.  There
             # will be more chances to add it to flat_list when examining
@@ -1558,8 +1497,7 @@ class DependencyGraphNode(object):
       # dependency that exported them.  This is done to more closely match
       # the depth-first method used by DeepDependencies.
       add_index = 1
-      for imported_dependency in \
-          dependency_dict.get('export_dependent_settings', []):
+      for imported_dependency in dependency_dict.get('export_dependent_settings', []):
         if imported_dependency not in dependencies:
           dependencies.insert(index + add_index, imported_dependency)
           add_index = add_index + 1
@@ -1593,8 +1531,7 @@ class DependencyGraphNode(object):
 
     return dependencies
 
-  def _LinkDependenciesInternal(self, targets, include_shared_libraries,
-                                dependencies=None, initial=True):
+  def _LinkDependenciesInternal(self, targets, include_shared_libraries, dependencies=None, initial=True):
     """Returns an OrderedSet of dependency targets that are linked
     into this target.
 
@@ -1626,8 +1563,7 @@ class DependencyGraphNode(object):
       raise GypError("Missing 'target_name' field in target.")
 
     if 'type' not in targets[self.ref]:
-      raise GypError("Missing 'type' field in target %s" %
-                     targets[self.ref]['target_name'])
+      raise GypError("Missing 'type' field in target %s" % targets[self.ref]['target_name'])
 
     target_type = targets[self.ref]['type']
 
@@ -1641,8 +1577,7 @@ class DependencyGraphNode(object):
       return dependencies
 
     # Don't traverse 'none' targets if explicitly excluded.
-    if (target_type == 'none' and
-        not targets[self.ref].get('dependencies_traverse', True)):
+    if (target_type == 'none' and not targets[self.ref].get('dependencies_traverse', True)):
       dependencies.add(self.ref)
       return dependencies
 
@@ -1650,9 +1585,7 @@ class DependencyGraphNode(object):
     # are already fully and finally linked. Nothing else can be a link
     # dependency of them, there can only be dependencies in the sense that a
     # dependent target might run an executable or load the loadable_module.
-    if not initial and target_type in ('executable', 'loadable_module',
-                                       'mac_kernel_extension',
-                                       'windows_driver'):
+    if not initial and target_type in ('executable', 'loadable_module', 'mac_kernel_extension', 'windows_driver'):
       return dependencies
 
     # Shared libraries are already fully linked.  They should only be included
@@ -1661,8 +1594,7 @@ class DependencyGraphNode(object):
     # in |dependencies| when propagating link_settings.
     # The |include_shared_libraries| flag controls which of these two cases we
     # are handling.
-    if (not initial and target_type == 'shared_library' and
-        not include_shared_libraries):
+    if (not initial and target_type == 'shared_library' and not include_shared_libraries):
       return dependencies
 
     # The target is linkable, add it to the list of link dependencies.
@@ -1674,9 +1606,7 @@ class DependencyGraphNode(object):
         # this target linkable.  Always look at dependencies of the initial
         # target, and always look at dependencies of non-linkables.
         for dependency in self.dependencies:
-          dependency._LinkDependenciesInternal(targets,
-                                               include_shared_libraries,
-                                               dependencies, False)
+          dependency._LinkDependenciesInternal(targets, include_shared_libraries, dependencies, False)
 
     return dependencies
 
@@ -1690,8 +1620,7 @@ class DependencyGraphNode(object):
     # link_settings are propagated.  So for now, we will allow it, unless the
     # 'allow_sharedlib_linksettings_propagation' flag is explicitly set to
     # False.  Once chrome is fixed, we can remove this flag.
-    include_shared_libraries = \
-        targets[self.ref].get('allow_sharedlib_linksettings_propagation', True)
+    include_shared_libraries = targets[self.ref].get('allow_sharedlib_linksettings_propagation', True)
     return self._LinkDependenciesInternal(targets, include_shared_libraries)
 
   def DependenciesToLinkAgainst(self, targets):
@@ -1745,8 +1674,7 @@ def BuildDependencyList(targets):
     for cycle in root_node.FindCycles():
       paths = [node.ref for node in cycle]
       cycles.append('Cycle: %s' % ' -> '.join(paths))
-    raise DependencyGraphNode.CircularException(
-        'Cycles in dependency graph detected:\n' + '\n'.join(cycles))
+    raise DependencyGraphNode.CircularException('Cycles in dependency graph detected:\n' + '\n'.join(cycles))
 
   return [dependency_nodes, flat_list]
 
@@ -1769,8 +1697,7 @@ def VerifyNoGYPFileCircularDependencies(targets):
       try:
         dependency_build_file = gyp.common.BuildFile(dependency)
       except GypError as e:
-        gyp.common.ExceptionAppend(
-            e, 'while computing dependencies of .gyp file %s' % build_file)
+        gyp.common.ExceptionAppend(e, 'while computing dependencies of .gyp file %s' % build_file)
         raise
 
       if dependency_build_file == build_file:
@@ -1782,7 +1709,6 @@ def VerifyNoGYPFileCircularDependencies(targets):
       if dependency_node not in build_file_node.dependencies:
         build_file_node.dependencies.append(dependency_node)
         dependency_node.dependents.append(build_file_node)
-
 
   # Files that have no dependencies are treated as dependent on root_node.
   root_node = DependencyGraphNode(None)
@@ -1806,8 +1732,7 @@ def VerifyNoGYPFileCircularDependencies(targets):
     for cycle in root_node.FindCycles():
       paths = [node.ref for node in cycle]
       cycles.append('Cycle: %s' % ' -> '.join(paths))
-    raise DependencyGraphNode.CircularException(
-        'Cycles in .gyp file dependency graph detected:\n' + '\n'.join(cycles))
+    raise DependencyGraphNode.CircularException('Cycles in .gyp file dependency graph detected:\n' + '\n'.join(cycles))
 
 
 def DoDependentSettings(key, flat_list, targets, dependency_nodes):
@@ -1821,26 +1746,21 @@ def DoDependentSettings(key, flat_list, targets, dependency_nodes):
     if key == 'all_dependent_settings':
       dependencies = dependency_nodes[target].DeepDependencies()
     elif key == 'direct_dependent_settings':
-      dependencies = \
-          dependency_nodes[target].DirectAndImportedDependencies(targets)
+      dependencies = dependency_nodes[target].DirectAndImportedDependencies(targets)
     elif key == 'link_settings':
-      dependencies = \
-          dependency_nodes[target].DependenciesForLinkSettings(targets)
+      dependencies = dependency_nodes[target].DependenciesForLinkSettings(targets)
     else:
-      raise GypError("DoDependentSettings doesn't know how to determine "
-                      'dependencies for ' + key)
+      raise GypError("DoDependentSettings doesn't know how to determine dependencies for " + key)
 
     for dependency in dependencies:
       dependency_dict = targets[dependency]
       if not key in dependency_dict:
         continue
       dependency_build_file = gyp.common.BuildFile(dependency)
-      MergeDicts(target_dict, dependency_dict[key],
-                 build_file, dependency_build_file)
+      MergeDicts(target_dict, dependency_dict[key], build_file, dependency_build_file)
 
 
-def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
-                                    sort_dependencies):
+def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes, sort_dependencies):
   # Recompute target "dependencies" properties.  For each static library
   # target, remove "dependencies" entries referring to other static libraries,
   # unless the dependency has the "hard_dependency" attribute set.  For each
@@ -1855,8 +1775,7 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
       if not 'dependencies' in target_dict:
         continue
 
-      target_dict['dependencies_original'] = target_dict.get(
-          'dependencies', [])[:]
+      target_dict['dependencies_original'] = target_dict.get('dependencies', [])[:]
 
       # A static library should not depend on another static library unless
       # the dependency relationship is "hard," which should only be done when
@@ -1866,8 +1785,7 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
       # the non-hard dependency can safely be removed, but the exported hard
       # dependency must be added to the target to keep the same dependency
       # ordering.
-      dependencies = \
-          dependency_nodes[target].DirectAndImportedDependencies(targets)
+      dependencies = dependency_nodes[target].DirectAndImportedDependencies(targets)
       index = 0
       while index < len(dependencies):
         dependency = dependencies[index]
@@ -1877,8 +1795,8 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
         # non-static library dependency that isn't a direct dependency.
         if (dependency_dict['type'] == 'static_library' and \
             not dependency_dict.get('hard_dependency', False)) or \
-           (dependency_dict['type'] != 'static_library' and \
-            not dependency in target_dict['dependencies']):
+            (dependency_dict['type'] != 'static_library' and \
+             not dependency in target_dict['dependencies']):
           # Take the dependency out of the list, and don't increment index
           # because the next dependency to analyze will shift into the index
           # formerly occupied by the one being removed.
@@ -1898,8 +1816,7 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
       # target.  Add them to the dependencies list if they're not already
       # present.
 
-      link_dependencies = \
-          dependency_nodes[target].DependenciesToLinkAgainst(targets)
+      link_dependencies = dependency_nodes[target].DependenciesToLinkAgainst(targets)
       for dependency in link_dependencies:
         if dependency == target:
           continue
@@ -1912,8 +1829,7 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
       # Note: flat_list is already sorted in the order from dependencies to
       # dependents.
       if sort_dependencies and 'dependencies' in target_dict:
-        target_dict['dependencies'] = [dep for dep in reversed(flat_list)
-                                       if dep in target_dict['dependencies']]
+        target_dict['dependencies'] = [dep for dep in reversed(flat_list) if dep in target_dict['dependencies']]
 
 
 # Initialize this here to speed up MakePathRelative.
@@ -1944,13 +1860,11 @@ def MakePathRelative(to_file, fro_file, item):
     # TODO(dglazkov) The backslash/forward-slash replacement at the end is a
     # temporary measure. This should really be addressed by keeping all paths
     # in POSIX until actual project generation.
-    ret = os.path.normpath(os.path.join(
-        gyp.common.RelativePath(os.path.dirname(fro_file),
-                                os.path.dirname(to_file)),
-                                item)).replace('\\', '/')
+    ret = os.path.normpath(os.path.join(gyp.common.RelativePath(os.path.dirname(fro_file), os.path.dirname(to_file)), item)).replace('\\', '/')
     if item[-1] == '/':
       ret += '/'
     return ret
+
 
 def MergeLists(to, fro, to_file, fro_file, is_paths=False, append=True):
   # Python documentation recommends objects which do not support hash
@@ -1997,9 +1911,7 @@ def MergeLists(to, fro, to_file, fro_file, is_paths=False, append=True):
       to_item = []
       MergeLists(to_item, item, to_file, fro_file)
     else:
-      raise TypeError(
-          'Attempt to merge list item of unsupported type ' + \
-          item.__class__.__name__)
+      raise TypeError('Attempt to merge list item of unsupported type ' + item.__class__.__name__)
 
     if append:
       # If appending a singleton that's already in the list, don't append.
@@ -2041,10 +1953,7 @@ def MergeDicts(to, fro, to_file, fro_file):
         bad_merge = True
 
       if bad_merge:
-        raise TypeError(
-            'Attempt to merge dict value of type ' + v.__class__.__name__ + \
-            ' into incompatible type ' + to[k].__class__.__name__ + \
-            ' for key ' + k)
+        raise TypeError('Attempt to merge dict value of type ' + v.__class__.__name__ + ' into incompatible type ' + to[k].__class__.__name__ + ' for key ' + k)
     if type(v) in (str, int):
       # Overwrite the existing value, if any.  Cheap and easy.
       is_path = IsPathSection(k)
@@ -2092,8 +2001,7 @@ def MergeDicts(to, fro, to_file, fro_file):
       # and prepend are the only policies that can coexist.
       for list_incompatible in lists_incompatible:
         if list_incompatible in fro:
-          raise GypError('Incompatible list policies ' + k + ' and ' +
-                         list_incompatible)
+          raise GypError('Incompatible list policies ' + k + ' and ' + list_incompatible)
 
       if list_base in to:
         if ext == '?':
@@ -2103,10 +2011,7 @@ def MergeDicts(to, fro, to_file, fro_file):
         elif type(to[list_base]) is not list:
           # This may not have been checked above if merging in a list with an
           # extension character.
-          raise TypeError(
-              'Attempt to merge dict value of type ' + v.__class__.__name__ + \
-              ' into incompatible type ' + to[list_base].__class__.__name__ + \
-              ' for key ' + list_base + '(' + k + ')')
+          raise TypeError('Attempt to merge dict value of type ' + v.__class__.__name__ + ' into incompatible type ' + to[list_base].__class__.__name__ + ' for key ' + list_base + '(' + k + ')')
       else:
         to[list_base] = []
 
@@ -2118,13 +2023,10 @@ def MergeDicts(to, fro, to_file, fro_file):
       is_paths = IsPathSection(list_base)
       MergeLists(to[list_base], v, to_file, fro_file, is_paths, append)
     else:
-      raise TypeError(
-          'Attempt to merge dict value of unsupported type ' + \
-          v.__class__.__name__ + ' for key ' + k)
+      raise TypeError('Attempt to merge dict value of unsupported type ' + v.__class__.__name__ + ' for key ' + k)
 
 
-def MergeConfigWithInheritance(new_configuration_dict, build_file,
-                               target_dict, configuration, visited):
+def MergeConfigWithInheritance(new_configuration_dict, build_file, target_dict, configuration, visited):
   # Skip if previously visted.
   if configuration in visited:
     return
@@ -2134,12 +2036,10 @@ def MergeConfigWithInheritance(new_configuration_dict, build_file,
 
   # Merge in parents.
   for parent in configuration_dict.get('inherit_from', []):
-    MergeConfigWithInheritance(new_configuration_dict, build_file,
-                               target_dict, parent, visited + [configuration])
+    MergeConfigWithInheritance(new_configuration_dict, build_file, target_dict, parent, visited + [configuration])
 
   # Merge it into the new config.
-  MergeDicts(new_configuration_dict, configuration_dict,
-             build_file, build_file)
+  MergeDicts(new_configuration_dict, configuration_dict, build_file, build_file)
 
   # Drop abstract.
   if 'abstract' in new_configuration_dict:
@@ -2161,8 +2061,7 @@ def SetUpConfigurations(target, target_dict):
   if not 'configurations' in target_dict:
     target_dict['configurations'] = {'Default': {}}
   if not 'default_configuration' in target_dict:
-    concrete = [i for (i, config) in target_dict['configurations'].items()
-                if not config.get('abstract')]
+    concrete = [i for (i, config) in target_dict['configurations'].items() if not config.get('abstract')]
     target_dict['default_configuration'] = sorted(concrete)[0]
 
   merged_configurations = {}
@@ -2185,20 +2084,17 @@ def SetUpConfigurations(target, target_dict):
         new_configuration_dict[key] = gyp.simple_copy.deepcopy(target_val)
 
     # Merge in configuration (with all its parents first).
-    MergeConfigWithInheritance(new_configuration_dict, build_file,
-                               target_dict, configuration, [])
+    MergeConfigWithInheritance(new_configuration_dict, build_file, target_dict, configuration, [])
 
     merged_configurations[configuration] = new_configuration_dict
 
   # Put the new configurations back into the target dict as a configuration.
   for configuration in merged_configurations.keys():
-    target_dict['configurations'][configuration] = (
-        merged_configurations[configuration])
+    target_dict['configurations'][configuration] = merged_configurations[configuration]
 
   # Now drop all the abstract ones.
   configs = target_dict['configurations']
-  target_dict['configurations'] = \
-      {k: v for k, v in configs.items() if not v.get('abstract')}
+  target_dict['configurations'] = {k: v for k, v in configs.items() if not v.get('abstract')}
 
   # Now that all of the target's configurations have been built, go through
   # the target dict's keys and remove everything that's been moved into a
@@ -2220,9 +2116,7 @@ def SetUpConfigurations(target, target_dict):
     configuration_dict = target_dict['configurations'][configuration]
     for key in configuration_dict.keys():
       if key in invalid_configuration_keys:
-        raise GypError('%s not allowed in the %s configuration, found in '
-                       'target %s' % (key, configuration, target))
-
+        raise GypError('%s not allowed in the %s configuration, found in target %s' % (key, configuration, target))
 
 
 def ProcessListFiltersInDict(name, the_dict):
@@ -2264,8 +2158,7 @@ def ProcessListFiltersInDict(name, the_dict):
       continue
 
     if type(value) is not list:
-      raise ValueError(name + ' key ' + key + ' must be list, not ' + \
-                       value.__class__.__name__)
+      raise ValueError(name + ' key ' + key + ' must be list, not ' + value.__class__.__name__)
 
     list_key = key[:-1]
     if list_key not in the_dict:
@@ -2277,10 +2170,7 @@ def ProcessListFiltersInDict(name, the_dict):
 
     if type(the_dict[list_key]) is not list:
       value = the_dict[list_key]
-      raise ValueError(name + ' key ' + list_key + \
-                       ' must be list, not ' + \
-                       value.__class__.__name__ + ' when applying ' + \
-                       {'!': 'exclusion', '/': 'regex'}[operation])
+      raise ValueError(name + ' key ' + list_key + ' must be list, not ' + value.__class__.__name__ + ' when applying ' + {'!': 'exclusion', '/': 'regex'}[operation])
 
     if not list_key in lists:
       lists.append(list_key)
@@ -2329,8 +2219,7 @@ def ProcessListFiltersInDict(name, the_dict):
           action_value = 1
         else:
           # This is an action that doesn't make any sense.
-          raise ValueError('Unrecognized action ' + action + ' in ' + name + \
-                           ' key ' + regex_key)
+          raise ValueError('Unrecognized action ' + action + ' in ' + name + ' key ' + regex_key)
 
         for index, list_item in enumerate(the_list):
           if list_actions[index] == action_value:
@@ -2352,9 +2241,7 @@ def ProcessListFiltersInDict(name, the_dict):
     # to be created.
     excluded_key = list_key + '_excluded'
     if excluded_key in the_dict:
-      raise GypError(name + ' key ' + excluded_key +
-                     ' must not be present prior '
-                     ' to applying exclusion/regex filters for ' + list_key)
+      raise GypError(name + ' key ' + excluded_key + ' must not be present prior to applying exclusion/regex filters for ' + list_key)
 
     excluded_list = []
 
@@ -2399,23 +2286,15 @@ def ValidateTargetType(target, target_dict):
 
   Raises an exception on error.
   """
-  VALID_TARGET_TYPES = ('executable', 'loadable_module',
-                        'static_library', 'shared_library',
-                        'mac_kernel_extension', 'none', 'windows_driver')
+  VALID_TARGET_TYPES = ('executable', 'loadable_module', 'static_library', 'shared_library', 'mac_kernel_extension', 'none', 'windows_driver')
   target_type = target_dict.get('type', None)
   if target_type not in VALID_TARGET_TYPES:
-    raise GypError("Target %s has an invalid target type '%s'.  "
-                   "Must be one of %s." %
-                   (target, target_type, '/'.join(VALID_TARGET_TYPES)))
-  if (target_dict.get('standalone_static_library', 0) and
-      not target_type == 'static_library'):
-    raise GypError('Target %s has type %s but standalone_static_library flag is'
-                   ' only valid for static_library type.' % (target,
-                                                             target_type))
+    raise GypError("Target %s has an invalid target type '%s'. Must be one of %s." % (target, target_type, '/'.join(VALID_TARGET_TYPES)))
+  if (target_dict.get('standalone_static_library', 0) and not target_type == 'static_library'):
+    raise GypError('Target %s has type %s but standalone_static_library flag is only valid for static_library type.' % (target, target_type))
 
 
-def ValidateSourcesInTarget(target, target_dict, build_file,
-                            duplicate_basename_check):
+def ValidateSourcesInTarget(target, target_dict, build_file, duplicate_basename_check):
   if not duplicate_basename_check:
     return
   if target_dict.get('type', None) != 'static_library':
@@ -2424,8 +2303,7 @@ def ValidateSourcesInTarget(target, target_dict, build_file,
   basenames = {}
   for source in sources:
     name, ext = os.path.splitext(source)
-    is_compiled_file = ext in [
-        '.c', '.cc', '.cpp', '.cxx', '.m', '.mm', '.s', '.S']
+    is_compiled_file = ext in ['.c', '.cc', '.cpp', '.cxx', '.m', '.mm', '.s', '.S']
     if not is_compiled_file:
       continue
     basename = os.path.basename(name)  # Don't include extension.
@@ -2437,9 +2315,7 @@ def ValidateSourcesInTarget(target, target_dict, build_file,
       error += '  %s: %s\n' % (basename, ' '.join(files))
 
   if error:
-    print('static library %s has several files with the same basename:\n' %
-          target + error + 'libtool on Mac cannot handle that. Use '
-          '--no-duplicate-basename-check to disable this validation.')
+    print('static library %s has several files with the same basename:\n' % target + error + 'libtool on Mac cannot handle that. Use --no-duplicate-basename-check to disable this validation.')
     raise GypError('Duplicate basenames in sources section, see list above')
 
 
@@ -2464,27 +2340,20 @@ def ValidateRulesInTarget(target, target_dict, extra_sources_for_rules):
     # Make sure that there's no conflict among rule names and extensions.
     rule_name = rule['rule_name']
     if rule_name in rule_names:
-      raise GypError('rule %s exists in duplicate, target %s' %
-                     (rule_name, target))
+      raise GypError('rule %s exists in duplicate, target %s' % (rule_name, target))
     rule_names[rule_name] = rule
 
     rule_extension = rule['extension']
     if rule_extension.startswith('.'):
       rule_extension = rule_extension[1:]
     if rule_extension in rule_extensions:
-      raise GypError(('extension %s associated with multiple rules, ' +
-                      'target %s rules %s and %s') %
-                     (rule_extension, target,
-                      rule_extensions[rule_extension]['rule_name'],
-                      rule_name))
+      raise GypError(('extension %s associated with multiple rules, ' + 'target %s rules %s and %s') % (rule_extension, target, rule_extensions[rule_extension]['rule_name'], rule_name))
     rule_extensions[rule_extension] = rule
 
     # Make sure rule_sources isn't already there.  It's going to be
     # created below if needed.
     if 'rule_sources' in rule:
-      raise GypError(
-            'rule_sources must not exist in input, target %s rule %s' %
-            (target, rule_name))
+      raise GypError('rule_sources must not exist in input, target %s rule %s' % (target, rule_name))
 
     rule_sources = []
     source_keys = ['sources']
@@ -2507,28 +2376,18 @@ def ValidateRunAsInTarget(target, target_dict, build_file):
   if not run_as:
     return
   if type(run_as) is not dict:
-    raise GypError("The 'run_as' in target %s from file %s should be a "
-                   "dictionary." %
-                   (target_name, build_file))
+    raise GypError("The 'run_as' in target %s from file %s should be a dictionary." % (target_name, build_file))
   action = run_as.get('action')
   if not action:
-    raise GypError("The 'run_as' in target %s from file %s must have an "
-                   "'action' section." %
-                   (target_name, build_file))
+    raise GypError("The 'run_as' in target %s from file %s must have an 'action' section." % (target_name, build_file))
   if type(action) is not list:
-    raise GypError("The 'action' for 'run_as' in target %s from file %s "
-                   "must be a list." %
-                   (target_name, build_file))
+    raise GypError("The 'action' for 'run_as' in target %s from file %s must be a list." % (target_name, build_file))
   working_directory = run_as.get('working_directory')
   if working_directory and type(working_directory) is not str:
-    raise GypError("The 'working_directory' for 'run_as' in target %s "
-                   "in file %s should be a string." %
-                   (target_name, build_file))
+    raise GypError("The 'working_directory' for 'run_as' in target %s in file %s should be a string." % (target_name, build_file))
   environment = run_as.get('environment')
   if environment and type(environment) is not dict:
-    raise GypError("The 'environment' for 'run_as' in target %s "
-                   "in file %s should be a dictionary." %
-                   (target_name, build_file))
+    raise GypError("The 'environment' for 'run_as' in target %s in file %s should be a dictionary." % (target_name, build_file))
 
 
 def ValidateActionsInTarget(target, target_dict, build_file):
@@ -2538,9 +2397,7 @@ def ValidateActionsInTarget(target, target_dict, build_file):
   for action in actions:
     action_name = action.get('action_name')
     if not action_name:
-      raise GypError("Anonymous action in target %s.  "
-                     "An action must have an 'action_name' field." %
-                     target_name)
+      raise GypError("Anonymous action in target %s. An action must have an 'action_name' field." % target_name)
     inputs = action.get('inputs', None)
     if inputs is None:
       raise GypError('Action in target %s has no inputs.' % target_name)
@@ -2580,8 +2437,7 @@ def TurnIntIntoStrInList(the_list):
       TurnIntIntoStrInList(item)
 
 
-def PruneUnwantedTargets(targets, flat_list, dependency_nodes, root_targets,
-                         data):
+def PruneUnwantedTargets(targets, flat_list, dependency_nodes, root_targets, data):
   """Return only the targets that are deep dependencies of |root_targets|."""
   qualified_root_targets = []
   for target in root_targets:
@@ -2605,9 +2461,7 @@ def PruneUnwantedTargets(targets, flat_list, dependency_nodes, root_targets,
       continue
     new_targets = []
     for target in data[build_file]['targets']:
-      qualified_name = gyp.common.QualifiedTarget(build_file,
-                                                  target['target_name'],
-                                                  target['toolset'])
+      qualified_name = gyp.common.QualifiedTarget(build_file, target['target_name'], target['toolset'])
       if qualified_name in wanted_targets:
         new_targets.append(target)
     data[build_file]['targets'] = new_targets
@@ -2654,15 +2508,13 @@ def SetGeneratorGlobals(generator_input_info):
   non_configuration_keys.extend(generator_input_info['non_configuration_keys'])
 
   global multiple_toolsets
-  multiple_toolsets = generator_input_info[
-      'generator_supports_multiple_toolsets']
+  multiple_toolsets = generator_input_info['generator_supports_multiple_toolsets']
 
   global generator_filelist_paths
   generator_filelist_paths = generator_input_info['generator_filelist_paths']
 
 
-def Load(build_files, variables, includes, depth, generator_input_info,
-         circular_check, duplicate_basename_check, root_targets):
+def Load(build_files, variables, includes, depth, generator_input_info, circular_check, duplicate_basename_check, root_targets):
   SetGeneratorGlobals(generator_input_info)
   # A generator can have other lists (in addition to sources) be processed
   # for rules.
@@ -2731,16 +2583,13 @@ def Load(build_files, variables, includes, depth, generator_input_info,
   if root_targets:
     # Remove, from |targets| and |flat_list|, the targets that are not deep
     # dependencies of the targets specified in |root_targets|.
-    targets, flat_list = PruneUnwantedTargets(
-        targets, flat_list, dependency_nodes, root_targets, data)
+    targets, flat_list = PruneUnwantedTargets(targets, flat_list, dependency_nodes, root_targets, data)
 
   # Check that no two targets in the same directory have the same name.
   VerifyNoCollidingTargets(flat_list)
 
   # Handle dependent settings of various types.
-  for settings_type in ['all_dependent_settings',
-                        'direct_dependent_settings',
-                        'link_settings']:
+  for settings_type in ['all_dependent_settings', 'direct_dependent_settings', 'link_settings']:
     DoDependentSettings(settings_type, flat_list, targets, dependency_nodes)
 
     # Take out the dependent settings now that they've been published to all
@@ -2754,15 +2603,13 @@ def Load(build_files, variables, includes, depth, generator_input_info,
   # that they need so that their link steps will be correct.
   gii = generator_input_info
   if gii['generator_wants_static_library_dependencies_adjusted']:
-    AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes,
-                                    gii['generator_wants_sorted_dependencies'])
+    AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes, gii['generator_wants_sorted_dependencies'])
 
   # Apply "post"/"late"/"target" variable expansions and condition evaluations.
   for target in flat_list:
     target_dict = targets[target]
     build_file = gyp.common.BuildFile(target)
-    ProcessVariablesAndConditionsInDict(
-        target_dict, PHASE_LATE, variables, build_file)
+    ProcessVariablesAndConditionsInDict(target_dict, PHASE_LATE, variables, build_file)
 
   # Move everything that can go into a "configurations" section into one.
   for target in flat_list:
@@ -2778,8 +2625,7 @@ def Load(build_files, variables, includes, depth, generator_input_info,
   for target in flat_list:
     target_dict = targets[target]
     build_file = gyp.common.BuildFile(target)
-    ProcessVariablesAndConditionsInDict(
-        target_dict, PHASE_LATELATE, variables, build_file)
+    ProcessVariablesAndConditionsInDict(target_dict, PHASE_LATELATE, variables, build_file)
 
   # Make sure that the rules make sense, and build up rule_sources lists as
   # needed.  Not all generators will need to use the rule_sources lists, but
@@ -2789,8 +2635,7 @@ def Load(build_files, variables, includes, depth, generator_input_info,
     target_dict = targets[target]
     build_file = gyp.common.BuildFile(target)
     ValidateTargetType(target, target_dict)
-    ValidateSourcesInTarget(target, target_dict, build_file,
-                            duplicate_basename_check)
+    ValidateSourcesInTarget(target, target_dict, build_file, duplicate_basename_check)
     ValidateRulesInTarget(target, target_dict, extra_sources_for_rules)
     ValidateRunAsInTarget(target, target_dict, build_file)
     ValidateActionsInTarget(target, target_dict, build_file)
