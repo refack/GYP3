@@ -16,10 +16,7 @@ import sys
 import traceback
 from gyp.common import GypError
 
-try:
-  # basestring was removed in python3.
-  basestring
-except NameError:
+if not 'basestring' in __builtins__:
   basestring = str
 
 # Default debug modes for GYP
@@ -113,28 +110,19 @@ def Load(build_files, format, default_variables={},
   # so we can default things and the generators only have to provide what
   # they need.
   generator_input_info = {
-    'non_configuration_keys':
-        getattr(generator, 'generator_additional_non_configuration_keys', []),
-    'path_sections':
-        getattr(generator, 'generator_additional_path_sections', []),
-    'extra_sources_for_rules':
-        getattr(generator, 'generator_extra_sources_for_rules', []),
-    'generator_supports_multiple_toolsets':
-        getattr(generator, 'generator_supports_multiple_toolsets', False),
-    'generator_wants_static_library_dependencies_adjusted':
-        getattr(generator,
-                'generator_wants_static_library_dependencies_adjusted', True),
-    'generator_wants_sorted_dependencies':
-        getattr(generator, 'generator_wants_sorted_dependencies', False),
-    'generator_filelist_paths':
-        getattr(generator, 'generator_filelist_paths', None),
+    'non_configuration_keys': getattr(generator, 'generator_additional_non_configuration_keys', []),
+    'path_sections': getattr(generator, 'generator_additional_path_sections', []),
+    'extra_sources_for_rules': getattr(generator, 'generator_extra_sources_for_rules', []),
+    'generator_supports_multiple_toolsets': getattr(generator, 'generator_supports_multiple_toolsets', False),
+    'generator_wants_static_library_dependencies_adjusted': getattr(generator, 'generator_wants_static_library_dependencies_adjusted', True),
+    'generator_wants_sorted_dependencies': getattr(generator, 'generator_wants_sorted_dependencies', False),
+    'generator_filelist_paths': getattr(generator, 'generator_filelist_paths', None),
   }
 
   # Process the input specific to this generator.
   result = gyp.input.Load(build_files, default_variables, includes[:],
-                          depth, generator_input_info, check, circular_check,
-                          duplicate_basename_check,
-                          params['parallel'], params['root_targets'])
+                          depth, generator_input_info, circular_check,
+                          duplicate_basename_check, params['root_targets'])
   return [generator] + result
 
 def NameValueListToDict(name_value_list):
@@ -343,16 +331,10 @@ def gyp_main(args):
                     dest='duplicate_basename_check', action='store_false',
                     default=True, regenerate=False,
                     help="don't check for duplicate basenames")
-  parser.add_option('--no-parallel', action='store_true', default=False,
-                    help='Disable multiprocessing')
-  parser.add_option('-S', '--suffix', dest='suffix', default='',
-                    help='suffix to add to generated files')
-  parser.add_option('--toplevel-dir', dest='toplevel_dir', action='store',
-                    default=None, metavar='DIR', type='path',
-                    help='directory to use as the root of the source tree')
-  parser.add_option('-R', '--root-target', dest='root_targets',
-                    action='append', metavar='TARGET',
-                    help='include only TARGET and its deep dependencies')
+  parser.add_option('--no-parallel', action='store_true', default=False, help='Disable multiprocessing')
+  parser.add_option('-S', '--suffix', dest='suffix', default='', help='suffix to add to generated files')
+  parser.add_option('--toplevel-dir', dest='toplevel_dir', action='store', default=None, metavar='DIR', type='path', help='directory to use as the root of the source tree')
+  parser.add_option('-R', '--root-target', dest='root_targets', action='append', metavar='TARGET', help='include only TARGET and its deep dependencies')
 
   options, build_files_arg = parser.parse_args(args)
   build_files = build_files_arg
@@ -406,8 +388,6 @@ def gyp_main(args):
     g_o = os.environ.get('GYP_GENERATOR_OUTPUT')
     if g_o:
       options.generator_output = g_o
-
-  options.parallel = not options.no_parallel
 
   for mode in options.debug:
     gyp.debug[mode] = 1
@@ -510,7 +490,6 @@ def gyp_main(args):
               'build_files_arg': build_files_arg,
               'gyp_binary': sys.argv[0],
               'home_dot_gyp': home_dot_gyp,
-              'parallel': options.parallel,
               'root_targets': options.root_targets,
               'target_arch': cmdline_default_variables.get('target_arch', '')}
 

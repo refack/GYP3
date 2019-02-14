@@ -433,22 +433,19 @@ class TestCommon(TestCmd):
             expect = ''
             if status != 0:
                 expect = " (expected %s)" % str(status)
-            print("%s returned %s%s" % (self.program, str(_status(self)),
-                                        expect))
+            print("%s returned %s%s" % (self.program, str(_status(self)), expect))
             print(self.banner('STDOUT '))
             print(actual_stdout)
             print(self.banner('STDERR '))
             print(actual_stderr)
             self.fail_test()
-        if not expected_stdout is None and not match(actual_stdout,
-                                                     expected_stdout):
+        if not expected_stdout is None and not match(actual_stdout, expected_stdout):
             self.diff(expected_stdout, actual_stdout, 'STDOUT ')
             if actual_stderr:
                 print(self.banner('STDERR '))
                 print(actual_stderr)
             self.fail_test()
-        if not expected_stderr is None and not match(actual_stderr,
-                                                     expected_stderr):
+        if not expected_stderr is None and not match(actual_stderr, expected_stderr):
             print(self.banner('STDOUT '))
             print(actual_stdout)
             self.diff(expected_stderr, actual_stderr, 'STDERR ')

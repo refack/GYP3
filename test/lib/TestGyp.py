@@ -11,7 +11,6 @@ import collections
 import errno
 import itertools
 import os
-import pprint
 import re
 import shutil
 import subprocess
@@ -119,7 +118,6 @@ class TestGypBase(TestCommon.TestCommon):
         else:
           gyp = 'gyp'
     self.gyp = os.path.abspath(gyp)
-    self.no_parallel = False
 
     self.formats = [self.format]
 
@@ -310,8 +308,6 @@ class TestGypBase(TestCommon.TestCommon):
     run_args = ['--depth='+depth]
     run_args.extend(['--format='+f for f in self.formats])
     run_args.append(gyp_file)
-    if self.no_parallel:
-      run_args += ['--no-parallel']
     # TODO: if extra_args contains a '--build' flag
     # we really want that to only apply to the last format (self.format).
     run_args.extend(self.extra_args)
@@ -423,11 +419,6 @@ class TestGypGypd(TestGypBase):
   internal data structure as pretty-printed Python).
   """
   format = 'gypd'
-  def __init__(self, gyp=None, *args, **kw):
-    super(TestGypGypd, self).__init__(*args, **kw)
-    # gypd implies the use of 'golden' files, so parallelizing conflicts as it
-    # causes ordering changes.
-    self.no_parallel = True
 
 
 class TestGypCustom(TestGypBase):
