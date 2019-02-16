@@ -40,6 +40,10 @@ matrix:
       <<: *windows-setup-steps
       script: py -m pipenv run -v test -f msvs
 
+    - name: "Windows: test with make-mock on Python 3.7"
+      <<: *windows-setup-steps
+      script: py -m pipenv run -v test -f make-mock
+
     - name: "lint with Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps

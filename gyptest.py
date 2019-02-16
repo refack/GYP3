@@ -161,14 +161,15 @@ class Runner(object):
 
     tests = [(t, f) for t in self.tests for f in self.formats]
     for i, (test, fmt) in enumerate(tests, 1):
-      print('# %s %s' % (test, fmt))
+      if self.verbose:
+        print('# %s %s' % (test, fmt))
       res, took, stdout, stderr = self.run_test(test, fmt)
       print(res % (i, test + ' ' + fmt))
       print('  ---')
       print('  duration_ms: %.3f' % took)
       if len(stdout):
         print('  stdout: |-\n%s' % stdout)
-      if len(stderr):
+      if len(stderr) and stderr != 'NO RESULT':
         print('  stderr: |-\n%s' % stderr)
       print('  ...')
 
@@ -179,18 +180,29 @@ class Runner(object):
     self.env['TESTGYP_FORMAT'] = fmt
 
     start = time.time()
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env)
-    err_lines = []
-    for l in proc.stderr:
-      l = l.decode('utf8').strip()
-      print("# %s" % l)
-      err_lines.append(l)
-    stderr = '\n'.join(err_lines)
+    proc = subprocess.Popen(cmd, bufsize=2**20, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env, universal_newlines=True)
+    if self.verbose:
+      err_lines = []
+      for l in proc.stderr:
+        l = l.strip()
+        print("# %s" % l, file=sys.stderr)
+        err_lines.append(l)
+      stderr = '\n'.join(err_lines)
+      print("# top pre", file=sys.stderr)
+      proc.wait()
+      print("# top post", file=sys.stderr)
+      took = time.time() - start
+      stdout = proc.stdout.read().strip()
+    else:
+      while proc.poll() is None:
+        try:
+          proc.wait(10)
+        except:
+          print("# wait 10 more", file=sys.stderr)
+      took = time.time() - start
+      stdout = proc.stdout.read().strip()
+      stderr = proc.stderr.read().strip()
 
-    proc.wait()
-    took = time.time() - start
-
-    stdout = proc.stdout.read().decode('utf8').strip()
 
     if proc.returncode == 2:
       res = 'not ok %d # skip %s'
