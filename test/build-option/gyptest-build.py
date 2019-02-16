@@ -13,7 +13,7 @@ import TestGyp
 
 test = TestGyp.TestGyp(workdir='workarea_default')
 
-if test.format in ['xcode-ninja', 'mock-make']:
+if test.format in ['xcode-ninja', 'make-mock']:
   # The xcode-ninja generator doesn't support --build
   # cf. https://code.google.com/p/gyp/issues/detail?id=453
   test.skip_test()
