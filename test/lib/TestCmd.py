@@ -29,8 +29,7 @@ There are a bunch of keyword arguments available at instantiation:
                            subdir = 'subdir',
                            verbose = Boolean,
                            match = default_match_function,
-                           diff = default_diff_function,
-                           combine = Boolean)
+                           diff = default_diff_function)
 
 There are a bunch of methods that let you do different things:
 
@@ -562,7 +561,7 @@ else:
   except AttributeError:  fcntl.F_SETFL = 4
 
 
-class Popen(subprocess.Popen):
+class Popen_maybe(subprocess.Popen):
   def recv(self, maxsize=None):
     return self._recv('stdout', maxsize)
 
@@ -667,7 +666,7 @@ class Popen(subprocess.Popen):
       finally:
         if not conn.closed and not flags is None:
           fcntl.fcntl(conn, fcntl.F_SETFL, flags)
-
+Popen = subprocess.Popen
 
 disconnect_message = "Other end disconnected!"
 
@@ -709,7 +708,7 @@ class TestCmd(object):
   """
 
   def __init__(self, description=None, program=None, interpreter=None, workdir=None, subdir=None, verbose=None,
-               match=None, diff=None, combine=0, universal_newlines=1):
+               match=None, diff=None, universal_newlines=True):
     self._cwd = os.getcwd()
     self.description_set(description)
     self.program_set(program)
@@ -720,7 +719,6 @@ class TestCmd(object):
       except ValueError:
         verbose = 0
     self.verbose_set(verbose)
-    self.combine = combine
     self.universal_newlines = universal_newlines
     if match is not None:
       self.match_function = match
@@ -1015,16 +1013,11 @@ class TestCmd(object):
     if stdin is not None:
       stdin = subprocess.PIPE
 
-    combine = kw.get('combine', self.combine)
-    if combine:
-      stderr_value = subprocess.STDOUT
-    else:
-      stderr_value = subprocess.PIPE
-
     return Popen(cmd,
+                 bufsize=2**20,
                  stdin=stdin,
                  stdout=subprocess.PIPE,
-                 stderr=stderr_value,
+                 stderr=subprocess.PIPE,
                  universal_newlines=universal_newlines)
 
   def finish(self, popen, **kw):
@@ -1057,6 +1050,7 @@ class TestCmd(object):
     The specified program will have the original directory
     prepended unless it is enclosed in a [list].
     """
+    oldcwd = ''
     if chdir:
       oldcwd = os.getcwd()
       if not os.path.isabs(chdir):
@@ -1064,42 +1058,36 @@ class TestCmd(object):
       if self.verbose:
         sys.stderr.write("chdir(" + chdir + ")\n")
       os.chdir(chdir)
-    p = self.start(program,
+
+    with_stdin = PIPE if stdin else None
+    with self.start(program,
                    interpreter,
                    arguments,
                    universal_newlines,
-                   stdin=stdin)
-    if stdin:
-      if is_List(stdin):
-        for line in stdin:
-          p.stdin.write(line)
-      else:
-        p.stdin.write(stdin)
-      p.stdin.close()
+                   stdin=with_stdin) as p:
+      if stdin:
+        if hasattr(stdin, '__iter__'):
+          for line in stdin:
+            p.stdin.write(line)
+        else:
+          p.stdin.write(stdin)
 
-    out = p.stdout.read()
-    if p.stderr is None:
-      err = ''
-    else:
-      err = p.stderr.read()
-    try:
-      close_output = p.close_output
-    except AttributeError:
-      p.stdout.close()
-      if not p.stderr is None:
-        p.stderr.close()
-    else:
-      close_output()
+      while p.poll() is None:
+        try:
+          p.wait(2)
+        except:
+          print("# wait 5 more", file=sys.stderr)
+      self.status = p.returncode
+      out = p.stdout.read()
+      err = '' if p.stderr is None else p.stderr.read()
 
+    # end with p
     self._stdout.append(out)
     self._stderr.append(err)
 
-    self.status = p.wait()
-    if not self.status:
-      self.status = 0
-
-    if chdir:
+    if oldcwd:
       os.chdir(oldcwd)
+
     if self.verbose >= 2:
       write = sys.stdout.write
       write('============ STATUS: %d\n' % self.status)

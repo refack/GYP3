@@ -471,8 +471,7 @@ class TestCommon(TestCmd):
                 arguments = options + " " + arguments
 
         try:
-            return TestCmd.start(self, program, interpreter, arguments,
-                    universal_newlines, **kw)
+            return TestCmd.start(self, program, interpreter, arguments, universal_newlines, **kw)
         except KeyboardInterrupt:
             raise
         except Exception as e:

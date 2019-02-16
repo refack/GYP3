@@ -311,8 +311,7 @@ class TestGypBase(TestCommon.TestCommon):
     # Default xcode_ninja_target_pattern to ^.*$ to fix xcode-ninja tests
     xcode_ninja_target_pattern = kw.pop('xcode_ninja_target_pattern', '.*')
     if self is TestGypXcodeNinja:
-      run_args.extend(
-        ['-G', 'xcode_ninja_target_pattern=%s' % xcode_ninja_target_pattern])
+      run_args.extend(['-G', 'xcode_ninja_target_pattern=%s' % xcode_ninja_target_pattern])
     run_args.extend(args)
     return self.run(program=self.gyp, arguments=run_args, **kw)
 

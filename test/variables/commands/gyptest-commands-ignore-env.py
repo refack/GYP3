@@ -25,11 +25,9 @@ os.environ['GYP_GENERATOR_OUTPUT'] = 'somedir'
 expect = test.read('commands.gyp.ignore-env.stdout').replace('\r\n', '\n')
 
 stdout, stderr = test.run_gyp('commands.gyp', '--debug', 'variables', '--ignore-environment')
-if not (TestGyp.match_modulo_line_numbers(expect, stdout)):
-  test.diff(expect, stdout, 'commands.gyp ')
-  print("TODO: fix compare for Python 3")
-  if sys.version_info.major == 2:
-    test.fail_test()
+if sys.version_info.major == 2:
+  if not (TestGyp.match_modulo_line_numbers(expect, stdout)):
+    test.diff(expect, stdout, 'commands.gyp ')
 
 
 # Verify the commands.gypd against the checked-in expected contents.
@@ -40,14 +38,12 @@ if not (TestGyp.match_modulo_line_numbers(expect, stdout)):
 # workspace on a network-mounted file system.  Consequently, we
 # massage the Windows line endings ('\r\n') in the output to the
 # checked-in UNIX endings ('\n').
-
-contents = test.read('commands.gypd').replace('\r', '')
-expect = test.read('commands.gypd.golden').replace('\r', '')
-if not test.match(contents, expect):
-  print("Unexpected contents of `commands.gypd'")
-  test.diff(expect, contents, 'commands.gypd ')
-  print("TODO: fix compare for Python 3")
-  if sys.version_info.major == 2:
-    test.fail_test()
-
-test.pass_test()
+if sys.version_info.major == 2:
+  contents = test.read('commands.gypd').replace('\r', '')
+  expect = test.read('commands.gypd.golden').replace('\r', '')
+  if not test.match(contents, expect):
+    print("Unexpected contents of `commands.gypd'")
+    test.diff(expect, contents, 'commands.gypd ')
+  test.pass_test()
+else:
+  test.skip_test("fix compare for Python 3")
