@@ -165,7 +165,7 @@ class Runner(object):
       res, took, stdout, stderr = self.run_test(test, fmt)
       print(res % (i, test + ' ' + fmt))
       print('  ---')
-      print('  duration_ms: %f' % took)
+      print('  duration_ms: %.3f' % took)
       if len(stdout):
         print('  stdout: |-\n%s' % stdout)
       if len(stderr):
