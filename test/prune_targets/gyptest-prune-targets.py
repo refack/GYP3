@@ -12,7 +12,7 @@ import TestGyp
 
 test = TestGyp.TestGyp()
 # The xcode-ninja generator has its own logic for which targets to include
-if test.format == 'xcode-ninja':
+if test.format in ['xcode-ninja', 'make-mock']:
   test.skip_test()
 
 build_error_code = {

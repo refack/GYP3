@@ -113,10 +113,7 @@ class TestGypBase(TestCommon.TestCommon):
     if not gyp:
       gyp = os.environ.get('TESTGYP_GYP')
       if not gyp:
-        if sys.platform == 'win32':
-          gyp = 'gyp_main.py'
-        else:
-          gyp = 'gyp'
+        gyp = 'gyp_main.py'
     self.gyp = os.path.abspath(gyp)
 
     self.formats = [self.format]
@@ -330,7 +327,7 @@ class TestGypBase(TestCommon.TestCommon):
     """
     if 'SYMROOT' in kw:
       del kw['SYMROOT']
-    super(TestGypBase, self).run(*args, **kw)
+    return super(TestGypBase, self).run(*args, **kw)
 
   def set_configuration(self, configuration):
     """
@@ -617,6 +614,13 @@ class TestGypMake(TestGypBase):
       result.append(subdir)
     result.append(self.built_file_basename(name, type, **kw))
     return self.workpath(*result)
+
+class TestGypMakeMock(TestGypMake):
+  format = 'make-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  def build(self, gyp_file, target=None, **kw):
+    exit(0)
 
 
 def ConvertToCygpath(path):
@@ -1217,6 +1221,7 @@ format_class_list = [
   TestGypGypd,
   TestGypCMake,
   TestGypMake,
+  TestGypMakeMock,
   TestGypMSVS,
   TestGypMSVSNinja,
   TestGypNinja,

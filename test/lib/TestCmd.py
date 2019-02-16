@@ -333,14 +333,8 @@ def _caller(tblist, skip):
         if file[-10:] == "TestCmd.py":
                 break
         arr = [(file, line, name, text)] + arr
-    atfrom = "at"
     for file, line, name, text in arr[skip:]:
-        if name in ("?", "<module>"):
-            name = ""
-        else:
-            name = " (" + name + ")"
-        string = string + ("%s line %d of %s%s\n" % (atfrom, line, file, name))
-        atfrom = "\tfrom"
+        string = string + ("%s:%d (%s)\n" % (os.path.normpath(file), line, name))
     return string
 
 def fail_test(self = None, condition = 1, function = None, skip = 0):
@@ -356,17 +350,19 @@ def fail_test(self = None, condition = 1, function = None, skip = 0):
         function()
     of = ""
     desc = ""
-    sep = " "
+    sep = ""
     if not self is None:
         if self.program:
             of = " of " + self.program
-            sep = "\n\t"
+            sep = "\n"
         if self.description:
             desc = " [" + self.description + "]"
-            sep = "\n\t"
+            sep = "\n"
 
     at = _caller(traceback.extract_stack(), skip)
-    sys.stderr.write("FAILED test" + of + desc + sep + at)
+    sys.stderr.flush()
+    sys.stderr.write("FAILED test:\n" + of + desc + sep + at)
+    sys.stderr.flush()
 
     sys.exit(1)
 

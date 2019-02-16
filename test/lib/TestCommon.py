@@ -450,6 +450,8 @@ class TestCommon(TestCmd):
             print(actual_stdout)
             self.diff(expected_stderr, actual_stderr, 'STDERR ')
             self.fail_test()
+        return actual_stdout, actual_stderr
+
 
     def start(self, program = None,
                     interpreter = None,
@@ -545,8 +547,8 @@ class TestCommon(TestCmd):
         kw['arguments'] = arguments
         match = kw.pop('match', self.match)
         TestCmd.run(self, **kw)
-        self._complete(self.stdout(), stdout,
-                       self.stderr(), stderr, status, match)
+        return self._complete(self.stdout(), stdout,
+                              self.stderr(), stderr, status, match)
 
     def skip_test(self, message="Skipping test.\n"):
         """Skips a test.
