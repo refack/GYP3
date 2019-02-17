@@ -130,15 +130,17 @@ class TestGypBase(TestCommon.TestCommon):
     kw['workdir'] = mk_temp_dir(kw.get('workdir'))
 
     kw_formats = kw.pop('formats', [])
-
-    super(TestGypBase, self).__init__(**kw)
-
-    self.origin_cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
-    self.extra_args = sys.argv[1:]
+    origin_cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
 
     if not gyp:
       gyp = os.environ.get('TESTGYP_GYP', 'gyp_main.py')
-    self.gyp = os.path.abspath(gyp)
+    gyp = os.path.abspath(gyp)
+
+    super(TestGypBase, self).__init__(**kw)
+
+    self.extra_args = sys.argv[1:]
+    self.origin_cwd=origin_cwd
+    self.gyp = gyp
 
     self.formats = [self.format]
 
@@ -152,7 +154,7 @@ class TestGypBase(TestCommon.TestCommon):
       msg = 'Invalid test for %r format; skipping test.\n'
       self.skip_test(msg % self.format)
 
-    self.copy_test_configuration(self.origin_cwd, self.workdir)
+    self.dir_fixture(self.origin_cwd)
     self.set_configuration(None)
 
     # Set $HOME so that gyp doesn't read the user's actual
@@ -165,6 +167,14 @@ class TestGypBase(TestCommon.TestCommon):
     # Override the user's language settings, which could
     # otherwise make the output vary from what is expected.
     os.environ['LC_ALL'] = 'C'
+
+  def _complete(self, actual_stdout, expected_stdout, actual_stderr, expected_stderr, status, match):
+    if match.__name__ == 'match_modulo_line_numbers':
+      if actual_stdout:
+        actual_stdout = remove_debug_line_numbers(actual_stdout)
+      if expected_stdout:
+        expected_stdout = remove_debug_line_numbers(expected_stdout)
+    return super(TestGypBase, self)._complete(actual_stdout, expected_stdout, actual_stderr, expected_stderr, status, match)
 
   def built_file_must_exist(self, name, type=None, **kw):
     """
@@ -199,52 +209,6 @@ class TestGypBase(TestCommon.TestCommon):
     """
     return self.must_not_contain(self.built_file_path(name, **kw), contents)
 
-  def copy_test_configuration(self, source_dir, dest_dir):
-    """
-    Copies the test configuration from the specified source_dir
-    (the directory in which the test script lives) to the
-    specified dest_dir (a temporary working directory).
-
-    This ignores all files and directories that begin with
-    the string 'gyptest', and all '.svn' subdirectories.
-    """
-    for root, dirs, files in os.walk(source_dir):
-      if '.svn' in dirs:
-        dirs.remove('.svn')
-      dirs = [ d for d in dirs if not d.startswith('gyptest') ]
-      files = [ f for f in files if not f.startswith('gyptest') ]
-      for dirname in dirs:
-        source = os.path.join(root, dirname)
-        destination = source.replace(source_dir, dest_dir)
-        os.mkdir(destination)
-        if sys.platform != 'win32':
-          shutil.copystat(source, destination)
-      for filename in files:
-        source = os.path.join(root, filename)
-        destination = source.replace(source_dir, dest_dir)
-        shutil.copy2(source, destination)
-
-    # The gyp tests are run with HOME pointing to |dest_dir| to provide an
-    # hermetic environment. Symlink login.keychain and the 'Provisioning
-    # Profiles' folder to allow codesign to access to the data required for
-    # signing binaries.
-    if sys.platform == 'darwin':
-      old_keychain = GetDefaultKeychainPath()
-      old_provisioning_profiles = os.path.join(
-          os.environ['HOME'], 'Library', 'MobileDevice',
-          'Provisioning Profiles')
-
-      new_keychain = os.path.join(dest_dir, 'Library', 'Keychains')
-      MakeDirs(new_keychain)
-      os.symlink(old_keychain, os.path.join(new_keychain, 'login.keychain'))
-
-      if os.path.exists(old_provisioning_profiles):
-        new_provisioning_profiles = os.path.join(
-            dest_dir, 'Library', 'MobileDevice')
-        MakeDirs(new_provisioning_profiles)
-        os.symlink(old_provisioning_profiles,
-            os.path.join(new_provisioning_profiles, 'Provisioning Profiles'))
-
   def initialize_build_tool(self):
     """
     Initializes the .build_tool attribute.
@@ -272,18 +236,21 @@ class TestGypBase(TestCommon.TestCommon):
     if mode[0] != 'r':
       raise ValueError("mode must begin with 'r'")
     kw = {
-      'file': file,
       'mode': mode,
     }
-    if 'b' not in mode:
-      kw['encoding'] = encoding
-    if IS_PY3:
-      kw['newline'] = newline
+    if IS_PY3 and 'b' not in mode:
+        kw['encoding'] = encoding
+        kw['newline'] = newline
     elif newline:
       kw['encoding'] += 'U'
 
-    with open(**kw) as f:
-      return f.read()
+    with open(file, **kw) as f:
+      ret = f.read()
+
+    if not IS_PY3 and 'b' not in mode:
+      ret = ret.encode(encoding)
+
+    return ret
 
   def relocate(self, source, destination):
     """
@@ -321,6 +288,8 @@ class TestGypBase(TestCommon.TestCommon):
     """
     Runs gyp against the specified gyp_file with the specified args.
     """
+    if kw.pop('ignore_line_numbers', False):
+      kw.setdefault('match', match_modulo_line_numbers)
 
     # TODO:  --depth=. works around Chromium-specific tree climbing.
     depth = kw.pop('depth', '.')
@@ -338,20 +307,7 @@ class TestGypBase(TestCommon.TestCommon):
       run_args.extend(['-G', 'xcode_ninja_target_pattern=%s' % xcode_ninja_target_pattern])
 
     run_args.extend(args)
-    return self.run(program=self.gyp, arguments=run_args, **kw)
-
-  def run(self, *args, **kw):
-    """
-    Executes a program by calling the superclass .run() method.
-
-    This exists to provide a common place to filter out keyword
-    arguments implemented in this layer, without having to update
-    the tool-specific subclasses or clutter the tests themselves
-    with platform-specific code.
-    """
-    if 'SYMROOT' in kw:
-      del kw['SYMROOT']
-    return super(TestGypBase, self).run(*args, **kw)
+    return self.run(program=self.gyp, interpreter=self.interpreter, arguments=run_args, **kw)
 
   def set_configuration(self, configuration):
     """

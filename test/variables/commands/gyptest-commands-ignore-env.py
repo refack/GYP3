@@ -24,7 +24,7 @@ os.environ['GYP_GENERATOR_OUTPUT'] = 'somedir'
 
 expect = test.read('commands.gyp.ignore-env.stdout')
 
-stdout, stderr = test.run_gyp('commands.gyp', '--debug', 'variables', '--ignore-environment', stdout=expect, ignore_line_numbers=True)
+test.run_gyp('commands.gyp', '--debug', 'variables', '--ignore-environment', stdout=expect, ignore_line_numbers=True)
 
 # Verify the commands.gypd against the checked-in expected contents.
 #
