@@ -135,6 +135,8 @@ if sys.platform == 'win32':
     lib_suffix   = '.lib'
     dll_prefix   = ''
     dll_suffix   = '.dll'
+    module_prefix = ''
+    module_suffix = '.dll'
 elif sys.platform == 'cygwin':
     exe_suffix   = '.exe'
     obj_suffix   = '.o'
@@ -144,6 +146,8 @@ elif sys.platform == 'cygwin':
     lib_suffix   = '.a'
     dll_prefix   = 'cyg'
     dll_suffix   = '.dll'
+    module_prefix = ''
+    module_suffix = '.dll'
 elif sys.platform.find('irix') != -1:
     exe_suffix   = ''
     obj_suffix   = '.o'
@@ -153,6 +157,8 @@ elif sys.platform.find('irix') != -1:
     lib_suffix   = '.a'
     dll_prefix   = 'lib'
     dll_suffix   = '.so'
+    module_prefix = 'lib'
+    module_suffix = '.so'
 elif sys.platform.find('darwin') != -1:
     exe_suffix   = ''
     obj_suffix   = '.o'
@@ -162,6 +168,8 @@ elif sys.platform.find('darwin') != -1:
     lib_suffix   = '.a'
     dll_prefix   = 'lib'
     dll_suffix   = '.dylib'
+    module_prefix = ''
+    module_suffix = '.so'
 elif sys.platform.find('sunos') != -1:
     exe_suffix   = ''
     obj_suffix   = '.o'
@@ -171,6 +179,8 @@ elif sys.platform.find('sunos') != -1:
     lib_suffix   = '.a'
     dll_prefix   = 'lib'
     dll_suffix   = '.so'
+    module_prefix = ''
+    module_suffix = '.so'
 else:
     exe_suffix   = ''
     obj_suffix   = '.o'
@@ -180,6 +190,8 @@ else:
     lib_suffix   = '.a'
     dll_prefix   = 'lib'
     dll_suffix   = '.so'
+    module_prefix = 'lib'
+    module_suffix = '.so'
 
 def is_List(e):
     return isinstance(e, (list, UserList))
