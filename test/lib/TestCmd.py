@@ -1060,26 +1060,26 @@ class TestCmd(object):
       os.chdir(chdir)
 
     with_stdin = PIPE if stdin else None
-    with self.start(program,
+    p = self.start(program,
                    interpreter,
                    arguments,
                    universal_newlines,
-                   stdin=with_stdin) as p:
-      if stdin:
-        if hasattr(stdin, '__iter__'):
-          for line in stdin:
-            p.stdin.write(line)
-        else:
-          p.stdin.write(stdin)
+                   stdin=with_stdin)
+    if stdin:
+      if hasattr(stdin, '__iter__'):
+        for line in stdin:
+          p.stdin.write(line)
+      else:
+        p.stdin.write(stdin)
 
-      while p.poll() is None:
-        try:
-          p.wait(2)
-        except:
-          print("# wait 5 more", file=sys.stderr)
-      self.status = p.returncode
-      out = p.stdout.read()
-      err = '' if p.stderr is None else p.stderr.read()
+    while p.poll() is None:
+      try:
+        p.wait(2)
+      except:
+        print("# wait 5 more", file=sys.stderr)
+    self.status = p.returncode
+    out = p.stdout.read()
+    err = '' if p.stderr is None else p.stderr.read()
 
     # end with p
     self._stdout.append(out)

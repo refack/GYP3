@@ -634,9 +634,6 @@ def ExpandVariables(input, phase, variables, build_file):
     assert False
 
   input_str = str(input)
-  if IsStrCanonicalInt(input_str):
-    return int(input_str)
-
   # Do a quick scan to determine if an expensive regex search is warranted.
   if expansion_symbol not in input_str:
     return input_str

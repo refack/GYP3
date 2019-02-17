@@ -197,7 +197,7 @@ class Runner(object):
       while proc.poll() is None:
         try:
           proc.wait(10)
-        except:
+        except Exception as e:
           print("# wait 10 more", file=sys.stderr)
       took = time.time() - start
       stdout = proc.stdout.read().strip()
