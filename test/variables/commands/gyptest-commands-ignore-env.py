@@ -24,11 +24,7 @@ os.environ['GYP_GENERATOR_OUTPUT'] = 'somedir'
 
 expect = test.read('commands.gyp.ignore-env.stdout').replace('\r\n', '\n')
 
-stdout, stderr = test.run_gyp('commands.gyp', '--debug', 'variables', '--ignore-environment')
-if sys.version_info.major == 2:
-  if not (TestGyp.match_modulo_line_numbers(expect, stdout)):
-    test.diff(expect, stdout, 'commands.gyp ')
-
+stdout, stderr = test.run_gyp('commands.gyp', '--debug', 'variables', '--ignore-environment', stdout=expect, ignore_line_numbers=True)
 
 # Verify the commands.gypd against the checked-in expected contents.
 #

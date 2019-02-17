@@ -15,9 +15,6 @@ import TestGyp
 
 test = TestGyp.TestGyp(format='gypd')
 
-if sys.version_info.major == 3:
-  test.skip_test("fix compare for gypd on Python 3")
-
 expect = test.read('commands.gyp.stdout').replace('\r', '')
 
 test.run_gyp('commands.gyp',

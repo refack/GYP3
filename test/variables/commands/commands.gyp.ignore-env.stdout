@@ -74,7 +74,7 @@ VARIABLES:input.py:964:ExpandVariables Found output ' 10', recursing.
 VARIABLES:input.py:724:ExpandVariables Matches: {'content': 'zero_int', 'is_array': '', 'replace': '<(zero_int)', 'type': '<', 'command_string': None}
 VARIABLES:input.py:964:ExpandVariables Found output '0', recursing.
 VARIABLES:input.py:724:ExpandVariables Matches: {'content': 'check_list_int', 'is_array': '', 'replace': '<@(check_list_int)', 'type': '<@', 'command_string': None}
-VARIABLES:input.py:964:ExpandVariables Found output [7, 8, 9], recursing.
+VARIABLES:input.py:964:ExpandVariables Found output [7, '8', 9], recursing.
 VARIABLES:input.py:724:ExpandVariables Matches: {'content': 'python test.py', 'is_array': '', 'replace': '<!@(python test.py)', 'type': '<!@', 'command_string': None}
 VARIABLES:input.py:889:ExpandVariables Had cache value for command 'python test.py' in directory 'None'
 VARIABLES:input.py:964:ExpandVariables Found output ['samplepathfoo.cpp'], recursing.

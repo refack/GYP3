@@ -102,10 +102,6 @@ import os
 import os.path
 import stat
 import sys
-try:
-    from UserList import UserList
-except ImportError:
-    from collections import UserList
 
 from TestCmd import *
 from TestCmd import __all__
@@ -154,7 +150,7 @@ elif sys.platform.find('irix') != -1:
     dll_prefix    = 'lib'
     dll_suffix    = '.so'
     module_prefix = 'lib'
-    module_prefix = '.so'
+    module_suffix = '.so'
 elif sys.platform.find('darwin') != -1:
     exe_suffix    = ''
     obj_suffix    = '.o'
@@ -190,8 +186,7 @@ else:
     module_suffix = '.so'
 
 def is_List(e):
-    return type(e) is list \
-        or isinstance(e, UserList)
+    return type(e) is list
 
 def is_writable(f):
     mode = os.stat(f)[stat.ST_MODE]
@@ -218,6 +213,26 @@ def _failed(self, status = 0):
 
 def _status(self):
     return self.status
+
+def remove_debug_line_numbers(contents):
+  """Function to remove the line numbers from the debug output
+  of gyp and thus reduce the extreme fragility of the stdout
+  comparison tests.
+  """
+  lines = contents.splitlines()
+  # split each line on first 4 ":"
+  lines = [l.split(":", 3) for l in lines]
+  # join each line back together while ignoring the
+  # 3rd column which is the line number
+  lines = [l[-1] for l in lines if len(l) > 3]
+  matches = [eval(l.split(':', 1)[1]) for l in lines if l.startswith('ExpandVariables Matches')]
+  matches = sorted([
+    ' '.join(["%s=%s" % (k, d[k]) for k in sorted(d.keys())])
+    for d in matches
+  ])
+  found_output = sorted([l for l in lines if l.startswith('ExpandVariables Found output')])
+  return '\n'.join(matches + found_output)
+
 
 class TestCommon(TestCmd):
 
@@ -439,7 +454,11 @@ class TestCommon(TestCmd):
             print(self.banner('STDERR '))
             print(actual_stderr)
             self.fail_test()
-        if not expected_stdout is None and not match(actual_stdout, expected_stdout):
+        if not expected_stdout is None:
+          if match.__name__ == 'match_modulo_line_numbers':
+            actual_stdout = remove_debug_line_numbers(actual_stdout)
+            expected_stdout = remove_debug_line_numbers(expected_stdout)
+          if not match(actual_stdout, expected_stdout):
             self.diff(expected_stdout, actual_stdout, 'STDOUT ')
             if actual_stderr:
                 print(self.banner('STDERR '))

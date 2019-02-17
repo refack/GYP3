@@ -254,13 +254,11 @@ def is_List(e):
   return type(e) is list
 
 
-if 'basestring' in __builtins__:
-  def is_String(e):
-    # noinspection PyUnresolvedReferences
-    return isinstance(e, basestring)
-else:
-  def is_String(e):
-    return isinstance(e, str)
+if 'basestring' not in __builtins__:
+  basestring = str
+
+def is_String(e):
+  return isinstance(e, basestring)
 
 tempfile.template = 'testcmd.'
 if os.name in ('posix', 'nt'):
@@ -872,21 +870,12 @@ class TestCmd(object):
     """
     self.description = description
 
-  try:
-    difflib
-  except NameError:
-    def diff(self, a, b, name, *args, **kw):
-      print(self.banner('Expected %s' % name))
-      print(a)
-      print(self.banner('Actual %s' % name))
-      print(b)
-  else:
-    def diff(self, a, b, name, *args, **kw):
-      print(self.banner(name))
-      args = (a.splitlines(), b.splitlines()) + args
-      lines = self.diff_function(*args, **kw)
-      for l in lines:
-        print(l)
+  def diff(self, a, b, name, *args, **kw):
+    print(self.banner(name))
+    args = (a.splitlines(), b.splitlines()) + args
+    lines = self.diff_function(*args, **kw)
+    for l in lines:
+      print(l)
 
   def fail_test(self, condition=1, function=None, skip=0):
     """Cause the test to fail.
