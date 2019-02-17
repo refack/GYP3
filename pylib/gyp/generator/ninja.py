@@ -707,7 +707,7 @@ class NinjaWriter(object):
         outputs = [self.GypPathToNinja(o, env) for o in outputs]
         if self.flavor == 'win':
           # WriteNewNinjaRule uses unique_name for creating an rsp file on win.
-          extra_bindings.append(('unique_name', hashlib.md5(outputs[0]).hexdigest()))
+          extra_bindings.append(('unique_name', hashlib.md5(outputs[0].encode('utf-8')).hexdigest()))
 
         self.ninja.build(outputs, rule_name, self.GypPathToNinja(source), implicit=inputs, order_only=prebuild, variables=extra_bindings)
 

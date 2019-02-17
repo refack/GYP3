@@ -634,9 +634,6 @@ def ExpandVariables(input, phase, variables, build_file):
     assert False
 
   input_str = str(input)
-  if IsStrCanonicalInt(input_str):
-    return int(input_str)
-
   # Do a quick scan to determine if an expensive regex search is warranted.
   if expansion_symbol not in input_str:
     return input_str
@@ -1384,22 +1381,21 @@ class DependencyGraphNode(object):
   def __repr__(self):
     return '<DependencyGraphNode: %r>' % self.ref
 
-  def FlattenToList(self):
+  def __lt__(self, other):
+    return self.ref < other.ref
+
+  def FlattenToList_NoCycles(self, nodes):
     # flat_list is the sorted list of dependencies - actually, the list items
     # are the "ref" attributes of DependencyGraphNodes.  Every target will
     # appear in flat_list after all of its dependencies, and before all of its
     # dependents.
     flat_list = OrderedSet()
 
-    def ExtractNodeRef(node):
-      """Extracts the object that the node represents from the given node."""
-      return node.ref
-
     # in_degree_zeros is the list of DependencyGraphNodes that have no
     # dependencies not in flat_list.  Initially, it is a copy of the children
     # of this node, because when the graph was built, nodes with no
     # dependencies were made implicit dependents of the root node.
-    in_degree_zeros = sorted(self.dependents[:], key=ExtractNodeRef)
+    in_degree_zeros = sorted(self.dependents[:])
 
     while in_degree_zeros:
       # Nodes in in_degree_zeros have no dependencies not in flat_list, so they
@@ -1411,12 +1407,12 @@ class DependencyGraphNode(object):
 
       # Look at dependents of the node just added to flat_list.  Some of them
       # may now belong in in_degree_zeros.
-      for node_dependent in sorted(node.dependents, key=ExtractNodeRef):
+      for node_dependent in sorted(node.dependents):
         is_in_degree_zero = True
         # TODO: We want to check through the
         # node_dependent.dependencies list but if it's long and we
         # always start at the beginning, then we get O(n^2) behaviour.
-        for node_dependent_dependency in (sorted(node_dependent.dependencies, key=ExtractNodeRef)):
+        for node_dependent_dependency in sorted(node_dependent.dependencies):
           if not node_dependent_dependency.ref in flat_list:
             # The dependent one or more dependencies not in flat_list.  There
             # will be more chances to add it to flat_list when examining
@@ -1431,6 +1427,21 @@ class DependencyGraphNode(object):
           # iteration of the outer loop.
           in_degree_zeros += [node_dependent]
 
+    if len(flat_list) != len(nodes) and len(nodes) != 0:
+      # If there's anything left unvisited, there must be a circular dependency (cycle).
+      if not self.dependents:
+        # If all files have dependencies, add the first file as a dependent
+        # of root_node so that the cycle can be discovered from root_node.
+        first_node = nodes.popitem()[1]
+        first_node.dependencies.append(self)
+        self.dependents.append(first_node)
+
+      cycles = []
+      for cycle in self.FindCycles():
+        paths = [node.ref for node in cycle]
+        cycles.append('Cycle: %s' % ' -> '.join(paths))
+      raise DependencyGraphNode.CircularException('Cycles in dependency graph detected:\n' + '\n'.join(cycles))
+
     return list(flat_list)
 
   def FindCycles(self):
@@ -1438,7 +1449,7 @@ class DependencyGraphNode(object):
     Returns a list of cycles in the graph, where each cycle is its own list.
     """
     results = []
-    visited = set()
+    visited = OrderedSet()
 
     def Visit(node, path):
       for child in node.dependents:
@@ -1633,13 +1644,12 @@ class DependencyGraphNode(object):
 def BuildDependencyList(targets):
   # Create a DependencyGraphNode for each target.  Put it into a dict for easy
   # access.
-  dependency_nodes = {}
-  for target, spec in targets.items():
+  dependency_nodes = OrderedDict()
+  for target in targets.keys():
     if target not in dependency_nodes:
       dependency_nodes[target] = DependencyGraphNode(target)
 
-  # Set up the dependency links.  Targets that have no dependencies are treated
-  # as dependent on root_node.
+  # Set up the dependency links.  Targets that have no dependencies are treated as dependent on root_node.
   root_node = DependencyGraphNode(None)
   for target, spec in targets.items():
     target_node = dependency_nodes[target]
@@ -1652,37 +1662,18 @@ def BuildDependencyList(targets):
       for dependency in dependencies:
         dependency_node = dependency_nodes.get(dependency)
         if not dependency_node:
-          raise GypError("Dependency '%s' not found while "
-                         "trying to load target %s" % (dependency, target))
+          raise GypError("Dependency '%s' not found while trying to load target %s" % (dependency, target))
         target_node.dependencies.append(dependency_node)
         dependency_node.dependents.append(target_node)
 
-  flat_list = root_node.FlattenToList()
-
-  # If there's anything left unvisited, there must be a circular dependency
-  # (cycle).
-  if len(flat_list) != len(targets):
-    if not root_node.dependents:
-      # If all targets have dependencies, add the first target as a dependent
-      # of root_node so that the cycle can be discovered from root_node.
-      target = next(iter(targets))
-      target_node = dependency_nodes[target]
-      target_node.dependencies.append(root_node)
-      root_node.dependents.append(target_node)
-
-    cycles = []
-    for cycle in root_node.FindCycles():
-      paths = [node.ref for node in cycle]
-      cycles.append('Cycle: %s' % ' -> '.join(paths))
-    raise DependencyGraphNode.CircularException('Cycles in dependency graph detected:\n' + '\n'.join(cycles))
-
-  return [dependency_nodes, flat_list]
+  flat_list = root_node.FlattenToList_NoCycles(dependency_nodes)
+  return [dict(dependency_nodes), flat_list]
 
 
 def VerifyNoGYPFileCircularDependencies(targets):
   # Create a DependencyGraphNode for each gyp file containing a target.  Put
   # it into a dict for easy access.
-  dependency_nodes = {}
+  dependency_nodes = OrderedDict()
   for target in targets.keys():
     build_file = gyp.common.BuildFile(target)
     if not build_file in dependency_nodes:
@@ -1717,22 +1708,7 @@ def VerifyNoGYPFileCircularDependencies(targets):
       build_file_node.dependencies.append(root_node)
       root_node.dependents.append(build_file_node)
 
-  flat_list = root_node.FlattenToList()
-
-  # If there's anything left unvisited, there must be a circular dependency
-  # (cycle).
-  if len(flat_list) != len(dependency_nodes):
-    if not root_node.dependents:
-      # If all files have dependencies, add the first file as a dependent
-      # of root_node so that the cycle can be discovered from root_node.
-      file_node = next(iter(dependency_nodes.values()))
-      file_node.dependencies.append(root_node)
-      root_node.dependents.append(file_node)
-    cycles = []
-    for cycle in root_node.FindCycles():
-      paths = [node.ref for node in cycle]
-      cycles.append('Cycle: %s' % ' -> '.join(paths))
-    raise DependencyGraphNode.CircularException('Cycles in .gyp file dependency graph detected:\n' + '\n'.join(cycles))
+  root_node.FlattenToList_NoCycles(dependency_nodes)
 
 
 def DoDependentSettings(key, flat_list, targets, dependency_nodes):
@@ -2527,11 +2503,11 @@ def Load(build_files, variables, includes, depth, generator_input_info, circular
   # NOTE: data contains both "target" files (.gyp) and "includes" (.gypi), as
   # well as meta-data (e.g. 'included_files' key). 'target_build_files' keeps
   # track of the keys corresponding to "target" files.
-  data = {'target_build_files': set()}
+  data = {'target_build_files': OrderedSet()}
   # Normalize paths everywhere.  This is important because paths will be
   # used as keys to the data dict and for references between input files.
-  build_files = set(map(os.path.normpath, build_files))
-  aux_data = {}
+  build_files = OrderedSet(map(os.path.normpath, build_files))
+  aux_data = OrderedDict()
   for build_file in build_files:
     try:
       LoadTargetBuildFile(build_file, data, aux_data, variables, includes, depth, True)
