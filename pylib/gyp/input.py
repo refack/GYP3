@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import ast
+from collections import OrderedDict
 import os.path
 import re
 import shlex
@@ -14,8 +15,7 @@ import sys
 import traceback
 import gyp.common
 import gyp.simple_copy
-from gyp.common import GypError
-from gyp.common import OrderedSet
+from gyp.common import GypError, OrderedSet
 
 if not 'unicode' in __builtins__:
   unicode = str
@@ -1206,8 +1206,7 @@ def BuildTargetsDict(data):
   in the returned dict.  These keys provide access to the target dicts,
   the dicts in the "targets" lists.
   """
-
-  targets = {}
+  targets = OrderedDict()
   for build_file in data['target_build_files']:
     for target in data[build_file].get('targets', []):
       target_name = gyp.common.QualifiedTarget(build_file, target['target_name'], target['toolset'])
@@ -2291,9 +2290,7 @@ def ValidateTargetType(target, target_dict):
     raise GypError('Target %s has type %s but standalone_static_library flag is only valid for static_library type.' % (target, target_type))
 
 
-def ValidateSourcesInTarget(target, target_dict, build_file, duplicate_basename_check):
-  if not duplicate_basename_check:
-    return
+def ValidateSourcesInTarget(target, target_dict):
   if target_dict.get('type', None) != 'static_library':
     return
   sources = target_dict.get('sources', [])
@@ -2511,7 +2508,7 @@ def SetGeneratorGlobals(generator_input_info):
   generator_filelist_paths = generator_input_info['generator_filelist_paths']
 
 
-def Load(build_files, variables, includes, depth, generator_input_info, circular_check, duplicate_basename_check, root_targets):
+def Load(build_files, variables, includes, depth, generator_input_info, root_targets):
   SetGeneratorGlobals(generator_input_info)
   # A generator can have other lists (in addition to sources) be processed
   # for rules.
@@ -2570,10 +2567,7 @@ def Load(build_files, variables, includes, depth, generator_input_info, circular
   # Make sure every dependency appears at most once.
   RemoveDuplicateDependencies(targets)
 
-  if circular_check:
-    # Make sure that any targets in a.gyp don't contain dependencies in other
-    # .gyp files that further depend on a.gyp.
-    VerifyNoGYPFileCircularDependencies(targets)
+  VerifyNoGYPFileCircularDependencies(targets)
 
   [dependency_nodes, flat_list] = BuildDependencyList(targets)
 
@@ -2632,7 +2626,7 @@ def Load(build_files, variables, includes, depth, generator_input_info, circular
     target_dict = targets[target]
     build_file = gyp.common.BuildFile(target)
     ValidateTargetType(target, target_dict)
-    ValidateSourcesInTarget(target, target_dict, build_file, duplicate_basename_check)
+    ValidateSourcesInTarget(target, target_dict)
     ValidateRulesInTarget(target, target_dict, extra_sources_for_rules)
     ValidateRunAsInTarget(target, target_dict, build_file)
     ValidateActionsInTarget(target, target_dict, build_file)

@@ -428,7 +428,7 @@ def match_re_dotall(lines=None, res=None):
     expr = re.compile(s, re.DOTALL)
   except re.error as e:
     msg = "Regular expression error in %s: %s"
-    raise re.error(msg % (repr(s), e[0]))
+    raise re.error(msg % (repr(s), e))
   if expr.match(lines):
     return 1
 
