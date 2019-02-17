@@ -16,6 +16,9 @@ import TestGyp
 
 test = TestGyp.TestGyp(format='gypd')
 
+if sys.version_info.major == 3:
+  test.skip_test("fix compare for gypd on Python 3")
+
 expect = test.read('commands-repeated.gyp.stdout').replace('\r\n', '\n')
 
 test.run_gyp('commands-repeated.gyp',
@@ -31,13 +34,11 @@ test.run_gyp('commands-repeated.gyp',
 # massage the Windows line endings ('\r\n') in the output to the
 # checked-in UNIX endings ('\n').
 
-if sys.version_info.major == 2:
-  contents = test.read('commands-repeated.gypd').replace('\r\n', '\n')
-  expect = test.read('commands-repeated.gypd.golden').replace('\r\n', '\n')
-  if not test.match(contents, expect):
-    print("Unexpected contents of `commands-repeated.gypd'")
-    test.diff(expect, contents, 'commands-repeated.gypd ')
-    test.fail_test()
-  test.pass_test()
-else:
-  test.skip_test("fix compare for Python 3")
+contents = test.read('commands-repeated.gypd').replace('\r\n', '\n')
+expect = test.read('commands-repeated.gypd.golden').replace('\r\n', '\n')
+if not test.match(contents, expect):
+  print("Unexpected contents of `commands-repeated.gypd'")
+  test.diff(expect, contents, 'commands-repeated.gypd ')
+  test.fail_test()
+test.pass_test()
+
