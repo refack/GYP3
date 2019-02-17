@@ -188,17 +188,11 @@ class Runner(object):
         print("# %s" % l, file=sys.stderr)
         err_lines.append(l)
       stderr = '\n'.join(err_lines)
-      print("# top pre", file=sys.stderr)
       proc.wait()
-      print("# top post", file=sys.stderr)
       took = time.time() - start
       stdout = proc.stdout.read().strip()
     else:
-      while proc.poll() is None:
-        try:
-          proc.wait(10)
-        except Exception as e:
-          print("# wait 10 more", file=sys.stderr)
+      proc.wait()
       took = time.time() - start
       stdout = proc.stdout.read().strip()
       stderr = proc.stderr.read().strip()

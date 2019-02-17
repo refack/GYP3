@@ -1072,11 +1072,7 @@ class TestCmd(object):
       else:
         p.stdin.write(stdin)
 
-    while p.poll() is None:
-      try:
-        p.wait(2)
-      except:
-        print("# wait 5 more", file=sys.stderr)
+    p.wait()
     self.status = p.returncode
     out = p.stdout.read()
     err = '' if p.stderr is None else p.stderr.read()
