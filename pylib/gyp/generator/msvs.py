@@ -4,8 +4,7 @@
 
 from __future__ import print_function
 
-import collections
-import copy
+from collections import OrderedDict
 import ntpath
 import os
 import posixpath
@@ -195,7 +194,7 @@ def _ConvertSourcesToFilterHierarchy(sources, prefix=None, excluded=None,
   if not prefix: prefix = []
   result = []
   excluded_result = []
-  folders = collections.OrderedDict()
+  folders = OrderedDict()
   # Gather files into the final result, excluded, or folders.
   for s in sources:
     if len(s) == 1:
@@ -2718,7 +2717,7 @@ def _GetMSBuildGlobalProperties(spec, version, guid, gyp_file_name):
 
   platform_name = None
   msvs_windows_sdk_version = None
-  for configuration in spec['configurations'].itervalues():
+  for configuration in spec['configurations'].values():
     platform_name = platform_name or _ConfigPlatform(configuration)
     msvs_windows_sdk_version = (msvs_windows_sdk_version or
                   _ConfigWindowsTargetPlatformVersion(configuration, version))
@@ -3315,7 +3314,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   sources, excluded_sources = _PrepareListOfSources(spec, generator_flags,
                                                     gyp_file)
   # Add rules.
-  actions_to_add = {}
+  actions_to_add = OrderedDict()
   props_files_of_rules = set()
   targets_files_of_rules = set()
   rule_dependencies = set()
@@ -3401,7 +3400,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
    content += _GetMSBuildLocalProperties(project.msbuild_toolset)
   content += import_cpp_props_section
   content += import_masm_props_section
-  content += import_marmasm_props_section
+  # content += import_marmasm_props_section
   content += _GetMSBuildExtensions(props_files_of_rules)
   content += _GetMSBuildPropertySheets(configurations)
   content += macro_section
@@ -3414,7 +3413,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   content += _GetMSBuildProjectReferences(project)
   content += import_cpp_targets_section
   content += import_masm_targets_section
-  content += import_marmasm_targets_section
+  # content += import_marmasm_targets_section
   content += _GetMSBuildExtensionTargets(targets_files_of_rules)
 
   if spec.get('msvs_external_builder'):

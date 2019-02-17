@@ -124,21 +124,22 @@ def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False,
 
   default_encoding = locale.getdefaultlocale()[1]
   if default_encoding and default_encoding.upper() != encoding.upper():
-    xml_string = xml_string.decode(default_encoding).encode(encoding)
+    if hasattr(xml_string, 'decode'):
+      xml_string = xml_string.decode(default_encoding)
 
   # Get the old content
   try:
-    f = open(path, 'r')
-    existing = f.read()
-    f.close()
+    with open(path, 'r', encoding=encoding) as f:
+      existing = f.read()
   except:
     existing = None
 
   # It has changed, write it
-  if existing != xml_string:
-    f = open(path, 'w')
+  if existing == xml_string:
+    return
+
+  with open(path, 'w', encoding=encoding) as f:
     f.write(xml_string)
-    f.close()
 
 
 _xml_escape_map = {
@@ -152,8 +153,7 @@ _xml_escape_map = {
 }
 
 
-_xml_escape_re = re.compile(
-    "(%s)" % "|".join(map(re.escape, _xml_escape_map.keys())))
+_xml_escape_re = re.compile("(%s)" % "|".join(map(re.escape, _xml_escape_map.keys())))
 
 
 def _XmlEscape(value, attr=False):

@@ -4,32 +4,10 @@
 
 """New implementation of Visual Studio project generation."""
 
+import hashlib
 import os
-import random
-
 import gyp.common
 
-# hashlib is supplied as of Python 2.5 as the replacement interface for md5
-# and other secure hashes.  In 2.6, md5 is deprecated.  Import hashlib if
-# available, avoiding a deprecation warning under 2.6.  Import md5 otherwise,
-# preserving 2.4 compatibility.
-try:
-  import hashlib
-  _new_md5 = hashlib.md5
-except ImportError:
-  import md5
-  _new_md5 = md5.new
-
-
-try:
-  # cmp was removed in python3.
-  cmp
-except NameError:
-  def cmp(a, b):
-    return (a > b) - (a < b)
-
-# Initialize random number generator
-random.seed()
 
 # GUIDs for project types
 ENTRY_TYPE_GUIDS = {
@@ -58,19 +36,32 @@ def MakeGuid(name, seed='msvs_new'):
   """
   # Calculate a MD5 signature for the seed and name.
   key = (str(seed) + str(name)).encode('utf-8')
-  d = _new_md5(key).hexdigest().upper()
+  d = hashlib.md5(key).hexdigest().upper()
   # Convert most of the signature to GUID form (discard the rest)
-  guid = ('{' + d[:8] + '-' + d[8:12] + '-' + d[12:16] + '-' + d[16:20]
-          + '-' + d[20:32] + '}')
+  guid = ('{' + d[:8] + '-' + d[8:12] + '-' + d[12:16] + '-' + d[16:20] + '-' + d[20:32] + '}')
   return guid
 
 #------------------------------------------------------------------------------
 
 
 class MSVSSolutionEntry(object):
-  def __cmp__(self, other):
+
+      # Set GUID from path
+      # TODO(rspangler): This is fragile.
+      # 1. We can't just use the project filename sans path, since there could
+      #    be multiple projects with the same base name (for example,
+      #    foo/unittest.vcproj and bar/unittest.vcproj).
+      # 2. The path needs to be relative to $SOURCE_ROOT, so that the project
+      #    GUID is the same whether it's included from base/base.sln or
+      #    foo/bar/baz/baz.sln.
+      # 3. The GUID needs to be the same each time this builder is invoked, so
+      #    that we don't need to rebuild the solution when the project changes.
+      # 4. We should be able to handle pre-built project files by reading the
+      #    GUID from the files.
+
+  def __lt__(self, other):
     # Sort by name then guid (so things are in order on vs2008).
-    return cmp((self.name, self.get_guid()), (other.name, other.get_guid()))
+    return self.name < other.name
 
 
 class MSVSFolder(MSVSSolutionEntry):
@@ -92,9 +83,7 @@ class MSVSFolder(MSVSSolutionEntry):
     if name:
       self.name = name
     else:
-      # Use last layer.
       self.name = os.path.basename(path)
-
     self.path = path
     self.guid = guid
 
@@ -103,10 +92,8 @@ class MSVSFolder(MSVSSolutionEntry):
     self.items = list(items or [])
 
     self.entry_type_guid = ENTRY_TYPE_GUIDS['folder']
-
   def get_guid(self):
     if self.guid is None:
-      # Use consistent guids for folders (so things don't regenerate).
       self.guid = MakeGuid(self.path, seed='msvs_folder')
     return self.guid
 
@@ -159,32 +146,17 @@ class MSVSProject(MSVSSolutionEntry):
 
   def get_guid(self):
     if self.guid is None:
-      # Set GUID from path
-      # TODO(rspangler): This is fragile.
-      # 1. We can't just use the project filename sans path, since there could
-      #    be multiple projects with the same base name (for example,
-      #    foo/unittest.vcproj and bar/unittest.vcproj).
-      # 2. The path needs to be relative to $SOURCE_ROOT, so that the project
-      #    GUID is the same whether it's included from base/base.sln or
-      #    foo/bar/baz/baz.sln.
-      # 3. The GUID needs to be the same each time this builder is invoked, so
-      #    that we don't need to rebuild the solution when the project changes.
-      # 4. We should be able to handle pre-built project files by reading the
-      #    GUID from the files.
       self.guid = MakeGuid(self.name)
     return self.guid
-
   def set_msbuild_toolset(self, msbuild_toolset):
     self.msbuild_toolset = msbuild_toolset
-
 #------------------------------------------------------------------------------
 
 
 class MSVSSolution(object):
   """Visual Studio solution."""
 
-  def __init__(self, path, version, entries=None, variants=None,
-               websiteProperties=True):
+  def __init__(self, path, version, entries=None, variants=None, websiteProperties=True):
     """Initializes the solution.
 
     Args:
@@ -210,14 +182,12 @@ class MSVSSolution(object):
     else:
       # Use default
       self.variants = ['Debug|Win32', 'Release|Win32']
-    # TODO(rspangler): Need to be able to handle a mapping of solution config
-    # to project config.  Should we be able to handle variants being a dict,
-    # or add a separate variant_map variable?  If it's a dict, we can't
-    # guarantee the order of variants since dict keys aren't ordered.
+    # TODO(rspangler): Need to be able to handle a mapping of solution config to project config.
+    # Should we be able to handle variants being a dict, or add a separate variant_map variable?
+    # If it's a dict, we can't guarantee the order of variants since dict keys aren't ordered.
 
 
-    # TODO(rspangler): Automatically write to disk for now; should delay until
-    # node-evaluation time.
+    # TODO(rspangler): Automatically write to disk for now; should delay until node-evaluation time.
     self.Write()
 
 
@@ -247,8 +217,7 @@ class MSVSSolution(object):
 
     # Open file and print header
     f = writer(self.path)
-    f.write('Microsoft Visual Studio Solution File, '
-            'Format Version %s\r\n' % self.version.SolutionVersion())
+    f.write('Microsoft Visual Studio Solution File, Format Version %s\r\n' % self.version.SolutionVersion())
     f.write('# %s\r\n' % self.version.Description())
 
     # Project entries
@@ -275,14 +244,14 @@ class MSVSSolution(object):
       if isinstance(e, MSVSFolder):
         if e.items:
           f.write('\tProjectSection(SolutionItems) = preProject\r\n')
-          for i in e.items:
+          for i in sorted(e.items):
             f.write('\t\t%s = %s\r\n' % (i, i))
           f.write('\tEndProjectSection\r\n')
 
       if isinstance(e, MSVSProject):
         if e.dependencies:
           f.write('\tProjectSection(ProjectDependencies) = postProject\r\n')
-          for d in e.dependencies:
+          for d in sorted(e.dependencies):
             f.write('\t\t%s = %s\r\n' % (d.get_guid(), d.get_guid()))
           f.write('\tEndProjectSection\r\n')
 
@@ -293,7 +262,7 @@ class MSVSSolution(object):
 
     # Configurations (variants)
     f.write('\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\r\n')
-    for v in self.variants:
+    for v in sorted(self.variants):
       f.write('\t\t%s = %s\r\n' % (v, v))
     f.write('\tEndGlobalSection\r\n')
 
@@ -308,7 +277,7 @@ class MSVSSolution(object):
 
     f.write('\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\r\n')
     for g in config_guids:
-      for v in self.variants:
+      for v in sorted(self.variants):
         nv = config_guids_overrides[g].get(v, v)
         # Pick which project configuration to build for this solution
         # configuration.
