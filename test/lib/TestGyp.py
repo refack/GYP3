@@ -35,12 +35,18 @@ def remove_debug_line_numbers(contents):
   comparison tests.
   """
   lines = contents.splitlines()
-  # split each line on ":"
+  # split each line on first 4 ":"
   lines = [l.split(":", 3) for l in lines]
   # join each line back together while ignoring the
   # 3rd column which is the line number
-  lines = [len(l) > 3 and ":".join(l[3:]) or l for l in lines]
-  return "\n".join(lines)
+  lines = [l[-1] for l in lines if len(l) > 3]
+  matches = [eval(l.split(':', 1)[1]) for l in lines if l.startswith('ExpandVariables Matches')]
+  matches = sorted([
+    ' '.join(["%s=%s" % (k, d[k]) for k in sorted(d.keys())])
+    for d in matches
+  ])
+  found_output = sorted([l for l in lines if l.startswith('ExpandVariables Found output')])
+  return matches + found_output
 
 
 def match_modulo_line_numbers(contents_a, contents_b):
