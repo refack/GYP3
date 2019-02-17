@@ -52,16 +52,13 @@ def FindBuildFiles():
   return build_files
 
 
-def Load(build_files, format, default_variables={}, includes=[], depth='.', params=None, check=False, circular_check=True, duplicate_basename_check=True):
+def Load(build_files, format, default_variables, includes, params, depth):
   """
   Loads one or more specified build files.
   default_variables and includes will be copied before use.
   Returns the generator for the specified format and the
   data returned by loading the specified build files.
   """
-  if params is None:
-    params = {}
-
   if '-' in format:
     format, params['flavor'] = format.split('-', 1)
 
@@ -97,12 +94,12 @@ def Load(build_files, format, default_variables={}, includes=[], depth='.', para
 
   # Give the generator the opportunity to set additional variables based on
   # the params it will receive in the output phase.
-  if getattr(generator, 'CalculateVariables', None):
+  if hasattr(generator, 'CalculateVariables'):
     generator.CalculateVariables(default_variables, params)
 
   # Give the generator the opportunity to set generator_input_info based on
   # the params it will receive in the output phase.
-  if getattr(generator, 'CalculateGeneratorInputInfo', None):
+  if hasattr(generator, 'CalculateGeneratorInputInfo'):
     generator.CalculateGeneratorInputInfo(params)
 
   # Fetch the generator specific info that gets fed to input, we use getattr
@@ -119,9 +116,7 @@ def Load(build_files, format, default_variables={}, includes=[], depth='.', para
   }
 
   # Process the input specific to this generator.
-  result = gyp.input.Load(build_files, default_variables, includes[:],
-                          depth, generator_input_info, circular_check,
-                          duplicate_basename_check, params['root_targets'])
+  result = gyp.input.Load(build_files, default_variables, includes[:], depth, generator_input_info, params['root_targets'])
   return [generator] + result
 
 
@@ -274,13 +269,10 @@ class RegeneratableOptionParser(optparse.OptionParser):
 
 
 def gyp_main(args):
-  my_name = os.path.basename(sys.argv[0])
-
   parser = RegeneratableOptionParser()
   usage = 'usage: %s [options ...] [build_file ...]'
   parser.set_usage(usage.replace('%s', '%prog'))
   parser.add_option('--build', dest='configs', action='append', help='configuration for build after project generation')
-  parser.add_option('--check', dest='check', action='store_true', help='check format of gyp files')
   parser.add_option('--config-dir', dest='config_dir', action='store', env_name='GYP_CONFIG_DIR', default=None, help='The location for configuration files like include.gypi.')
   parser.add_option('-d', '--debug', dest='debug', metavar='DEBUGMODE', action='append', default=[], help='turn on a debugging mode for debugging GYP.  Supported modes are "variables", "includes" and "general" or "all" for all of them.')
   parser.add_option('-D', dest='defines', action='append', metavar='VAR=VAL', env_name='GYP_DEFINES', help='sets variable VAR to value VAL')
@@ -290,25 +282,14 @@ def gyp_main(args):
   parser.add_option('--generator-output', dest='generator_output', action='store', default=None, metavar='DIR', type='path', env_name='GYP_GENERATOR_OUTPUT', help='puts generated build files under DIR')
   parser.add_option('--ignore-environment', dest='use_environment', action='store_false', default=True, regenerate=False, help='do not read options from environment variables')
   parser.add_option('-I', '--include', dest='includes', action='append', metavar='INCLUDE', type='path', help='files to include in all loaded .gyp files')
-  # --no-circular-check disables the check for circular relationships between
-  # .gyp files.  These relationships should not exist, but they've only been
-  # observed to be harmful with the Xcode generator.  Chromium's .gyp files
-  # currently have some circular relationships on non-Mac platforms, so this
-  # option allows the strict behavior to be used on Macs and the lenient
-  # behavior to be used elsewhere.
-  # TODO(mark): Remove this option when http://crbug.com/35878 is fixed.
-  parser.add_option('--no-circular-check', dest='circular_check', action='store_false', default=True, regenerate=False, help="don't check for circular relationships between files")
-  # --no-duplicate-basename-check disables the check for duplicate basenames
-  # in a static_library/shared_library project. Visual C++ 2008 generator
-  # doesn't support this configuration. Libtool on Mac also generates warnings
-  # when duplicate basenames are passed into Make generator on Mac.
-  # TODO(yukawa): Remove this option when these legacy generators are
-  # deprecated.
-  parser.add_option('--no-duplicate-basename-check', dest='duplicate_basename_check', action='store_false', default=True, regenerate=False, help="don't check for duplicate basenames")
-  parser.add_option('--no-parallel', action='store_true', default=False, help='Disable multiprocessing')
+  parser.add_option('-R', '--root-target', dest='root_targets', action='append', metavar='TARGET', help='include only TARGET and its deep dependencies')
   parser.add_option('-S', '--suffix', dest='suffix', default='', help='suffix to add to generated files')
   parser.add_option('--toplevel-dir', dest='toplevel_dir', action='store', default=None, metavar='DIR', type='path', help='directory to use as the root of the source tree')
-  parser.add_option('-R', '--root-target', dest='root_targets', action='append', metavar='TARGET', help='include only TARGET and its deep dependencies')
+  # TODO(refack) deprecated - Have no effect. Kept as to not break CLI usage
+  parser.add_option('--check', dest='check', action='store_true', help='check format of gyp files')
+  parser.add_option('--no-circular-check', dest='circular_check', action='store_false', default=True, regenerate=False, help="don't check for circular relationships between files")
+  parser.add_option('--no-duplicate-basename-check', dest='duplicate_basename_check', action='store_false', default=True, regenerate=False, help="don't check for duplicate basenames")
+  parser.add_option('--no-parallel', action='store_true', default=False, help='Disable multiprocessing')
 
   options, build_files_arg = parser.parse_args(args)
   build_files = build_files_arg
@@ -380,6 +361,7 @@ def gyp_main(args):
   if not build_files:
     build_files = FindBuildFiles()
   if not build_files:
+    my_name = os.path.basename(sys.argv[0])
     raise GypError((usage + '\n\n%s: error: no build_file') % (my_name, my_name))
 
   # TODO(mark): Chromium-specific hack!
@@ -431,7 +413,7 @@ def gyp_main(args):
 
   # If ~/.gyp/include.gypi exists, it'll be forcibly included into every
   # .gyp file that's loaded, before anything else is included.
-  if home_dot_gyp != None:
+  if home_dot_gyp is not None:
     default_include = os.path.join(home_dot_gyp, 'include.gypi')
     if os.path.exists(default_include):
       print('Using overrides found in ' + default_include)
@@ -455,21 +437,20 @@ def gyp_main(args):
   # Generate all requested formats (use a set in case we got one format request
   # twice)
   for format in set(options.formats):
-    params = {'options': options,
-              'build_files': build_files,
-              'generator_flags': generator_flags,
-              'cwd': os.getcwd(),
-              'build_files_arg': build_files_arg,
-              'gyp_binary': sys.argv[0],
-              'home_dot_gyp': home_dot_gyp,
-              'root_targets': options.root_targets,
-              'target_arch': cmdline_default_variables.get('target_arch', '')}
+    params = {
+      'options': options,
+      'build_files': build_files,
+      'generator_flags': generator_flags,
+      'cwd': os.getcwd(),
+      'build_files_arg': build_files_arg,
+      'gyp_binary': sys.argv[0],
+      'home_dot_gyp': home_dot_gyp,
+      'root_targets': options.root_targets,
+      'target_arch': cmdline_default_variables.get('target_arch', '')
+    }
 
     # Start with the default variables from the command line.
-    [generator, flat_list, targets, data] = Load(
-      build_files, format, cmdline_default_variables, includes, options.depth,
-      params, options.check, options.circular_check, options.duplicate_basename_check
-    )
+    [generator, flat_list, targets, data] = Load(build_files, format, cmdline_default_variables, includes, params, options.depth)
 
     # TODO(mark): Pass |data| for now because the generator needs a list of
     # build files that came in.  In the future, maybe it should just accept
