@@ -168,9 +168,13 @@ class Runner(object):
       print('  ---')
       print('  duration_ms: %.3f' % took)
       if len(stdout):
-        print('  stdout: |-\n%s' % stdout)
+        print('  stdout: |-')
+        for l in stdout.splitlines():
+          print('   ', l)
       if len(stderr) and stderr != 'NO RESULT':
-        print('  stderr: |-\n%s' % stderr)
+        print('  stderr: |-')
+        for l in stderr.splitlines():
+          print('   ', l)
       print('  ...')
 
     self.took = time.time() - run_start
