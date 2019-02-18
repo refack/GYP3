@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import json
+import traceback
 
 from contextlib import contextmanager
 
@@ -123,17 +124,20 @@ class TestGypBase(TestCommon.TestCommon):
   LOADABLE_MODULE = '__loadable_module__'
 
   def __init__(self, gyp=None, **kw):
+    origin_cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
+
     kw.setdefault('match', TestCommon.match_exact)
     kw.setdefault('interpreter', sys.executable)
-
+    if 'description' not in kw:
+      bt = [t[0] for t in traceback.extract_stack() if 'gyptest' in t[0]]
+      kw['description'] = bt and bt.pop()
     kw['workdir'] = mk_temp_dir(kw.get('workdir'))
-
     kw_formats = kw.pop('formats', [])
-    origin_cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
 
     if not gyp:
       gyp = os.environ.get('TESTGYP_GYP', 'gyp_main.py')
     gyp = os.path.abspath(gyp)
+    kw.setdefault('program', gyp)
 
     super(TestGypBase, self).__init__(**kw)
 
@@ -208,6 +212,41 @@ class TestGypBase(TestCommon.TestCommon):
     """
     return self.must_not_contain(self.built_file_path(name, **kw), contents)
 
+  def fail_test(self, condition=1, function=None, skip=0, message=None):
+    """Cause the test to fail.
+
+    By default, the fail_test() method reports that the test FAILED
+    and exits with a status of 1.  If a condition argument is supplied,
+    the test fails only if the condition is true.
+    """
+    if not condition:
+      return
+    self.condition = 'fail_test'
+    if not function is None:
+      function()
+    of = ""
+    desc = ""
+    sep = ""
+    if self.program:
+      of = " of " + self.program
+      sep = "\n"
+    if self.description:
+      desc = " [" + self.description + "]"
+      sep = "\n"
+
+    string = ""
+    tb = [t for t in traceback.extract_stack() if os.path.basename(t[0]) not in ("TestCmd.py", "TestCommon.py", "TestGyp.py")]
+    for file, line, name, text in tb[skip:]:
+      if name not in ("?", "<module>"):
+        name = " (" + name + ")"
+      string += ("%s:%d at %s\n" % (file, line, name))
+    sys.stderr.flush()
+    sys.stderr.write("FAILED test:\n" + of + desc + sep)
+    sys.stderr.write(string)
+    sys.stderr.flush()
+
+    sys.exit(1)
+
   def initialize_build_tool(self):
     """
     Initializes the .build_tool attribute.
@@ -230,6 +269,9 @@ class TestGypBase(TestCommon.TestCommon):
     if self.build_tool_list:
       self.build_tool = self.build_tool_list[0]
 
+  def must_match(self, file, expect, mode='rt', match=None, message=None, newline=None):
+    super(TestGypBase, self).must_match(file, expect, mode, match, message, newline)
+
   def read(self, file, mode='rt', newline=None, encoding='utf-8'):
     file = self.canonicalize(file)
     if mode[0] != 'r':
@@ -240,8 +282,8 @@ class TestGypBase(TestCommon.TestCommon):
     if IS_PY3 and 'b' not in mode:
         kw['encoding'] = encoding
         kw['newline'] = newline
-    elif newline:
-      kw['encoding'] += 'U'
+    elif newline is None:
+      kw['mode'] = kw['mode'].replace('t', 'U')
 
     with open(file, **kw) as f:
       ret = f.read()
@@ -402,9 +444,9 @@ class TestGypCustom(TestGypBase):
   Subclass for testing the GYP with custom generator
   """
 
-  def __init__(self, gyp=None, *args, **kw):
+  def __init__(self, **kw):
     self.format = kw.pop("format")
-    super(TestGypCustom, self).__init__(*args, **kw)
+    super(TestGypCustom, self).__init__(**kw)
 
 
 class TestGypCMake(TestGypBase):
@@ -1208,12 +1250,15 @@ format_class_list = [
   TestGypXcodeNinja,
 ]
 
-def TestGyp(*args, **kw):
+def TestGyp(**kw):
   """
   Returns an appropriate TestGyp* instance for a specified GYP format.
+
+  Args:
+    **kw (dict):
   """
   format = kw.pop('format', os.environ.get('TESTGYP_FORMAT'))
   for format_class in format_class_list:
     if format == format_class.format:
-      return format_class(*args, **kw)
+      return format_class(**kw)
   raise Exception("unknown format %r" % format)
