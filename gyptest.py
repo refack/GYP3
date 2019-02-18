@@ -180,6 +180,8 @@ class Runner(object):
     self.env['TESTGYP_FORMAT'] = fmt
 
     start = time.time()
+    if self.verbose:
+      self.env['TESTCMD_VERBOSE'] = '1'
     proc = subprocess.Popen(cmd, bufsize=2**20, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env, universal_newlines=True)
     if self.verbose:
       err_lines = []
