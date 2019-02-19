@@ -21,7 +21,7 @@ import traceback
 from contextlib import contextmanager
 
 import TestCmd
-from TestCmd import IS_PY3, IS_WINDOWS, IS_64_BIT
+from TestCmd import _Cleanup, IS_PY3, IS_WINDOWS, IS_64_BIT
 import TestCommon
 from TestCommon import __all__
 
@@ -212,6 +212,22 @@ class TestGypBase(TestCommon.TestCommon):
     """
     return self.must_not_contain(self.built_file_path(name, **kw), contents)
 
+  def cleanup(self, condition=None):
+    global _Cleanup
+    if self in _Cleanup:
+      _Cleanup.remove(self)
+
+    if not self._dirlist:
+      return
+    os.chdir(self._cwd)
+    self.workdir = None
+    if condition is None:
+      condition = self.condition
+    if self._preserve[condition]:
+      return
+    else:
+      super(TestGypBase, self).cleanup(condition)
+
   def fail_test(self, condition=1, function=None, skip=0, message=None):
     """Cause the test to fail.
 
@@ -350,6 +366,28 @@ class TestGypBase(TestCommon.TestCommon):
     run_args.extend(args)
     return self.run(program=self.gyp, interpreter=self.interpreter, arguments=run_args, **kw)
 
+  def run(self, *args, **kw):
+    """
+    Executes a program by calling the superclass .run() method.
+
+    This exists to provide a common place to filter out keyword
+    arguments implemented in this layer, without having to update
+    the tool-specific subclasses or clutter the tests themselves
+    with platform-specific code.
+    """
+    if 'SYMROOT' in kw:
+      del kw['SYMROOT']
+    return super(TestGypBase, self).run(*args, **kw)
+
+  def run_built_executable(self, name, *args, **kw):
+    # Enclosing the name in a list avoids prepending the original dir.
+    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
+    if sys.platform == 'darwin':
+      configuration = self.configuration_dirname()
+      build_dir = 'build' if self.format == 'xcode' else 'out'
+      os.environ['DYLD_LIBRARY_PATH'] = os.path.join(build_dir, configuration)
+    return self.run(program=program, *args, **kw)
+
   def set_configuration(self, configuration):
     """
     Sets the configuration, to be used for invoking the build
@@ -368,6 +406,16 @@ class TestGypBase(TestCommon.TestCommon):
       return self.configuration
     else:
       return 'Default'
+
+
+  def no_result(self, condition=1, function=None, skip=0):
+    """
+    Report that the test could not be run.
+    """
+    if skip:
+      sys.exit(2)
+    else:
+      super(TestGypBase, self).no_result(condition, function, skip)
 
   #
   # Abstract methods to be defined by format-specific subclasses.
@@ -408,16 +456,6 @@ class TestGypBase(TestCommon.TestCommon):
       elif type == self.LOADABLE_MODULE:
         name = self.module_ + name + self._module
     return name
-
-  def run_built_executable(self, name, *args, **kw):
-    """
-    Runs an executable program built from a gyp-generated configuration.
-
-    The specified name should be independent of any particular generator.
-    Subclasses should find the output executable in the appropriate
-    output build directory, tack on any necessary executable suffix, etc.
-    """
-    raise NotImplementedError
 
   def up_to_date(self, gyp_file, target=None, **kw):
     """
@@ -513,14 +551,6 @@ class TestGypCMake(TestGypBase):
     kw['status'] = status
     self.ninja_build(gyp_file, target, **kw)
 
-  def run_built_executable(self, name, *args, **kw):
-    # Enclosing the name in a list avoids prepending the original dir.
-    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
-    if sys.platform == 'darwin':
-      configuration = self.configuration_dirname()
-      os.environ['DYLD_LIBRARY_PATH'] = os.path.join('out', configuration)
-    return self.run(program=program, *args, **kw)
-
   def built_file_path(self, name, type=None, **kw):
     result = []
     chdir = kw.get('chdir')
@@ -576,6 +606,7 @@ class TestGypMake(TestGypBase):
       arguments.insert(1, os.path.splitext(gyp_file)[0] + '.Makefile')
     kw['arguments'] = arguments
     return self.run(program=self.build_tool, **kw)
+
   def up_to_date(self, gyp_file, target=None, **kw):
     """
     Verifies that a build of the specified Make target is up to date.
@@ -586,6 +617,7 @@ class TestGypMake(TestGypBase):
       message_target = target
     kw['stdout'] = "make: Nothing to be done for '%s'.\n" % message_target
     return self.build(gyp_file, target, **kw)
+
   def run_built_executable(self, name, *args, **kw):
     """
     Runs an executable built by Make.
@@ -603,6 +635,7 @@ class TestGypMake(TestGypBase):
     # Enclosing the name in a list avoids prepending the original dir.
     program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
     return self.run(program=program, *args, **kw)
+
   def built_file_path(self, name, type=None, **kw):
     """
     Returns a path to the specified file name, of the specified type,
@@ -641,7 +674,7 @@ class TestGypMakeMock(TestGypMake):
   build_tool_list = ['dir']
   ALL = 'all'
   def build(self, gyp_file, target=None, **kw):
-    exit(0)
+    self.pass_test()
 
 
 def ConvertToCygpath(path):
@@ -853,14 +886,6 @@ class TestGypNinja(TestGypOnMSToolchain):
     kw['arguments'] = arguments
     return self.run(program=self.build_tool, **kw)
 
-  def run_built_executable(self, name, *args, **kw):
-    # Enclosing the name in a list avoids prepending the original dir.
-    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
-    if sys.platform == 'darwin':
-      configuration = self.configuration_dirname()
-      os.environ['DYLD_LIBRARY_PATH'] = os.path.join('out', configuration)
-    return self.run(program=program, *args, **kw)
-
   def built_file_path(self, name, type=None, **kw):
     result = []
     chdir = kw.get('chdir')
@@ -974,14 +999,7 @@ class TestGypMSVS(TestGypOnMSToolchain):
         self.report_not_up_to_date()
         self.fail_test()
     return result
-  def run_built_executable(self, name, *args, **kw):
-    """
-    Runs an executable built by Visual Studio.
-    """
-    # configuration = self.configuration_dirname()
-    # Enclosing the name in a list avoids prepending the original dir.
-    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
-    return self.run(program=program, *args, **kw)
+
   def built_file_path(self, name, type=None, **kw):
     """
     Returns a path to the specified file name, of the specified type,
@@ -1137,15 +1155,7 @@ class TestGypXcode(TestGypBase):
         self.report_not_up_to_date()
         self.fail_test()
     return result
-  def run_built_executable(self, name, *args, **kw):
-    """
-    Runs an executable built by xcodebuild.
-    """
-    configuration = self.configuration_dirname()
-    os.environ['DYLD_LIBRARY_PATH'] = os.path.join('build', configuration)
-    # Enclosing the name in a list avoids prepending the original dir.
-    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
-    return self.run(program=program, *args, **kw)
+
   def built_file_path(self, name, type=None, **kw):
     """
     Returns a path to the specified file name, of the specified type,
@@ -1183,18 +1193,15 @@ class TestGypXcodeNinja(TestGypXcode):
 
   def build(self, gyp_file, target=None, **kw):
     """
-    Runs an xcodebuild using the .xcodeproj generated from the specified
-    gyp_file.
+    Runs an xcodebuild using the .xcodeproj generated from the specified gyp_file.
     """
     build_config = self.configuration
-    if build_config and build_config.endswith(('-iphoneos',
-                                               '-iphonesimulator')):
+    if build_config and build_config.endswith(('-iphoneos', '-iphonesimulator')):
       build_config, sdk = self.configuration.split('-')
       kw['arguments'] = kw.get('arguments', []) + ['-sdk', sdk]
 
     with self._build_configuration(build_config):
-      return super(TestGypXcodeNinja, self).build(
-        gyp_file.replace('.gyp', '.ninja.gyp'), target, **kw)
+      return super(TestGypXcodeNinja, self).build(gyp_file.replace('.gyp', '.ninja.gyp'), target, **kw)
 
   @contextmanager
   def _build_configuration(self, build_config):
@@ -1226,16 +1233,6 @@ class TestGypXcodeNinja(TestGypXcode):
         self.report_not_up_to_date()
         self.fail_test()
     return result
-
-  def run_built_executable(self, name, *args, **kw):
-    """
-    Runs an executable built by xcodebuild + ninja.
-    """
-    configuration = self.configuration_dirname()
-    os.environ['DYLD_LIBRARY_PATH'] = os.path.join('out', configuration)
-    # Enclosing the name in a list avoids prepending the original dir.
-    program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
-    return self.run(program=program, *args, **kw)
 
 
 format_class_list = [

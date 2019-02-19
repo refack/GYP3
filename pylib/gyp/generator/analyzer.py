@@ -64,12 +64,11 @@ then the "all" target includes "b1" and "b2".
 
 from __future__ import print_function
 
-import gyp.common
-import gyp.ninja_syntax as ninja_syntax
 import json
 import os
 import posixpath
-import sys
+import gyp.msvs_emulation
+import gyp.common
 
 debug = False
 
@@ -293,8 +292,7 @@ def _WasBuildFileModified(build_file, data, files, toplevel_dir):
         _ToGypPath(gyp.common.UnrelativePath(include_file, build_file))
     if _ToLocalPath(toplevel_dir, rel_include_file) in files:
       if debug:
-        print('included gyp file modified, gyp_file=', build_file, \
-            'included file=', rel_include_file)
+        print('included gyp file modified, gyp_file=', build_file, 'included file=', rel_include_file)
       return True
   return False
 

@@ -171,7 +171,7 @@ class Runner(object):
         print('  stdout: |-')
         for l in stdout.splitlines():
           print('   ', l)
-      if len(stderr) and stderr != 'NO RESULT':
+      if len(stderr) and stderr != 'PASSED':
         print('  stderr: |-')
         for l in stderr.splitlines():
           print('   ', l)
