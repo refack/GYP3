@@ -1253,9 +1253,6 @@ format_class_list = [
 def TestGyp(**kw):
   """
   Returns an appropriate TestGyp* instance for a specified GYP format.
-
-  Args:
-    **kw (dict):
   """
   format = kw.pop('format', os.environ.get('TESTGYP_FORMAT'))
   for format_class in format_class_list:
