@@ -1436,7 +1436,7 @@ class DependencyGraphNode(object):
 
       cycles = []
       for cycle in self.FindCycles():
-        paths = [node.ref for node in cycle]
+        paths = [n.ref for n in cycle]
         cycles.append('Cycle: %s' % ' -> '.join(paths))
       raise DependencyGraphNode.CircularException('Cycles in dependency graph detected:\n' + '\n'.join(cycles))
 
@@ -1766,9 +1766,9 @@ def AdjustStaticLibraryDependencies(flat_list, targets, dependency_nodes, sort_d
 
         # Remove every non-hard static library dependency and remove every
         # non-static library dependency that isn't a direct dependency.
-        if (dependency_dict['type'] == 'static_library' and \
+        if (dependency_dict['type'] == 'static_library' and
             not dependency_dict.get('hard_dependency', False)) or \
-            (dependency_dict['type'] != 'static_library' and \
+            (dependency_dict['type'] != 'static_library' and
              not dependency in target_dict['dependencies']):
           # Take the dependency out of the list, and don't increment index
           # because the next dependency to analyze will shift into the index
