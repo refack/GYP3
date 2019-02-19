@@ -121,23 +121,13 @@ class WinTool(object):
     if sys.platform == 'win32':
       args = list(args)  # *args is a tuple by default, which is read-only.
       args[0] = args[0].replace('/', '\\')
-    # https://docs.python.org/2/library/subprocess.html:
-    # "On Unix with shell=True [...] if args is a sequence, the first item
-    # specifies the command string, and any additional items will be treated as
-    # additional arguments to the shell itself.  That is to say, Popen does the
-    # equivalent of:
-    #   Popen(['/bin/sh', '-c', args[0], args[1], ...])"
-    # For that reason, since going through the shell doesn't seem necessary on
-    # non-Windows don't do that there.
-    link = subprocess.Popen(args, shell=sys.platform == 'win32', env=env,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = link.communicate()
+    out = subprocess.check_output(args, shell=sys.platform == 'win32', env=env, stderr=subprocess.STDOUT).decode('utf-8')
     for line in out.splitlines():
       if (not line.startswith('   Creating library ') and
           not line.startswith('Generating code') and
           not line.startswith('Finished generating code')):
         print(line)
-    return link.returncode
+    return 0
 
   def ExecLinkWithManifests(self, arch, embed_manifest, out, ldcmd, resname,
                             mt, rc, intermediate_manifest, *manifests):
@@ -195,10 +185,10 @@ class WinTool(object):
       our_manifest = '%(out)s.manifest' % variables
       # Load and normalize the manifests. mt.exe sometimes removes whitespace,
       # and sometimes doesn't unfortunately.
-      with open(our_manifest, 'r') as our_f:
-        with open(assert_manifest, 'r') as assert_f:
-          our_data = our_f.read().translate(None, string.whitespace)
-          assert_data = assert_f.read().translate(None, string.whitespace)
+      with open(our_manifest, 'rt') as our_f:
+        with open(assert_manifest, 'rt') as assert_f:
+          our_data = our_f.read()
+          assert_data = assert_f.read()
       if our_data != assert_data:
         os.unlink(out)
         def dump(filename):
@@ -222,13 +212,11 @@ class WinTool(object):
     (some XML blocks are recognized by the OS loader, but not the manifest
     tool)."""
     env = self._GetEnv(arch)
-    popen = subprocess.Popen(args, shell=True, env=env,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = popen.communicate()
+    out = subprocess.check_output(args, shell=True, env=env, stderr=subprocess.STDOUT).decode('utf-8')
     for line in out.splitlines():
       if line and 'manifest authoring warning 81010002' not in line:
         print(line)
-    return popen.returncode
+    return 0
 
   def ExecManifestToRc(self, arch, *args):
     """Creates a resource file pointing a SxS assembly manifest.
@@ -254,49 +242,42 @@ class WinTool(object):
         '/proxy', proxy,
         idl]
     env = self._GetEnv(arch)
-    popen = subprocess.Popen(args, shell=True, env=env,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = popen.communicate()
+    out = subprocess.check_output(args, shell=True, env=env, stderr=subprocess.STDOUT).decode('utf-8')
     # Filter junk out of stdout, and write filtered versions. Output we want
     # to filter is pairs of lines that look like this:
     # Processing C:\Program Files (x86)\Microsoft SDKs\...\include\objidl.idl
     # objidl.idl
     lines = out.splitlines()
     prefixes = ('Processing ', '64 bit Processing ')
-    processing = set(os.path.basename(x)
-                     for x in lines if x.startswith(prefixes))
+    processing = set(os.path.basename(x) for x in lines if x.startswith(prefixes))
     for line in lines:
       if not line.startswith(prefixes) and line not in processing:
         print(line)
-    return popen.returncode
+    return 0
 
   def ExecAsmWrapper(self, arch, *args):
     """Filter logo banner from invocations of asm.exe."""
     env = self._GetEnv(arch)
-    popen = subprocess.Popen(args, shell=True, env=env,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = popen.communicate()
+    out = subprocess.check_output(args, shell=True, env=env, stderr=subprocess.STDOUT).decode('utf-8')
     for line in out.splitlines():
       if (not line.startswith('Copyright (C) Microsoft Corporation') and
           not line.startswith('Microsoft (R) Macro Assembler') and
           not line.startswith(' Assembling: ') and
           line):
         print(line)
-    return popen.returncode
+    return 0
 
   def ExecRcWrapper(self, arch, *args):
     """Filter logo banner from invocations of rc.exe. Older versions of RC
     don't support the /nologo flag."""
     env = self._GetEnv(arch)
-    popen = subprocess.Popen(args, shell=True, env=env,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = popen.communicate()
+    out = subprocess.check_output(args, shell=True, env=env, stderr=subprocess.STDOUT).decode('utf-8')
     for line in out.splitlines():
       if (not line.startswith('Microsoft (R) Windows (R) Resource Compiler') and
           not line.startswith('Copyright (C) Microsoft Corporation') and
           line):
         print(line)
-    return popen.returncode
+    return 0
 
   def ExecActionWrapper(self, arch, rspfile, *dir):
     """Runs an action command line from a response file using the environment

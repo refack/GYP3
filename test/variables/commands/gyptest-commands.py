@@ -9,17 +9,15 @@ Test variable expansion of '<!()' syntax commands.
 """
 
 from __future__ import print_function
-import os
+import sys
 
 import TestGyp
 
 test = TestGyp.TestGyp(format='gypd')
 
-expect = test.read('commands.gyp.stdout').replace('\r', '')
+expect = test.read('commands.gyp.stdout')
 
-test.run_gyp('commands.gyp',
-             '--debug', 'variables',
-             stdout=expect, ignore_line_numbers=True)
+test.run_gyp('commands.gyp', '--debug', 'variables', stdout=expect, ignore_line_numbers=True)
 
 # Verify the commands.gypd against the checked-in expected contents.
 #
@@ -30,8 +28,8 @@ test.run_gyp('commands.gyp',
 # massage the Windows line endings ('\r\n') in the output to the
 # checked-in UNIX endings ('\n').
 
-contents = test.read('commands.gypd').replace('\r', '')
-expect = test.read('commands.gypd.golden').replace('\r', '')
+contents = test.read('commands.gypd')
+expect = test.read('commands.gypd.golden')
 if not test.match(contents, expect):
   print("Unexpected contents of `commands.gypd'")
   test.diff(expect, contents, 'commands.gypd ')

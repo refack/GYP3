@@ -25,32 +25,23 @@ osx-setup-steps: &osx-setup-steps
 
 matrix:
   include:
-    - name: "Linux: test with ninja on Python 3.7"
+    - name: "Linux: test on Python 3.7"
       python: '3.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f ninja
-
-    - name: "Linux: test with make on Python 3.7"
-      python: '3.7'
-      <<: *linux-setup-steps
-      script: pipenv run -v test -f make
+      script: pipenv run -v test -f ninja,make
 
     - name: "Linux: test with make on Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps
       script: pipenv run -v test -f make
 
-    - name: "Windows: test with ninja on Python 3.7"
-      <<: *windows-setup-steps
-      script: py -m pipenv run -v test -f ninja
-
-    - name: "Windows: test with msvs on Python 3.7"
-      <<: *windows-setup-steps
-      script: py -m pipenv run -v test -f msvs
-
     - name: "Windows: test with make-mock on Python 3.7"
       <<: *windows-setup-steps
       script: py -m pipenv run -v test -f make-mock
+
+    - name: "macOS: test with make on Python 3.7"
+      <<: *osx-setup-steps
+      script: pipenv run -v test -f make
 
     - name: "lint with Python 2.7"
       python: '2.7'
@@ -69,14 +60,6 @@ matrix:
         - wget -qO- "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJv
         - shellcheck-stable/shellcheck --version  # Current is v0.6.0
       script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
-
-    - name: "macOS: test with make on Python 3.7"
-      <<: *osx-setup-steps
-      script: pipenv run -v test -f make
-
-  allow_failures:
-    - os: windows
-    - language: shell
 
 notifications:
   slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw

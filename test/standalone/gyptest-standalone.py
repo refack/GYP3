@@ -20,13 +20,14 @@ test.run_gyp('standalone.gyp', '-Gstandalone')
 
 # Look at all the files in the tree to make sure none
 # of them reference the gyp file.
+me = os.path.basename(__file__)
 for root, dirs, files in os.walk("."):
   for file in files:
-    # ignore ourself
-    if os.path.splitext(__file__)[0] in file:
+    # ignore me
+    if me in file:
       continue
     file = os.path.join(root, file)
-    contents = open(file, 'rb').read().decode('utf-8', 'ignore')
+    contents = test.read(file)
     if 'standalone.gyp' in contents:
       print('gyp file referenced in generated output: %s' % file)
       test.fail_test()

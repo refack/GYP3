@@ -1968,7 +1968,7 @@ def PerformBuild(data, configurations, params):
   for config in configurations:
     arguments = [devenv, sln_path, '/Build', config]
     print('Building [%s]: %s' % (config, arguments))
-    rtn = subprocess.check_call(arguments)
+    subprocess.check_call(arguments)
 
 
 def CalculateGeneratorInputInfo(params):
@@ -3307,9 +3307,8 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   project_dir, project_file_name = os.path.split(project.path)
   gyp.common.EnsureDirExists(project.path)
   # Prepare list of sources and excluded sources.
-  gyp_path = _NormalizedSource(project.build_file)
-  relative_path_of_gyp_file = gyp.common.RelativePath(gyp_path, project_dir)
-
+  # gyp_path = _NormalizedSource(project.build_file)
+  # relative_path_of_gyp_file = gyp.common.RelativePath(gyp_path, project_dir)
   gyp_file = os.path.split(project.build_file)[1]
   sources, excluded_sources = _PrepareListOfSources(spec, generator_flags,
                                                     gyp_file)
@@ -3400,7 +3399,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
    content += _GetMSBuildLocalProperties(project.msbuild_toolset)
   content += import_cpp_props_section
   content += import_masm_props_section
-  # content += import_marmasm_props_section
+  content += import_marmasm_props_section
   content += _GetMSBuildExtensions(props_files_of_rules)
   content += _GetMSBuildPropertySheets(configurations)
   content += macro_section
@@ -3413,7 +3412,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
   content += _GetMSBuildProjectReferences(project)
   content += import_cpp_targets_section
   content += import_masm_targets_section
-  # content += import_marmasm_targets_section
+  content += import_marmasm_targets_section
   content += _GetMSBuildExtensionTargets(targets_files_of_rules)
 
   if spec.get('msvs_external_builder'):

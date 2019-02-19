@@ -6,9 +6,10 @@
 # happens correctly.  Run "run_tests.py" using python to generate the
 # output from this gyp file.
 
+# noinspection Duplicates
 {
   'variables': {
-    'pi': 'import math; print(math.pi)',
+    'pi': 'import math; print(\'%.15f\' % math.pi)',
     'third_letters': "<(other_letters)HIJK",
     'letters_list': 'ABCD',
     'other_letters': '<(letters_list)EFG',

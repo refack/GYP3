@@ -168,9 +168,13 @@ class Runner(object):
       print('  ---')
       print('  duration_ms: %.3f' % took)
       if len(stdout):
-        print('  stdout: |-\n%s' % stdout)
-      if len(stderr) and stderr != 'NO RESULT':
-        print('  stderr: |-\n%s' % stderr)
+        print('  stdout: |-')
+        for l in stdout.splitlines():
+          print('   ', l)
+      if len(stderr) and stderr != 'PASSED':
+        print('  stderr: |-')
+        for l in stderr.splitlines():
+          print('   ', l)
       print('  ...')
 
     self.took = time.time() - run_start
@@ -180,6 +184,8 @@ class Runner(object):
     self.env['TESTGYP_FORMAT'] = fmt
 
     start = time.time()
+    if self.verbose:
+      self.env['TESTCMD_VERBOSE'] = '1'
     proc = subprocess.Popen(cmd, bufsize=2**20, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env, universal_newlines=True)
     if self.verbose:
       err_lines = []
@@ -188,17 +194,11 @@ class Runner(object):
         print("# %s" % l, file=sys.stderr)
         err_lines.append(l)
       stderr = '\n'.join(err_lines)
-      print("# top pre", file=sys.stderr)
       proc.wait()
-      print("# top post", file=sys.stderr)
       took = time.time() - start
       stdout = proc.stdout.read().strip()
     else:
-      while proc.poll() is None:
-        try:
-          proc.wait(10)
-        except Exception as e:
-          print("# wait 10 more", file=sys.stderr)
+      proc.wait()
       took = time.time() - start
       stdout = proc.stdout.read().strip()
       stderr = proc.stderr.read().strip()
