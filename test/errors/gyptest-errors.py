@@ -32,10 +32,10 @@ test.run_gyp('duplicate_rule.gyp', status=1, stderr=stderr, match=TestCmd.match_
 stderr = "gyp: Key 'targets' repeated at level 1 with key path '' while reading .*duplicate_node.gyp.*"
 test.run_gyp('duplicate_node.gyp', '--check', status=1, stderr=stderr, match=TestCmd.match_re_dotall)
 
-stderr = ".*target0.*target1.*target2.*target0.*"
+stderr = ".*target2.*target0.*target1.*target2.*"
 test.run_gyp('dependency_cycle.gyp', status=1, stderr=stderr, match=TestCmd.match_re_dotall)
 
-stderr = ".*file_cycle0.*file_cycle1.*file_cycle0.*"
+stderr = ".*file_cycle1.*file_cycle0.*file_cycle1.*"
 test.run_gyp('file_cycle0.gyp', status=1, stderr=stderr, match=TestCmd.match_re_dotall)
 
 stderr = 'gyp: Duplicate basenames in sources section, see list above\n'
