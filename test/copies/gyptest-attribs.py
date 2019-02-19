@@ -17,8 +17,6 @@ import sys
 
 def check_attribs(path, expected_exec_bit):
   out_path = test.built_file_path(path, chdir='src')
-
-  in_stat = os.stat(os.path.join('src', path))
   out_stat = os.stat(out_path)
   if out_stat.st_mode & stat.S_IXUSR != expected_exec_bit:
     test.fail_test()

@@ -2222,9 +2222,8 @@ def GenerateOutput(target_list, target_dicts, data, params):
     # testing against the non-relativized items in target_list and before
     # calculating the Makefile path.
     build_file = os.path.join(depth_rel_path, build_file)
-    gyp_targets = [target_dicts[target]['target_name'] for target in target_list
-                   if target.startswith(build_file) and
-                   target in needed_targets]
+    gyp_targets = [target_dicts[t]['target_name'] for t in target_list
+                   if t.startswith(build_file) and t in needed_targets]
     # Only generate Makefiles for gyp files with targets.
     if not gyp_targets:
       continue
