@@ -1266,7 +1266,6 @@ def ExpandWildcardDependencies(targets, data):
   """
 
   for target, target_dict in targets.items():
-    toolset = target_dict['toolset']
     target_build_file = gyp.common.BuildFile(target)
     for dependency_key in dependency_sections:
       dependencies = target_dict.get(dependency_key, [])
@@ -1652,7 +1651,6 @@ def BuildDependencyList(targets):
   root_node = DependencyGraphNode(None)
   for target, spec in targets.items():
     target_node = dependency_nodes[target]
-    target_build_file = gyp.common.BuildFile(target)
     dependencies = spec.get('dependencies')
     if not dependencies:
       target_node.dependencies = [root_node]

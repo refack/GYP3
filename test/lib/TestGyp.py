@@ -795,7 +795,7 @@ class TestGypOnMSToolchain(TestGypBase):
   """
   @staticmethod
   def _ComputeVsvarsPath(devenv_path):
-    devenv_dir = os.path.split(devenv_path)[0]
+    # devenv_dir = os.path.split(devenv_path)[0]
 
     # Check for location of Community install (in VS2017, at least).
     vcvars_path = os.path.join(devenv_path, '..', '..', '..', '..', 'VC',
@@ -978,7 +978,7 @@ class TestGypMSVS(TestGypOnMSToolchain):
     """
     Runs an executable built by Visual Studio.
     """
-    configuration = self.configuration_dirname()
+    # configuration = self.configuration_dirname()
     # Enclosing the name in a list avoids prepending the original dir.
     program = [self.built_file_path(name, type=self.EXECUTABLE, **kw)]
     return self.run(program=program, *args, **kw)

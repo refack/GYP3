@@ -47,9 +47,8 @@ def CheckSignature(file):
 
 def CheckEntitlements(file, expected_entitlements):
   with tempfile.NamedTemporaryFile() as temp:
-    proc = subprocess.Popen(['codesign', '--display', '--entitlements',
-                             temp.name, file], stdout=subprocess.PIPE)
-    o = proc.communicate()[0].strip()
+    proc = subprocess.Popen(['codesign', '--display', '--entitlements', temp.name, file], stdout=subprocess.PIPE)
+    proc.wait()
     assert not proc.returncode
     data = temp.read()
   entitlements = ParseEntitlements(data)
@@ -95,8 +94,7 @@ def CheckPlistNotSet(plist, key):
     return
 
 def ConvertBinaryPlistToXML(path):
-  proc = subprocess.call(['plutil', '-convert', 'xml1', path],
-                         stdout=subprocess.PIPE)
+  subprocess.call(['plutil', '-convert', 'xml1', path], stdout=subprocess.PIPE)
 
 if sys.platform == 'darwin':
   test = TestGyp.TestGyp(formats=['ninja', 'xcode'])
