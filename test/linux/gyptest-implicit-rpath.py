@@ -10,8 +10,6 @@ Verifies that the implicit rpath is added only when needed.
 
 import TestGyp
 
-import re
-import subprocess
 import sys
 
 if sys.platform.startswith('linux'):
@@ -21,28 +19,20 @@ if sys.platform.startswith('linux'):
   test.run_gyp('test.gyp', chdir=CHDIR)
   test.build('test.gyp', test.ALL, chdir=CHDIR)
 
-  def GetRpaths(p):
-    p = test.built_file_path(p, chdir=CHDIR)
-    r = re.compile(r'Library rpath: \[([^\]]+)\]')
-    proc = subprocess.Popen(['readelf', '-d', p], stdout=subprocess.PIPE)
-    o = proc.communicate()[0].decode('utf-8')
-    assert not proc.returncode
-    return r.findall(o)
+  expect = '$ORIGIN/lib/' if test.format == 'ninja' else '$ORIGIN/lib.target/'
 
-  if test.format == 'ninja':
-    expect = '$ORIGIN/lib/'
-  elif test.format == 'make':
-    expect = '$ORIGIN/lib.target/'
-  else:
+  shared_executable = test.run_readelf('shared_executable', CHDIR)
+  if shared_executable != [expect]:
+    print('shared_executable=%s' % shared_executable)
+    print('expect=%s' % expect)
     test.fail_test()
 
-  if GetRpaths('shared_executable') != [expect]:
+  shared_executable_no_so_suffix = test.run_readelf('shared_executable_no_so_suffix', CHDIR)
+  if shared_executable_no_so_suffix != [expect]:
     test.fail_test()
 
-  if GetRpaths('shared_executable_no_so_suffix') != [expect]:
-    test.fail_test()
-
-  if GetRpaths('static_executable'):
+  static_executable = test.run_readelf('static_executable', CHDIR)
+  if static_executable:
     test.fail_test()
 
   test.pass_test()

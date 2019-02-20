@@ -21,23 +21,15 @@ if sys.platform.startswith('linux'):
   test.run_gyp('test.gyp', '-G', 'target_rpath=/usr/lib/gyptest/', chdir=CHDIR)
   test.build('test.gyp', test.ALL, chdir=CHDIR)
 
-  def GetRpaths(p):
-    p = test.built_file_path(p, chdir=CHDIR)
-    r = re.compile(r'Library rpath: \[([^\]]+)\]')
-    proc = subprocess.Popen(['readelf', '-d', p], stdout=subprocess.PIPE)
-    o = proc.communicate()[0].decode('utf-8')
-    assert not proc.returncode
-    return r.findall(o)
-
   expect = '/usr/lib/gyptest/'
 
-  if GetRpaths('shared_executable') != [expect]:
+  if test.run_readelf('shared_executable', chdir=CHDIR) != [expect]:
     test.fail_test()
 
-  if GetRpaths('shared_executable_no_so_suffix') != [expect]:
+  if test.run_readelf('shared_executable_no_so_suffix', chdir=CHDIR) != [expect]:
     test.fail_test()
 
-  if GetRpaths('static_executable'):
+  if test.run_readelf('static_executable', chdir=CHDIR):
     test.fail_test()
 
   test.pass_test()

@@ -11,12 +11,9 @@ using the default build target.
 
 import TestGyp
 
-test = TestGyp.TestGyp(workdir='workarea_default')
-
-if test.format == 'xcode-ninja':
-  # The xcode-ninja generator doesn't support --build
-  # cf. https://code.google.com/p/gyp/issues/detail?id=453
-  test.skip_test()
+# The xcode-ninja generator doesn't support --build
+# https://code.google.com/p/gyp/issues/detail?id=453
+test = TestGyp.TestGyp(workdir='workarea_default', formats=['!xcode-ninja'])
 
 test.run_gyp('hello.gyp', '--build=Default')
 

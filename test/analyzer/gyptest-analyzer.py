@@ -28,7 +28,7 @@ def _CreateConfigFile(files, additional_compile_targets, test_targets=[]):
 
 
 def _CreateBogusConfigFile():
-  f = open('test_file','w')
+  f = open('test_file', 'w')
   f.write('bogus')
   f.close()
 
@@ -44,9 +44,9 @@ def _ReadOutputFileContents():
 # over a bug in pylint (E1002).
 test = TestGyp.TestGypCustom(format='analyzer')
 
+
 def CommonArgs():
-  return ('-Gconfig_path=test_file',
-           '-Ganalyzer_output_path=analyzer_output')
+  return ('-Gconfig_path=test_file', '-Ganalyzer_output_path=analyzer_output')
 
 
 def run_analyzer(*args, **kw):
@@ -86,14 +86,12 @@ def EnsureContains(matched=False, compile_targets=set(), test_targets=set()):
 
   actual_compile_targets = set(result['compile_targets'])
   if actual_compile_targets != compile_targets:
-    print('actual compile_targets:', actual_compile_targets,
-           '\nexpected compile_targets:', compile_targets)
+    print('actual compile_targets:', actual_compile_targets, '\nexpected compile_targets:', compile_targets)
     test.fail_test()
 
   actual_test_targets = set(result['test_targets'])
   if actual_test_targets != test_targets:
-    print('actual test_targets:', actual_test_targets,
-           '\nexpected test_targets:', test_targets)
+    print('actual test_targets:', actual_test_targets, '\nexpected test_targets:', test_targets)
     test.fail_test()
 
   if matched and result['status'] != found:
@@ -120,14 +118,12 @@ def EnsureMatchedAll(compile_targets, test_targets=set()):
 
   actual_compile_targets = set(result['compile_targets'])
   if actual_compile_targets != compile_targets:
-    print('actual compile_targets:', actual_compile_targets,
-           '\nexpected compile_targets:', compile_targets)
+    print('actual compile_targets:', actual_compile_targets, '\nexpected compile_targets:', compile_targets)
     test.fail_test()
 
   actual_test_targets = set(result['test_targets'])
   if actual_test_targets != test_targets:
-    print('actual test_targets:', actual_test_targets,
-           '\nexpected test_targets:', test_targets)
+    print('actual test_targets:', actual_test_targets, '\nexpected test_targets:', test_targets)
     test.fail_test()
 
 
@@ -135,15 +131,13 @@ def EnsureError(expected_error_string):
   """Verifies output contains the error string."""
   result = _ReadOutputFileContents()
   if result.get('error', '').find(expected_error_string) == -1:
-    print('actual error:', result.get('error', ''), '\nexpected error:',
-        expected_error_string)
+    print('actual error:', result.get('error', ''), '\nexpected error:', expected_error_string)
     test.fail_test()
 
 
 def EnsureStdoutContains(expected_error_string):
   if test.stdout().find(expected_error_string) == -1:
-    print('actual stdout:', test.stdout(), '\nexpected stdout:',
-        expected_error_string)
+    print('actual stdout:', test.stdout(), '\nexpected stdout:', expected_error_string)
     test.fail_test()
 
 
@@ -152,8 +146,7 @@ def EnsureInvalidTargets(expected_invalid_targets):
   result = _ReadOutputFileContents()
   actual_invalid_targets = set(result['invalid_targets'])
   if actual_invalid_targets != expected_invalid_targets:
-    print('actual invalid_targets:', actual_invalid_targets,
-        '\nexpected :', expected_invalid_targets)
+    print('actual invalid_targets:', actual_invalid_targets, '\nexpected :', expected_invalid_targets)
     test.fail_test()
 
 
@@ -162,15 +155,14 @@ def EnsureInvalidTargets(expected_invalid_targets):
 # A is compiled in this case, only B.
 _CreateConfigFile(['b.c'], ['all'])
 test.run_gyp('static_library_test.gyp', *CommonArgs())
-EnsureContains(matched=True, compile_targets={'a' ,'b'})
+EnsureContains(matched=True, compile_targets={'a', 'b'})
 
 # Verifies config_path must be specified.
 test.run_gyp('test.gyp')
 EnsureStdoutContains('Must specify files to analyze via config_path')
 
 # Verifies config_path must point to a valid file.
-test.run_gyp('test.gyp', '-Gconfig_path=bogus_file',
-             '-Ganalyzer_output_path=analyzer_output')
+test.run_gyp('test.gyp', '-Gconfig_path=bogus_file', '-Ganalyzer_output_path=analyzer_output')
 EnsureError('Unable to open file bogus_file')
 
 # Verify 'invalid_targets' is present when bad target is specified.
@@ -254,19 +246,16 @@ run_analyzer()
 EnsureContains(matched=True, compile_targets={'exe'})
 
 # Various permutations when passing in targets.
-_CreateConfigFile(['exe2.c', 'subdir/subdir2b_source.c'],
-                  ['all'], ['exe', 'exe3'])
+_CreateConfigFile(['exe2.c', 'subdir/subdir2b_source.c'], ['all'], ['exe', 'exe3'])
 run_analyzer()
-EnsureContains(matched=True, test_targets={'exe3'},
-               compile_targets={'exe2', 'exe3'})
+EnsureContains(matched=True, test_targets={'exe3'}, compile_targets={'exe2', 'exe3'})
 
 _CreateConfigFile(['exe2.c', 'subdir/subdir2b_source.c'], ['all'], ['exe'])
 run_analyzer()
 EnsureContains(matched=True, compile_targets={'exe2', 'exe3'})
 
 # Verifies duplicates are ignored.
-_CreateConfigFile(['exe2.c', 'subdir/subdir2b_source.c'], ['all'],
-                  ['exe', 'exe'])
+_CreateConfigFile(['exe2.c', 'subdir/subdir2b_source.c'], ['all'], ['exe', 'exe'])
 run_analyzer()
 EnsureContains(matched=True, compile_targets={'exe2', 'exe3'})
 
@@ -298,32 +287,24 @@ EnsureContains(matched=True, compile_targets={'exe'})
 # are included.
 _CreateConfigFile(['subdir2/d.cc'], ['all'], ['exe', 'exe2', 'foo', 'exe3'])
 run_analyzer2()
-EnsureContains(matched=True, test_targets={'exe', 'foo'},
-               compile_targets={'exe', 'foo'})
+EnsureContains(matched=True, test_targets={'exe', 'foo'}, compile_targets={'exe', 'foo'})
 
-_CreateConfigFile(['subdir2/subdir.includes.gypi'], ['all'],
-                ['exe', 'exe2', 'foo', 'exe3'])
+_CreateConfigFile(['subdir2/subdir.includes.gypi'], ['all'], ['exe', 'exe2', 'foo', 'exe3'])
 run_analyzer2()
-EnsureContains(matched=True, test_targets={'exe', 'foo'},
-               compile_targets={'exe', 'foo'})
+EnsureContains(matched=True, test_targets={'exe', 'foo'}, compile_targets={'exe', 'foo'})
 
-_CreateConfigFile(['subdir2/subdir.gyp'], ['all'],
-                  ['exe', 'exe2', 'foo', 'exe3'])
+_CreateConfigFile(['subdir2/subdir.gyp'], ['all'], ['exe', 'exe2', 'foo', 'exe3'])
 run_analyzer2()
-EnsureContains(matched=True, test_targets={'exe', 'foo'},
-               compile_targets={'exe', 'foo'})
+EnsureContains(matched=True, test_targets={'exe', 'foo'}, compile_targets={'exe', 'foo'})
 
-_CreateConfigFile(['test2.includes.gypi'], ['all'],
-                  ['exe', 'exe2', 'foo', 'exe3'])
+_CreateConfigFile(['test2.includes.gypi'], ['all'], ['exe', 'exe2', 'foo', 'exe3'])
 run_analyzer2()
-EnsureContains(matched=True, test_targets={'exe', 'exe2', 'exe3'},
-               compile_targets={'exe', 'exe2', 'exe3'})
+EnsureContains(matched=True, test_targets={'exe', 'exe2', 'exe3'}, compile_targets={'exe', 'exe2', 'exe3'})
 
 # Verify modifying a file included makes all targets dirty.
 _CreateConfigFile(['common.gypi'], ['all'], ['exe', 'exe2', 'foo', 'exe3'])
 run_analyzer2('-Icommon.gypi')
-EnsureMatchedAll({'all', 'exe', 'exe2', 'foo', 'exe3'},
-                 {'exe', 'exe2', 'foo', 'exe3'})
+EnsureMatchedAll({'all', 'exe', 'exe2', 'foo', 'exe3'}, {'exe', 'exe2', 'foo', 'exe3'})
 
 # Assertions from test3.gyp.
 _CreateConfigFile(['d.c', 'f.c'], ['all'], ['a'])
@@ -356,8 +337,7 @@ EnsureContains(matched=True, test_targets={'a'}, compile_targets={'a'})
 
 _CreateConfigFile(['d.c'], ['all'], ['a', 'b'])
 run_analyzer3()
-EnsureContains(matched=True, test_targets={'a', 'b'},
-               compile_targets={'a', 'b'})
+EnsureContains(matched=True, test_targets={'a', 'b'}, compile_targets={'a', 'b'})
 
 _CreateConfigFile(['f.c'], ['all'], ['a'])
 run_analyzer3()
@@ -398,16 +378,13 @@ _CreateConfigFile(['exe20.c'], [], ['exe2'])
 run_analyzer()
 EnsureContains(matched=False)
 
-
 _CreateConfigFile(['exe2.c', 'exe3.c'], [], ['exe2', 'exe3'])
 run_analyzer()
-EnsureContains(matched=True, test_targets={'exe2', 'exe3'},
-               compile_targets={'exe2', 'exe3'})
+EnsureContains(matched=True, test_targets={'exe2', 'exe3'}, compile_targets={'exe2', 'exe3'})
 
 _CreateConfigFile(['exe2.c', 'exe3.c'], ['exe3'], ['exe2'])
 run_analyzer()
-EnsureContains(matched=True, test_targets={'exe2'},
-               compile_targets={'exe2', 'exe3'})
+EnsureContains(matched=True, test_targets={'exe2'}, compile_targets={'exe2', 'exe3'})
 
 _CreateConfigFile(['exe3.c'], ['exe2'], ['exe2'])
 run_analyzer()
@@ -416,12 +393,10 @@ EnsureContains(matched=False)
 # Assertions with 'all' listed as a test_target.
 _CreateConfigFile(['exe3.c'], [], ['all'])
 run_analyzer()
-EnsureContains(matched=True, compile_targets={'exe3', 'all'},
-               test_targets={'all'})
+EnsureContains(matched=True, compile_targets={'exe3', 'all'}, test_targets={'all'})
 
 _CreateConfigFile(['exe2.c'], [], ['all', 'exe2'])
 run_analyzer()
-EnsureContains(matched=True, compile_targets={'exe2', 'all'},
-               test_targets={'all', 'exe2'})
+EnsureContains(matched=True, compile_targets={'exe2', 'all'}, test_targets={'all', 'exe2'})
 
 test.pass_test()

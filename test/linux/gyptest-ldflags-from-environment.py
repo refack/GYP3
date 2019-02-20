@@ -22,24 +22,21 @@ if sys.platform.startswith('linux'):
   test = TestGyp.TestGyp(formats=FORMATS)
 
   CHDIR = 'ldflags-from-environment'
-  with TestGyp.LocalEnv({'LDFLAGS': '-Wl,--dynamic-linker=/target',
-                         'LDFLAGS_host': '-Wl,--dynamic-linker=/host',
-                         'GYP_CROSSCOMPILE': '1'}):
+  env = {
+    'LDFLAGS': '-Wl,--dynamic-linker=/target',
+    'LDFLAGS_host': '-Wl,--dynamic-linker=/host',
+    'GYP_CROSSCOMPILE': '1'
+  }
+  with TestGyp.LocalEnv(env):
     test.run_gyp('test.gyp', chdir=CHDIR)
     test.build('test.gyp', chdir=CHDIR)
 
-  def GetDynamicLinker(p):
-    p = test.built_file_path(p, chdir=CHDIR)
-    r = re.compile(r'\[Requesting program interpreter: ([^\]]+)\]')
-    proc = subprocess.Popen(['readelf', '-l', p], stdout=subprocess.PIPE)
-    o = proc.communicate()[0].decode('utf-8')
-    assert not proc.returncode
-    return r.search(o).group(1)
-
-  if GetDynamicLinker('ldflags') != '/target':
+  ldflags = test.run_readelf('ldflags', CHDIR, '-l')
+  if ldflags != ['/target']:
     test.fail_test()
 
-  if GetDynamicLinker('ldflags_host') != '/host':
+  ldflags_host = test.run_readelf('ldflags_host', CHDIR, '-l')
+  if ldflags_host != ['/host']:
     test.fail_test()
 
   test.pass_test()
