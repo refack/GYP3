@@ -1445,13 +1445,17 @@ def CLTVersion():
       continue
 
 
-def GetStdout(cmdlist):
-  """Returns the content of standard output returned by invoking |cmdlist|.
-  Raises |GypError| if the command return with a non-zero return code."""
-  job = subprocess.Popen(cmdlist, stdout=subprocess.PIPE)
-  out = job.communicate()[0]
+def GetStdout(cmdlist, with_stderr=False):
+  """
+  Returns the content of standard output returned by invoking |cmdlist|.
+  Raises |GypError| if the command return with a non-zero return code.
+  """
+  job = subprocess.Popen(cmdlist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  out, err = job.communicate()
   if job.returncode != 0:
-    sys.stderr.write(out + '\n')
+    if with_stderr:
+      print(out, file=sys.stderr)
+      print(err, file=sys.stderr)
     raise GypError('Error %d running %s' % (job.returncode, cmdlist[0]))
   return out.rstrip('\n')
 

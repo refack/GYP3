@@ -31,6 +31,7 @@ __all__.extend([
 
 RPATH_RE = re.compile(r'Library (?:r|run)path: \[([^\]]+)\]')
 RPROG_RE = re.compile(r'\[Requesting program interpreter: ([^\]]+)\]')
+BUILDTOOLS_RE = re.compile(r"^xcode-select: error: tool 'xcodebuild' requires Xcode.*$\n", re.MULTILINE)
 
 def remove_debug_line_numbers(contents):
   """Function to remove the line numbers from the debug output
@@ -175,6 +176,8 @@ class TestGypBase(TestCommon.TestCommon):
     os.environ['LC_ALL'] = 'C'
 
   def _complete(self, actual_stdout, expected_stdout, actual_stderr, expected_stderr, status, match):
+    if sys.platform == 'darwin' and actual_stderr:
+      actual_stderr = BUILDTOOLS_RE.sub('', actual_stderr)
     if match.__name__ == 'match_modulo_line_numbers':
       if actual_stdout:
         actual_stdout = remove_debug_line_numbers(actual_stdout)

@@ -119,14 +119,20 @@ def print_configuration_info():
   print('Test configuration:')
   if sys.platform == 'darwin':
     sys.path.append(os.path.abspath('test/lib'))
-    import TestMac
     print('  Mac %s %s' % (platform.mac_ver()[0], platform.mac_ver()[2]))
-    print('  Xcode %s' % TestMac.Xcode.Version())
+    try:
+      import TestMac
+      print('  Xcode %s' % TestMac.Xcode.Version())
+    except:
+      pass
   elif sys.platform == 'win32':
     sys.path.append(os.path.abspath('pylib'))
-    import gyp.MSVSVersion
     print('  Win %s %s\n' % platform.win32_ver()[0:2])
-    print('  MSVS %s' % gyp.MSVSVersion.SelectVisualStudioVersion().Description())
+    try:
+      import gyp.MSVSVersion
+      print('  MSVS %s' % gyp.MSVSVersion.SelectVisualStudioVersion().Description())
+    except:
+      pass
   elif sys.platform in ('linux', 'linux2'):
     # noinspection PyBroadException
     try:

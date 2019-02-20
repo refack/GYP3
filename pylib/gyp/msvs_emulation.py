@@ -1024,7 +1024,7 @@ def _GetEnvironment(arch, vs, open_out):
   # Extract environment variables for subprocesses.
   std_out = subprocess.check_output(args, shell=True, stderr=subprocess.STDOUT).decode('utf-8')
   end_time = time.clock()
-  if DEBUG_GENERAL in gyp.debug.keys():
+  if DEBUG_GENERAL in gyp.debug:
     DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
   env = _ExtractImportantEnvironment(std_out, arch)
   try:
