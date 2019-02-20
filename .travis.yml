@@ -9,40 +9,39 @@ linux-setup-steps: &linux-setup-steps
 
 windows-setup-steps: &windows-setup-steps
   os: windows
-  language: cpp  #Python is not yet supported on Windows
+  language: cpp  # 'language: python' is not yet supported on Windows
   before_install: choco install python3
   install:
     - py -m pip install --upgrade pip pipenv
     - py -m pipenv install --dev
 
+osx-setup-steps: &osx-setup-steps
+  os: osx
+  language: shell  # 'language: python' is not yet supported on macOS
+  before_install: brew upgrade python
+  install:
+    - pip install --upgrade pip pipenv
+    - pipenv install --dev
+
 matrix:
   include:
-    - name: "Linux: test with ninja on Python 3.7"
+    - name: "Linux: test on Python 3.7"
       python: '3.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f ninja
-
-    - name: "Linux: test with make on Python 3.7"
-      python: '3.7'
-      <<: *linux-setup-steps
-      script: pipenv run -v test -f make
+      script: pipenv run -v test -f ninja,make
 
     - name: "Linux: test with make on Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps
       script: pipenv run -v test -f make
 
-    - name: "Windows: test with ninja on Python 3.7"
-      <<: *windows-setup-steps
-      script: py -m pipenv run -v test -f ninja
-
-    - name: "Windows: test with msvs on Python 3.7"
-      <<: *windows-setup-steps
-      script: py -m pipenv run -v test -f msvs
-
     - name: "Windows: test with make-mock on Python 3.7"
       <<: *windows-setup-steps
       script: py -m pipenv run -v test -f make-mock
+
+    - name: "macOS: test with make-mock on Python 3.7"
+      <<: *osx-setup-steps
+      script: pipenv run -v test -f make
 
     - name: "lint with Python 2.7"
       python: '2.7'
@@ -53,7 +52,6 @@ matrix:
       python: '3.7'
       <<: *linux-setup-steps
       script: pipenv run -v lint
-
     - name: "lint shell scripts"
       language: shell
       install:
@@ -61,21 +59,6 @@ matrix:
         - wget -qO- "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJv
         - shellcheck-stable/shellcheck --version  # Current is v0.6.0
       script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
-
-    - name: "test with make on macOS"
-      os: osx
-      language: shell  # 'language: python' is not yet supported
-      before_install: brew upgrade python
-      install:
-        - pip install --upgrade pip pipenv
-        - pipenv install --dev
-      script:
-        - pipenv run -v test -f make
-
-
-  allow_failures:
-    - os: windows
-    - language: shell
 
 notifications:
   slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
