@@ -52,13 +52,6 @@ matrix:
       python: '3.7'
       <<: *linux-setup-steps
       script: pipenv run -v lint
-    - name: "lint shell scripts"
-      language: shell
-      install:
-        - shellcheck --version  # Travis defaults to v0.4.6
-        - wget -qO- "https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz" | tar -xJv
-        - shellcheck-stable/shellcheck --version  # Current is v0.6.0
-      script: bash -c 'shopt -s globstar ; shellcheck-stable/shellcheck **/*.{sh,ksh,bash}'
 
 notifications:
   slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
