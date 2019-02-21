@@ -8,19 +8,18 @@
 Test that MACH_O_TYPE etc are set correctly.
 """
 
-import TestGyp
-
+import os
 import sys
 
-if sys.platform == 'darwin':
-  test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'])
+if sys.platform != 'darwin' or os.environ.get('TRAVIS') == 'true':
+  print('only for macOS')
+  sys.exit(2)
 
-  test.run_gyp('test.gyp',
-               '-G', 'xcode_ninja_target_pattern=^(?!nonbundle_none).*$',
-               chdir='type_envvars')
+import TestGyp
 
-  test.build('test.gyp', test.ALL, chdir='type_envvars')
+test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'])
 
-  # The actual test is done by postbuild scripts during |test.build()|.
+test.run_gyp('test.gyp', '-G', 'xcode_ninja_target_pattern=^(?!nonbundle_none).*$', chdir='type_envvars')
 
-  test.pass_test()
+# The actual test is done by postbuild scripts during |test.build()|.
+test.build('test.gyp', test.ALL, chdir='type_envvars')
