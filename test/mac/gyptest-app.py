@@ -18,12 +18,11 @@ import plistlib
 import subprocess
 import sys
 
-
-if sys.platform in ('darwin', 'win32'):
-  print("This test is currently disabled: https://crbug.com/483696.")
-  sys.exit(0)
+print("This test is currently disabled: https://crbug.com/483696.")
+sys.exit(2)
 
 
+# noinspection PyUnreachableCode
 def CheckFileXMLPropertyList(file):
   output = subprocess.check_output(['file', file])
   # The double space after XML is intentional.
@@ -31,10 +30,12 @@ def CheckFileXMLPropertyList(file):
     print('File: Expected XML  document text, got %s' % output)
     test.fail_test()
 
+
 def ExpectEq(expected, actual):
   if expected != actual:
     print('Expected "%s", got "%s"' % (expected, actual), file=sys.stderr)
     test.fail_test()
+
 
 def ls(path):
   '''Returns a list of all files in a directory, relative to the directory.'''
@@ -53,15 +54,13 @@ if sys.platform == 'darwin':
   test.build('test.gyp', test.ALL, chdir='app-bundle')
 
   # Binary
-  test.built_file_must_exist('Test App Gyp.app/Contents/MacOS/Test App Gyp',
-                             chdir='app-bundle')
+  test.built_file_must_exist('Test App Gyp.app/Contents/MacOS/Test App Gyp', chdir='app-bundle')
 
   # Info.plist
-  info_plist = test.built_file_path('Test App Gyp.app/Contents/Info.plist',
-                                    chdir='app-bundle')
+  info_plist = test.built_file_path('Test App Gyp.app/Contents/Info.plist', chdir='app-bundle')
   test.must_exist(info_plist)
   test.must_contain(info_plist, 'com.google.Test-App-Gyp')  # Variable expansion
-  test.must_not_contain(info_plist, '${MACOSX_DEPLOYMENT_TARGET}');
+  test.must_not_contain(info_plist, '${MACOSX_DEPLOYMENT_TARGET}')
   CheckFileXMLPropertyList(info_plist)
 
   if test.format != 'make':
@@ -78,45 +77,35 @@ if sys.platform == 'darwin':
       version = TestMac.Xcode.SDKVersion()
       expected = 'macosx' + version
     ExpectEq(expected, plist['DTSDKName'])
-    sdkbuild = TestMac.Xcode.SDKBuild()
-    if not sdkbuild:
-      # Above command doesn't work in Xcode 4.2.
-      sdkbuild = plist['BuildMachineOSBuild']
-    ExpectEq(sdkbuild, plist['DTSDKBuild'])
     ExpectEq(TestMac.Xcode.Version(), plist['DTXcode'])
-    ExpectEq(TestMac.Xcode.Build(), plist['DTXcodeBuild'])
 
   # Resources
   strings_files = ['InfoPlist.strings', 'utf-16be.strings', 'utf-16le.strings']
   for f in strings_files:
-    strings = test.built_file_path(
-        os.path.join('Test App Gyp.app/Contents/Resources/English.lproj', f),
-        chdir='app-bundle')
+    strings = test.built_file_path(os.path.join('Test App Gyp.app/Contents/Resources/English.lproj', f), chdir='app-bundle')
     test.must_exist(strings)
     # Xcodes writes UTF-16LE with BOM.
     contents = open(strings, 'rb').read()
-    if not contents.startswith('\xff\xfe' + '/* Localized'.encode('utf-16le')):
+    if not contents.startswith(('\xff\xfe' + '/* Localized').encode('utf-16le')):
       test.fail_test()
 
   test.built_file_must_exist(
-      'Test App Gyp.app/Contents/Resources/English.lproj/MainMenu.nib',
-      chdir='app-bundle')
+    'Test App Gyp.app/Contents/Resources/English.lproj/MainMenu.nib',
+    chdir='app-bundle')
 
   # Packaging
-  test.built_file_must_exist('Test App Gyp.app/Contents/PkgInfo',
-                             chdir='app-bundle')
-  test.built_file_must_match('Test App Gyp.app/Contents/PkgInfo', 'APPLause',
-                             chdir='app-bundle')
+  test.built_file_must_exist('Test App Gyp.app/Contents/PkgInfo', chdir='app-bundle')
+  test.built_file_must_match('Test App Gyp.app/Contents/PkgInfo', 'APPLause', chdir='app-bundle')
 
   # Check that no other files get added to the bundle.
   if set(ls(test.built_file_path('Test App Gyp.app', chdir='app-bundle'))) != \
-     set(['Contents/MacOS/Test App Gyp',
-          'Contents/Info.plist',
-          'Contents/Resources/English.lproj/MainMenu.nib',
-          'Contents/PkgInfo',
-          ] +
-         [os.path.join('Contents/Resources/English.lproj', f)
-             for f in strings_files]):
+      set(['Contents/MacOS/Test App Gyp',
+           'Contents/Info.plist',
+           'Contents/Resources/English.lproj/MainMenu.nib',
+           'Contents/PkgInfo',
+           ] +
+          [os.path.join('Contents/Resources/English.lproj', f)
+           for f in strings_files]):
     test.fail_test()
 
   test.pass_test()

@@ -12,12 +12,21 @@ import TestGyp
 
 import sys
 
-if sys.platform == 'darwin':
-  test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'])
+import TestMac
 
-  test.run_gyp('deployment-target.gyp', chdir='deployment-target')
+if sys.platform != 'darwin':
+  print('Test only for macOS')
+  sys.exit(2)
 
-  test.build('deployment-target.gyp', test.ALL, chdir='deployment-target')
+if not TestMac.Xcode.HasIPhoneSDK():
+  print('IPhone SDK not installed')
+  sys.exit(2)
 
-  test.pass_test()
+test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'])
+
+test.run_gyp('deployment-target.gyp', chdir='deployment-target')
+
+test.build('deployment-target.gyp', test.ALL, chdir='deployment-target')
+
+test.pass_test()
 

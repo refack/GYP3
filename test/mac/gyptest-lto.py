@@ -42,7 +42,7 @@ if sys.platform == 'darwin':
     objtype = 'unknown'
     if ': Mach-O ' in o:
       objtype = 'mach-o'
-    elif ': LLVM bitcode' in o:
+    elif ': LLVM bit' in o:
       objtype = 'llvm'
     if objtype != t_expected:
       print('Expected %s, got %s' % (t_expected, objtype))

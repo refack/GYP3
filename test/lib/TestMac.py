@@ -25,55 +25,70 @@ def CheckFileType(test, file, archs):
     pattern = re.compile('^Architectures in the fat file: (.*) are: (.*)$')
   match = pattern.match(o)
   if match is None:
-    print('Ouput does not match expected pattern: %s' % (pattern.pattern))
+    print('Output does not match expected pattern: %s' % pattern.pattern)
     test.fail_test()
   else:
     found_file, found_archs = match.groups()
     if found_file != file or set(found_archs.split()) != set(archs):
-      print('Expected file %s with arch %s, got %s with arch %s' % (
-          file, ' '.join(archs), found_file, found_archs))
+      print('Expected file %s with arch %s, got %s with arch %s' % (file, ' '.join(archs), found_file, found_archs))
       test.fail_test()
 
 
-class XcodeInfo(object):
-  """Simplify access to Xcode informations."""
-
-  def __init__(self):
-    self._cache = {}
-
-  def _XcodeVersion(self):
-    try:
-      lines = subprocess.check_output(['xcodebuild', '-version']).splitlines()
-    except:
-      return '', ''
-    version = ''.join(lines[0].decode('utf-8').split()[-1].split('.'))
-    version = (version + '0' * (3 - len(version))).zfill(4)
-    return version, lines[-1].split()[-1]
-
-  def Version(self):
-    if 'Version' not in self._cache:
-      self._cache['Version'], self._cache['Build'] = self._XcodeVersion()
-    return self._cache['Version']
-
-  def Build(self):
-    if 'Build' not in self._cache:
-      self._cache['Version'], self._cache['Build'] = self._XcodeVersion()
-    return self._cache['Build']
-
-  def SDKBuild(self):
-    if 'SDKBuild' not in self._cache:
-      self._cache['SDKBuild'] = subprocess.check_output(
-          ['xcodebuild', '-version', '-sdk', '', 'ProductBuildVersion'])
-      self._cache['SDKBuild'] = self._cache['SDKBuild'].decode('utf-8')
-      self._cache['SDKBuild'] = self._cache['SDKBuild'].rstrip('\n')
-    return self._cache['SDKBuild']
-
-  def SDKVersion(self):
-    if 'SDKVersion' not in self._cache:
-      self._cache['SDKVersion'] = subprocess.check_output(
-          ['xcodebuild', '-version', '-sdk', '', 'SDKVersion'])
-      self._cache['SDKVersion'] = self._cache['SDKVersion'].rstrip('\n')
-    return self._cache['SDKVersion']
+def run(*cmd_args):
+  return subprocess.check_output(cmd_args, stderr=subprocess.PIPE).decode('utf-8')
 
 
-Xcode = XcodeInfo()
+class Xcode(object):
+  """Simplify access to Xcode information."""
+  _cache = {}
+
+  @staticmethod
+  def Version():
+    if 'Version' not in Xcode._cache:
+      version = ''
+      try:
+        lines = run('xcodebuild', '-version').splitlines()
+        version = ''.join(lines[0].decode('utf-8').split()[-1].split('.'))
+        version = (version + '0' * (3 - len(version))).zfill(4)
+      except subprocess.CalledProcessError:
+        pass
+      try:
+        lines = run('pkgutil', '--pkg-info=com.apple.pkg.CLTools_Executables').splitlines()
+        for l in lines:
+          n, v = l.split(': ', 1)
+          if n != 'version':
+            continue
+          parts = v.split('.',4)
+          version = '%s%s%s%s' % tuple(parts[0:4])
+          break
+      except subprocess.CalledProcessError:
+        pass
+      Xcode._cache['Version'] = version
+    return Xcode._cache['Version']
+
+  @staticmethod
+  def SDKVersion():
+    if 'SDKVersion' not in Xcode._cache:
+      out = ''
+      try:
+        out = run('xcrun', '--show-sdk-version')
+      except subprocess.CalledProcessError:
+        pass
+      try:
+        out = run('xcodebuild', '-version', '-sdk', '', 'SDKVersion')
+      except subprocess.CalledProcessError:
+        pass
+      Xcode._cache['SDKVersion'] = out.strip()
+    return Xcode._cache['SDKVersion']
+
+  @staticmethod
+  def HasIPhoneSDK():
+    if 'HasIPhoneSDK' not in Xcode._cache:
+      try:
+        out = run('xcrun', '--sdk', 'iphoneos', '--show-sdk-path')
+      except subprocess.CalledProcessError:
+        out = 1
+      Xcode._cache['HasIPhoneSDK'] = out == 0
+    return Xcode._cache['HasIPhoneSDK']
+
+

@@ -158,6 +158,7 @@ class Runner(object):
     self.isatty = sys.stdout.isatty() and not self.verbose
     self.env = os.environ.copy()
     self.hpos = 0
+    self.took = 0
 
   def run(self):
     print('TAP version 13')

@@ -135,7 +135,6 @@ if sys.platform == 'darwin':
     machine_build = GetMachineBuild()
     platform_version = GetXcodeVersionValue('ProductVersion')
     sdk_build = GetXcodeVersionValue('ProductBuildVersion')
-    xcode_build = TestMac.Xcode.Build()
 
     # Xcode keeps changing what gets included in executable plists, and it
     # changes between device and simuator builds.  Allow the strictest tests for
@@ -146,7 +145,6 @@ if sys.platform == 'darwin':
       CheckPlistvalue(plist, 'DTPlatformVersion', platform_version)
       CheckPlistvalue(plist, 'DTSDKBuild', sdk_build)
       CheckPlistvalue(plist, 'DTXcode', xcode_version)
-      CheckPlistvalue(plist, 'DTXcodeBuild', xcode_build)
       CheckPlistvalue(plist, 'MinimumOSVersion', '8.0')
 
 

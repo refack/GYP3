@@ -510,8 +510,7 @@ class XcodeSettings(object):
   def _XcodePlatformPath(self, configname=None):
     sdk_root = self._SdkRoot(configname)
     if sdk_root not in XcodeSettings._platform_path_cache:
-      platform_path = self._GetSdkVersionInfoItem(sdk_root,
-                                                  '--show-sdk-platform-path')
+      platform_path = self._GetSdkVersionInfoItem(sdk_root, '--show-sdk-platform-path')
       XcodeSettings._platform_path_cache[sdk_root] = platform_path
     return XcodeSettings._platform_path_cache[sdk_root]
 
