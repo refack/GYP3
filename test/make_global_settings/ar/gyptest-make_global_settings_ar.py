@@ -12,60 +12,50 @@ import os
 import sys
 import TestGyp
 
-def resolve_path(test, path):
-  if path is None:
-    return None
-  elif test.format == 'make':
-    return '$(abspath %s)' % path
-  elif test.format in ['ninja', 'xcode-ninja']:
-    return os.path.join('..', '..', path)
-  else:
-    test.fail_test()
-
-
-def verify_ar_target(test, ar=None, rel_path=False):
-  if rel_path:
-    ar_expected = resolve_path(test, ar)
-  else:
-    ar_expected = ar
-  # Resolve default values
-  if ar_expected is None:
-    if test.format == 'make':
-      # Make generator hasn't set the default value for AR.
-      # You can remove the following assertion as long as it doesn't
-      # break existing projects.
-      test.must_not_contain('Makefile', 'AR ?= ')
-      return
-    elif test.format in ['ninja', 'xcode-ninja']:
-      if sys.platform == 'win32':
-        ar_expected = 'lib.exe'
-      else:
-        ar_expected = 'ar'
-  if test.format == 'make':
-    test.must_contain('Makefile', 'AR ?= %s' % ar_expected)
-  elif test.format in ['ninja', 'xcode-ninja']:
-    test.must_contain('out/Default/build.ninja', 'ar = %s' % ar_expected)
-  else:
-    test.fail_test()
-
-
-def verify_ar_host(test, ar=None, rel_path=False):
-  if rel_path:
-    ar_expected = resolve_path(test, ar)
-  else:
-    ar_expected = ar
-  # Resolve default values
-  if ar_expected is None:
-    if sys.platform == 'win32':
-      ar_expected = 'lib.exe'
+def verify_ar(tst, ars=None, rel_path=False, is_cross=True):
+  ars = ars or {}
+  rel_path = rel_path or set()
+  for toolset in ['host', 'target']:
+    ar = ars.get(toolset)
+    ar_expected = fix_ar(ar, toolset in rel_path, tst)
+    ar_suffix = '' if toolset == 'target' else 'host'
+    if toolset == 'host':
+      ar_expected = ar_expected or ('lib.exe' if sys.platform == 'win32' else 'ar')
+    if tst.is_make:
+      ar_suffix = ar_suffix and '.' + ar_suffix
+      filename = 'Makefile'
+      if toolset == 'target' and ar is None:
+        tst.must_not_contain(filename, 'AR ?= ')
+        return
+      ar_rule = 'AR%s ?= %s' % (ar_suffix, ar_expected)
+    elif tst.is_ninja:
+      if not is_cross and toolset == 'host':
+        return
+      filename = 'out/Default/build.ninja'
+      ar_suffix = ar_suffix and '_' + ar_suffix
+      ar_expected = ar_expected or ('lib.exe' if sys.platform == 'win32' else 'ar')
+      ar_rule = 'ar%s = %s' % (ar_suffix, ar_expected)
     else:
-      ar_expected = 'ar'
-  if test.format == 'make':
-    test.must_contain('Makefile', 'AR.host ?= %s' % ar_expected)
-  elif test.format in ['ninja', 'xcode-ninja']:
-    test.must_contain('out/Default/build.ninja', 'ar_host = %s' % ar_expected)
+      tst.fail_test()
+      return
+
+    tst.must_contain(filename, ar_rule)
+
+
+def fix_ar(ar, rel_path, tst):
+  if rel_path:
+    if ar is None:
+      ar_expected = ''
+    elif tst.is_make:
+      ar_expected = '$(abspath %s)' % ar
+    elif tst.is_ninja:
+      ar_expected = os.path.join('..', '..', ar)
+    else:
+      tst.fail_test()
+      return
   else:
-    test.fail_test()
+    ar_expected = ar or ''
+  return ar_expected
 
 
 test_format = ['ninja']
@@ -76,51 +66,41 @@ test = TestGyp.TestGyp(formats=test_format)
 
 # Check default values
 test.run_gyp('make_global_settings_ar.gyp')
-verify_ar_target(test)
+verify_ar(test, is_cross=False)
 
 
 # Check default values with GYP_CROSSCOMPILE enabled.
 with TestGyp.LocalEnv({'GYP_CROSSCOMPILE': '1'}):
   test.run_gyp('make_global_settings_ar.gyp')
-verify_ar_target(test)
-verify_ar_host(test)
+verify_ar(test)
 
 
 # Test 'AR' in 'make_global_settings'.
 with TestGyp.LocalEnv({'GYP_CROSSCOMPILE': '1'}):
   test.run_gyp('make_global_settings_ar.gyp', '-Dcustom_ar_target=my_ar')
-verify_ar_target(test, ar='my_ar', rel_path=True)
+verify_ar(test, ars={'target': 'my_ar'}, rel_path={'target', 'host'})
 
 
 # Test 'AR'/'AR.host' in 'make_global_settings'.
 with TestGyp.LocalEnv({'GYP_CROSSCOMPILE': '1'}):
-  test.run_gyp('make_global_settings_ar.gyp',
-               '-Dcustom_ar_target=my_ar_target1',
-               '-Dcustom_ar_host=my_ar_host1')
-verify_ar_target(test, ar='my_ar_target1', rel_path=True)
-verify_ar_host(test, ar='my_ar_host1', rel_path=True)
+  test.run_gyp('make_global_settings_ar.gyp', '-Dcustom_ar_target=my_ar_target1', '-Dcustom_ar_host=my_ar_host1')
+verify_ar(test, ars={'target': 'my_ar_target1', 'host': 'my_ar_host1'}, rel_path={'target', 'host'})
 
 
 # Test $AR and $AR_host environment variables.
-with TestGyp.LocalEnv({'AR': 'my_ar_target2',
-                       'AR_host': 'my_ar_host2'}):
+with TestGyp.LocalEnv({'AR': 'my_ar_target2', 'AR_host': 'my_ar_host2'}):
   test.run_gyp('make_global_settings_ar.gyp')
 # Ninja generator resolves $AR in gyp phase. Make generator doesn't.
-if test.format == 'ninja':
-  if sys.platform == 'win32':
-    # TODO(yukawa): Make sure if this is an expected result or not.
-    verify_ar_target(test, ar='lib.exe', rel_path=False)
-  else:
-    verify_ar_target(test, ar='my_ar_target2', rel_path=False)
-verify_ar_host(test, ar='my_ar_host2', rel_path=False)
+ar_target_expected = None
+if test.is_ninja:
+  ar_target_expected = 'lib.exe' if sys.platform == 'win32' else 'my_ar_target2'
+verify_ar(test, ars={'target': ar_target_expected, 'host': 'my_ar_host2'})
 
 
 # Test 'AR' in 'make_global_settings' with $AR_host environment variable.
 with TestGyp.LocalEnv({'AR_host': 'my_ar_host3'}):
-  test.run_gyp('make_global_settings_ar.gyp',
-               '-Dcustom_ar_target=my_ar_target3')
-verify_ar_target(test, ar='my_ar_target3', rel_path=True)
-verify_ar_host(test, ar='my_ar_host3', rel_path=False)
+  test.run_gyp('make_global_settings_ar.gyp', '-Dcustom_ar_target=my_ar_target3')
+verify_ar(test, ars={'target': 'my_ar_target3', 'host': 'my_ar_host3'}, rel_path={'target'})
 
 
 test.pass_test()

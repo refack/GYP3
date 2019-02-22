@@ -30,9 +30,7 @@ CMakeLists.txt file.
 
 from __future__ import print_function
 
-import multiprocessing
 import os
-import signal
 import string
 import subprocess
 import gyp.common
@@ -1169,15 +1167,6 @@ def PerformBuild(data, configurations, params):
     arguments = ['ninja', '-C', build_dir]
     print('Building [%s]: %s' % (config_name, arguments))
     subprocess.check_call(arguments)
-
-
-def CallGenerateOutputForConfig(arglist):
-  # Ignore the interrupt signal so that the parent process catches it and
-  # kills all multiprocessing children.
-  signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-  target_list, target_dicts, data, params, config_name = arglist
-  GenerateOutputForConfig(target_list, target_dicts, data, params, config_name)
 
 
 def GenerateOutput(target_list, target_dicts, data, params):

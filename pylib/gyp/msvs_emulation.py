@@ -7,6 +7,7 @@ This module helps emulate Visual Studio 2008 behavior on top of other
 build systems, primarily ninja.
 """
 
+import codecs
 import collections
 import os
 import pickle
@@ -16,16 +17,22 @@ import sys
 import time
 import hashlib
 import traceback
+from typing import Dict
 
-from gyp.common import OrderedSet
 import gyp.MSVSUtil
-import gyp.MSVSVersion
 from gyp import DebugOutput, DEBUG_GENERAL
+
 if 'basestring' not in __builtins__:
   basestring = str
 
 vcvars_cache = dict()
 windows_quoter_regex = re.compile(r'(\\*)"')
+
+utf8encoder = codecs.getencoder('utf-8')
+def encode(s):
+  return utf8encoder(s)[0]
+
+NUL = bytes([0])
 
 
 def QuoteForRspFile(arg):
@@ -98,16 +105,16 @@ def _AddPrefix(element, prefix):
     return prefix + element
 
 
-def _DoRemapping(element, map):
+def _DoRemapping(element, map_arg):
   """If |element| then remap it through |map|. If |element| is iterable then
   each item will be remapped. Any elements not found will be removed."""
-  if map is not None and element is not None:
-    if not callable(map):
-      map = map.get  # Assume it's a dict, otherwise a callable to do the remap.
-    if (isinstance(element, collections.Iterable) and not isinstance(element, basestring)):
-      element = filter(None, [map(elem) for elem in element])
+  if map_arg is not None and element is not None:
+    if not callable(map_arg):
+      map_arg = map_arg.get  # Assume it's a dict, otherwise a callable to do the remap.
+    if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
+      element = filter(None, [map_arg(elem) for elem in element])
     else:
-      element = map(element)
+      element = map_arg(element)
   return element
 
 
@@ -116,7 +123,7 @@ def _AppendOrReturn(append, element):
   then add |element| to it, adding each item in |element| if it's a list or
   tuple."""
   if append is not None and element is not None:
-    if (isinstance(element, collections.Iterable) and not isinstance(element, basestring)):
+    if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
       append.extend(element)
     else:
       append.append(element)
@@ -152,9 +159,8 @@ def GetGlobalVSMacroEnv(vs_version):
   env = {}
   # '$(VSInstallDir)' and '$(VCInstallDir)' are available when and only when
   # Visual Studio is actually installed.
-  if vs_version.Path():
-    env['$(VSInstallDir)'] = vs_version.Path()
-    env['$(VCInstallDir)'] = os.path.join(vs_version.Path(), 'VC') + '\\'
+  if vs_version.path:
+    env['$(VCInstallDir)'] = os.path.join(vs_version.path, 'VC\\')
   # Chromium uses DXSDK_DIR in include/lib paths, but it may or may not be
   # set. This happens when the SDK is sync'd via src-internal, rather than
   # by typical end-user installation of the SDK. If it's not set, we don't
@@ -167,32 +173,7 @@ def GetGlobalVSMacroEnv(vs_version):
   return env
 
 
-def ExtractSharedMSVSSystemIncludes(configs, generator_flags):
-  """Finds msvs_system_include_dirs that are common to all targets, removes
-  them from all targets, and returns an OrderedSet containing them."""
-  all_system_includes = OrderedSet(configs[0].get('msvs_system_include_dirs', []))
-  for config in configs[1:]:
-    system_includes = config.get('msvs_system_include_dirs', [])
-    all_system_includes = all_system_includes & OrderedSet(system_includes)
-  if not all_system_includes:
-    return None
-  # Expand macros in all_system_includes.
-  env = GetGlobalVSMacroEnv(GetVSVersion(generator_flags))
-  expanded_system_includes = OrderedSet([ExpandMacros(include, env) for include in all_system_includes])
-  if any(['$' in include for include in expanded_system_includes]):
-    # Some path relies on target-specific variables, bail.
-    return None
-
-  # Remove system includes shared by all targets from the targets.
-  for config in configs:
-    includes = config.get('msvs_system_include_dirs', [])
-    if includes:  # Don't insert a msvs_system_include_dirs key if not needed.
-      # This must check the unexpanded includes list:
-      new_includes = [i for i in includes if i not in all_system_includes]
-      config['msvs_system_include_dirs'] = new_includes
-  return expanded_system_includes
-
-
+# noinspection PyUnresolvedReferences
 class MsvsSettings(object):
   """A class that understands the gyp 'msvs_...' values (especially the
   msvs_settings field). They largely correpond to the VS2008 IDE DOM. This
@@ -231,6 +212,9 @@ class MsvsSettings(object):
           unsupported += ["%s not supported (target %s)." % (field, spec['target_name'])]
     if unsupported:
       raise Exception('\n'.join(unsupported))
+
+    self.msvs_configuration_platform = {}   # type: Dict[str, str]
+    self.msvs_target_platform = {}          # type: Dict[str, str]
 
   def GetExtension(self):
     """Returns the extension for the target, with no leading dot.
@@ -274,18 +258,20 @@ class MsvsSettings(object):
     env = self.GetVSMacroEnv(base_to_build, config=config)
     return ExpandMacros(s, env)
 
-  def AdjustLibraries(self, libraries):
+  @staticmethod
+  def AdjustLibraries(libraries):
     """Strip -l from library if it's specified with that."""
     libs = [lib[2:] if lib.startswith('-l') else lib for lib in libraries]
     return [lib + '.lib' if not lib.lower().endswith('.lib') else lib for lib in libs]
 
-  def _GetAndMunge(self, field, path, default, prefix, append, map):
+  @staticmethod
+  def _GetAndMunge(field, path, default, prefix, append, map_arg):
     """Retrieve a value from |field| at |path| or return |default|. If
     |append| is specified, and the item is found, it will be appended to that
     object instead of returned. If |map| is specified, results will be
     remapped through |map| before being returned or appended."""
     result = _GenericRetrieve(field, default, path)
-    result = _DoRemapping(result, map)
+    result = _DoRemapping(result, map_arg)
     result = _AddPrefix(result, prefix)
     return _AppendOrReturn(append, result)
 
@@ -297,7 +283,8 @@ class MsvsSettings(object):
       self.append = append
 
     def __call__(self, name, map=None, prefix='', default=None):
-      return self.parent._GetAndMunge(self.field, self.base_path + [name], default=default, prefix=prefix, append=self.append, map=map)
+      # noinspection PyProtectedMember
+      return self.parent._GetAndMunge(self.field, self.base_path + [name], default=default, prefix=prefix, append=self.append, map_arg=map)
 
   def GetArch(self, config):
     """Get architecture based on msvs_configuration_platform and
@@ -327,13 +314,13 @@ class MsvsSettings(object):
       config = config.rsplit('_', 1)[0]
     return config
 
-  def _Setting(self, path, config, default=None, prefix='', append=None, map=None):
+  def _Setting(self, path, config, default=None, prefix='', append=None, map_arg=None):
     """_GetAndMunge for msvs_settings."""
-    return self._GetAndMunge(self.msvs_settings[config], path, default, prefix, append, map)
+    return self._GetAndMunge(self.msvs_settings[config], path, default, prefix, append, map_arg)
 
-  def _ConfigAttrib(self, path, config, default=None, prefix='', append=None, map=None):
+  def _ConfigAttrib(self, path, config, default=None, prefix='', append=None, map_arg=None):
     """_GetAndMunge for msvs_configuration_attributes."""
-    return self._GetAndMunge(self.msvs_configuration_attributes[config], path, default, prefix, append, map)
+    return self._GetAndMunge(self.msvs_configuration_attributes[config], path, default, prefix, append, map_arg)
 
   def AdjustIncludeDirs(self, include_dirs, config):
     """Updates include_dirs to expand VS specific paths, and adds the system
@@ -385,8 +372,8 @@ class MsvsSettings(object):
     """Gets the explicitly overridden output name for a target or returns None
     if it's not overridden."""
     config = self._TargetConfig(config)
-    type = self.spec['type']
-    root = 'VCLibrarianTool' if type == 'static_library' else 'VCLinkerTool'
+    spec_type = self.spec['type']
+    root = 'VCLibrarianTool' if spec_type == 'static_library' else 'VCLinkerTool'
     # TODO(scottmg): Handle OutputDirectory without OutputFile.
     output_file = self._Setting((root, 'OutputFile'), config)
     if output_file:
@@ -632,7 +619,6 @@ class MsvsSettings(object):
       return ['/MANIFEST:NO'], [], []
 
     output_name = name + '.intermediate.manifest'
-    flags = ['/MANIFEST', '/ManifestFile:' + output_name, ]
 
     # Instead of using the MANIFESTUAC flags, we generate a .manifest to
     # include into the list of manifests. This allows us to avoid the need to
@@ -641,13 +627,12 @@ class MsvsSettings(object):
     # final manifest we get from merging all the additional manifest files
     # (plus the one we generate here) isn't modified by merging the
     # intermediate into it.
+    flags = ['/MANIFEST', '/ManifestFile:' + output_name, '/MANIFESTUAC:NO']
 
     # Always NO, because we generate a manifest file that has what we want.
-    flags.append('/MANIFESTUAC:NO')
 
     config = self._TargetConfig(config)
     enable_uac = self._Setting(('VCLinkerTool', 'EnableUAC'), config, default='true')
-    manifest_files = []
     generated_manifest_outer = "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>" \
                                "<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>%s" \
                                "</assembly>"
@@ -754,28 +739,30 @@ class MsvsSettings(object):
     unset, or set to 1 we use cygwin."""
     return int(rule.get('msvs_cygwin_shell', self.spec.get('msvs_cygwin_shell', 1))) != 0
 
-  def _HasExplicitRuleForExtension(self, spec, extension):
+  @staticmethod
+  def _HasExplicitRuleForExtension(spec, extension):
     """Determine if there's an explicit rule for a particular extension."""
     for rule in spec.get('rules', []):
-      if rule['extension'] == extension:
+      if rule.get('extension') == extension:
         return True
     return False
 
-  def _HasExplicitIdlActions(self, spec):
+  @staticmethod
+  def _HasExplicitIdlActions(spec):
     """Determine if an action should not run midl for .idl files."""
     return any([action.get('explicit_idl_action', 0) for action in spec.get('actions', [])])
 
   def HasExplicitIdlRulesOrActions(self, spec):
     """Determine if there's an explicit rule or action for idl files. When
     there isn't we need to generate implicit rules to build MIDL .idl files."""
-    return (self._HasExplicitRuleForExtension(spec, 'idl') or self._HasExplicitIdlActions(spec))
+    return self._HasExplicitRuleForExtension(spec, 'idl') or self._HasExplicitIdlActions(spec)
 
   def HasExplicitAsmRules(self, spec):
     """Determine if there's an explicit rule for asm files. When there isn't we
     need to generate implicit rules to assemble .asm files."""
     return self._HasExplicitRuleForExtension(spec, 'asm')
 
-  def GetIdlBuildData(self, source, config):
+  def GetIdlBuildData(self, _, config):
     """Determine the implicit outputs for an idl file. Returns output
     directory, outputs, and variables and flags that are required."""
     config = self._TargetConfig(config)
@@ -825,7 +812,7 @@ class PrecompiledHeader(object):
     files."""
     return self.settings.msvs_precompiled_header[self.config]
 
-  def GetObjDependencies(self, sources, objs, arch):
+  def GetObjDependencies(self, sources, _, arch):
     """Given a list of sources files and the corresponding object files,
     returns a list of the pch files that should be depended upon. The
     additional wrapping in the return value is for interface compatibility
@@ -839,36 +826,36 @@ class PrecompiledHeader(object):
         return [(None, None, self.output_obj)]
     return []
 
-  def GetPchBuildCommands(self, arch):
+  @staticmethod
+  def GetPchBuildCommands(_):
     """Not used on Windows as there are no additional build steps required
     (instead, existing steps are modified in GetFlagsModifications below)."""
     return []
 
-  def GetFlagsModifications(self, input, output, implicit, command, cflags_c, cflags_cc, expand_special):
+  def GetFlagsModifications(self, input_arg, output, implicit, command, cflags_c, cflags_cc, expand_special):
     """Get the modified cflags and implicit dependencies that should be used
     for the pch compilation step."""
-    if input == self.pch_source:
+    if input_arg == self.pch_source:
       pch_output = ['/Yc' + self._PchHeader()]
       if command == 'cxx':
-        return ([('cflags_cc', map(expand_special, cflags_cc + pch_output))], self.output_obj, [])
+        return [('cflags_cc', map(expand_special, cflags_cc + pch_output))], self.output_obj, []
       elif command == 'cc':
-        return ([('cflags_c', map(expand_special, cflags_c + pch_output))], self.output_obj, [])
+        return [('cflags_c', map(expand_special, cflags_c + pch_output))], self.output_obj, []
     return [], output, implicit
 
 
-vs_version = None
-
-
+default_vs_version = None
 def GetVSVersion(generator_flags):
-  global vs_version
-  if not vs_version:
-    vs_version = gyp.MSVSVersion.SelectVisualStudioVersion(generator_flags.get('msvs_version', 'auto'))
-  return vs_version
+  global default_vs_version
+  if not default_vs_version:
+    from gyp import MSVSVersion
+    default_vs_version = MSVSVersion.SelectVisualStudioVersion(generator_flags.get('msvs_version', 'auto'))
+  return default_vs_version
 
 
 def _GetVsvarsSetupArgs(generator_flags, arch):
   vs = GetVSVersion(generator_flags)
-  return vs.SetupScript()
+  return vs.SetupScript(arch)
 
 
 def ExpandMacros(string, expansions):
@@ -925,21 +912,9 @@ def _ExtractImportantEnvironment(output_of_set, arch):
   return env
 
 
-def _FormatAsEnvironmentBlock(envvar_dict):
-  """Format as an 'environment block' directly suitable for CreateProcess.
-  Briefly this is a list of key=value\0, terminated by an additional \0. See
-  CreateProcess documentation for more details."""
-  block = ''
-  nul = '\0'
-  for key, value in envvar_dict.items():
-    block += key + '=' + value + nul
-  block += nul
-  return block
-
-
-
-def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags, system_includes, open_out):
-  """It's not sufficient to have the absolute path to the compiler, linker,
+def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags):
+  """
+  It's not sufficient to have the absolute path to the compiler, linker,
   etc. on Windows, as those tools rely on .dlls being in the PATH. We also
   need to support both x86 and x64 compilers within the same build (to support
   msvs_target_platform hackery). Different architectures require a different
@@ -952,33 +927,31 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags, system_include
   When the following procedure to generate environment files does not
   meet your requirement (e.g. for custom toolchains), you can pass
   "-G ninja_use_custom_environment_files" to the gyp to suppress file
-  generation and use custom environment files prepared by yourself."""
+  generation and use custom environment files prepared by yourself.
+
+  Args:
+    toplevel_build_dir (str): root dir of build tree
+    generator_flags (OrderedDict): flags passed to the generator
+  """
   archs = ('x86', 'x64')
+  cl_paths = collections.OrderedDict()
   if generator_flags.get('ninja_use_custom_environment_files', 0):
-    cl_paths = {}
     for arch in archs:
       cl_paths[arch] = 'cl.exe'
     return cl_paths
+
   vs = GetVSVersion(generator_flags)
-  cl_paths = {}
   for arch in archs:
-    env = _GetEnvironment(arch, vs, open_out)
-
-    # Inject system includes from gyp files into INCLUDE.
-    if system_includes:
-      system_includes = system_includes | OrderedSet(env.get('INCLUDE', '').split(';'))
-      env['INCLUDE'] = ';'.join(system_includes)
-
-    env_block = _FormatAsEnvironmentBlock(env)
-    f = open_out(os.path.join(toplevel_build_dir, 'environment.' + arch), 'w')
-    f.write(env_block)
-    f.close()
+    env = _GetEnvironment(arch, vs)
+    env_block = NUL.join(encode(k) + '=' + encode(v) for k, v in env.items()) + NUL + NUL
+    with open(os.path.join(toplevel_build_dir, 'environment.' + arch), 'wb') as f:
+      f.write(env_block)
 
     cl_paths[arch] = env['GYP_CL_PATH']
   return cl_paths
 
 
-def _GetEnvironment(arch, vs, open_out):
+def _GetEnvironment(arch, vs):
   """
   This function will run the VC environment setup script, retrieve variables,
   and also the path on cl.exe.
@@ -992,7 +965,6 @@ def _GetEnvironment(arch, vs, open_out):
   Args:
     arch: {string} target architecture
     vs: VisualStudioVersion
-    open_out: file open wrapper
 
   Returns: {dict} the important environment variables VC need to run
 
@@ -1028,7 +1000,7 @@ def _GetEnvironment(arch, vs, open_out):
     DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
   env = _ExtractImportantEnvironment(std_out, arch)
   try:
-    with open_out(cache_keyed_file, mode='wb') as f:
+    with open(cache_keyed_file, mode='wb') as f:
       pickle.dump(env, f)
   except Exception as e:
     DebugOutput(DEBUG_GENERAL, "Failed to save env pickle: %s" % e)
@@ -1061,8 +1033,8 @@ def CalculateCommonVariables(default_variables, params):
   generator_flags = params.get('generator_flags', {})
 
   # Set a variable so conditions can be based on msvs_version.
-  msvs_version = gyp.msvs_emulation.GetVSVersion(generator_flags)
-  default_variables['MSVS_VERSION'] = msvs_version.ShortName()
+  msvs_version = GetVSVersion(generator_flags)
+  default_variables['MSVS_VERSION'] = msvs_version.short_name
 
   # To determine processor word size on Windows, in addition to checking
   # PROCESSOR_ARCHITECTURE (which reflects the word size of the current

@@ -21,7 +21,7 @@ import traceback
 from contextlib import contextmanager
 
 import TestCmd
-from TestCmd import _Cleanup, IS_PY3, IS_WINDOWS, IS_64_BIT
+from TestCmd import _Cleanup, IS_PY3
 import TestCommon
 from TestCommon import __all__
 
@@ -164,6 +164,8 @@ class TestGypBase(TestCommon.TestCommon):
 
     self.dir_fixture(self.origin_cwd)
     self.set_configuration(None)
+    self.is_make = 'make' in self.format.split('-')
+    self.is_ninja = 'ninja' in self.format.split('-')
 
     # Set $HOME so that gyp doesn't read the user's actual
     # ~/.gyp/include.gypi file, which may contain variables
@@ -206,13 +208,6 @@ class TestGypBase(TestCommon.TestCommon):
     do not match the specified contents.
     """
     return self.must_match(self.built_file_path(name, **kw), contents)
-
-  def built_file_must_not_match(self, name, contents, **kw):
-    """
-    Fails the test if the contents of the specified built file name
-    match the specified contents.
-    """
-    return self.must_not_match(self.built_file_path(name, **kw), contents)
 
   def built_file_must_not_contain(self, name, contents, **kw):
     """
@@ -297,6 +292,17 @@ class TestGypBase(TestCommon.TestCommon):
   def must_match(self, file, expect, mode='rt', match=None, message=None, newline=None):
     super(TestGypBase, self).must_match(file, expect, mode, match, message, newline)
 
+  def must_contain(self, file, required, mode='rt', find=None):
+    if isinstance(required, list) and not find:
+      def find(content, subseq):
+        seq = content.splitlines()
+        seq_len = len(seq)
+        seq_strp = [l.strip() for l in seq]
+        sub_len = len(subseq)
+        subseq_strp = [l.strip() for l in subseq]
+        return any(seq_strp[i:i+sub_len] == subseq_strp for i in range(seq_len))
+    super(TestGypBase, self).must_contain(file, required, mode, find)
+
   def must_not_contain(self, file, banned, mode='rt', find=None):
     super(TestGypBase, self).must_not_contain(file, banned, mode, find)
 
@@ -363,7 +369,7 @@ class TestGypBase(TestCommon.TestCommon):
     # TODO:  --depth=. works around Chromium-specific tree climbing.
     depth = kw.pop('depth', '.')
     run_args = ['--depth='+depth]
-    run_args.extend(['--format='+f for f in self.formats])
+    run_args.extend(['--format=' + f.replace('-mock', '') for f in self.formats])
     run_args.append(gyp_file)
 
     run_args.extend(self.extra_args)
@@ -700,6 +706,24 @@ class TestGypMakeMock(TestGypMake):
     self.pass_test()
 
 
+class TestGypNinjaMock(TestGypMake):
+  format = 'ninja-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  def build(self, gyp_file, target=None, **kw):
+    self.pass_test()
+
+
+class TestGypMSVSMock(TestGypMake):
+  format = 'msvs-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  uses_msbuild = True
+
+  def build(self, gyp_file, target=None, **kw):
+    self.pass_test()
+
+
 def ConvertToCygpath(path):
   """Convert to cygwin path if we are using cygwin."""
   if sys.platform == 'cygwin':
@@ -893,6 +917,11 @@ class TestGypNinja(TestGypOnMSToolchain):
   DEFAULT = 'all'
 
   def run_gyp(self, gyp_file, *args, **kw):
+    """
+
+    Args:
+      gyp_file (str):
+    """
     TestGypBase.run_gyp(self, gyp_file, *args, **kw)
 
   def build(self, gyp_file, target=None, **kw):
@@ -1264,8 +1293,10 @@ format_class_list = [
   TestGypMake,
   TestGypMakeMock,
   TestGypMSVS,
+  TestGypMSVSMock,
   TestGypMSVSNinja,
   TestGypNinja,
+  TestGypNinjaMock,
   TestGypXcode,
   TestGypXcodeNinja,
 ]

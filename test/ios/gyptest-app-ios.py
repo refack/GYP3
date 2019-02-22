@@ -9,9 +9,16 @@ Verifies that ios app bundles are built correctly.
 """
 
 import TestGyp
+import TestMac
 
 import subprocess
 import sys
+
+
+if not TestMac.Xcode.HasIPhoneSDK():
+  print('IPhone SDK not installed')
+  sys.exit(2)
+
 
 def CheckFileXMLPropertyList(file):
   output = subprocess.check_output(['file', file])
@@ -27,6 +34,7 @@ def CheckFileBinaryPropertyList(file):
 
 if sys.platform == 'darwin':
   test = TestGyp.TestGyp(formats=['xcode', 'ninja'])
+
 
   test.run_gyp('test.gyp', chdir='app-bundle')
 

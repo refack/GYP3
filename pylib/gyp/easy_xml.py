@@ -108,8 +108,7 @@ def _ConstructContentList(xml_parts, specification, pretty, level=0):
     xml_parts.append('/>%s' % new_line)
 
 
-def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False,
-                      win32=False):
+def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False, win32=False):
   """ Writes the XML content to disk, touching the file only if it has changed.
 
   Args:
@@ -117,6 +116,7 @@ def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False,
     path: Location of the file.
     encoding: The encoding to report on the first line of the XML file.
     pretty: True if we want pretty printing with indents and new lines.
+    win32: True if we want \r\n as line terminator.
   """
   xml_string = XmlToString(content, encoding, pretty)
   if win32 and os.linesep != '\r\n':
@@ -138,8 +138,8 @@ def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False,
   if existing == xml_string:
     return
 
-  with open(path, 'w', encoding=encoding) as f:
-    f.write(xml_string)
+  with open(path, 'wb') as f:
+    f.write(xml_string.encode('utf-8'))
 
 
 _xml_escape_map = {

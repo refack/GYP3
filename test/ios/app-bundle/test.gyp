@@ -37,7 +37,7 @@
         ],
         'INFOPLIST_FILE': 'TestApp/TestApp-Info.plist',
         'SDKROOT': 'iphonesimulator',  # -isysroot
-        'IPHONEOS_DEPLOYMENT_TARGET': '5.0',
+        'IPHONEOS_DEPLOYMENT_TARGET': '7.0',
         'CONFIGURATION_BUILD_DIR':'build/Default',
       },
     },

@@ -138,10 +138,9 @@ class Writer(object):
     for config, spec in sorted(self.configurations.items()):
       configs.append(spec)
 
-    content = ['VisualStudioUserFile',
-               {'Version': self.version.ProjectVersion(),
-                'Name': self.name
-               },
-               configs]
-    easy_xml.WriteXmlIfChanged(content, self.user_file_path,
-                               encoding="Windows-1252")
+    content = [
+      'VisualStudioUserFile',
+      {'Version': self.version.project_version, 'Name': self.name},
+      configs
+    ]
+    easy_xml.WriteXmlIfChanged(content, self.user_file_path, encoding="Windows-1252")

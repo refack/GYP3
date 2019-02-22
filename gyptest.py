@@ -130,8 +130,9 @@ def print_configuration_info():
     print('  Win %s %s\n' % platform.win32_ver()[0:2])
     try:
       import gyp.MSVSVersion
-      print('  MSVS %s' % gyp.MSVSVersion.SelectVisualStudioVersion().Description())
-    except:
+      version = gyp.MSVSVersion.SelectVisualStudioVersion()
+      print('  MSVS %s' % version.description)
+    except Exception:
       pass
   elif sys.platform in ('linux', 'linux2'):
     # noinspection PyBroadException
@@ -190,26 +191,19 @@ class Runner(object):
     cmd = [sys.executable, test] + self.gyp_options
     self.env['TESTGYP_FORMAT'] = fmt
 
-    start = time.time()
+    stderr_fd = subprocess.PIPE
     if self.verbose:
       self.env['TESTCMD_VERBOSE'] = '1'
-    proc = subprocess.Popen(cmd, bufsize=2**20, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env, universal_newlines=True)
-    if self.verbose:
-      err_lines = []
-      for l in proc.stderr:
-        l = l.strip()
-        print("# %s" % l, file=sys.stderr)
-        err_lines.append(l)
-      stderr = '\n'.join(err_lines)
-      proc.wait()
-      took = time.time() - start
-      stdout = proc.stdout.read().strip()
-    else:
-      proc.wait()
-      took = time.time() - start
-      stdout = proc.stdout.read().strip()
-      stderr = proc.stderr.read().strip()
+      # this will stream STDOUT to the parent's but will not pipe it to us...
+      # something something `while not proc.poll()`...
+      stderr_fd = None
 
+    start = time.time()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=stderr_fd, env=self.env, universal_newlines=True)
+    stdout, stderr = proc.communicate()
+    took = time.time() - start
+    stdout = stdout.strip()
+    stderr = (stderr or '').strip()
 
     if proc.returncode == 2:
       res = 'not ok %d # skip %s'

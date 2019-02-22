@@ -20,8 +20,6 @@ if sys.platform == 'win32':
 
   test.build('input-output-macros.gyp', 'test_expansions', chdir=CHDIR)
 
-  test.built_file_must_exist('stuff.blah.something',
-      content='Random data file.\nModified.',
-      chdir=CHDIR)
+  test.built_file_must_exist('stuff.blah.something', content='Random data file.\nModified.', chdir=CHDIR)
 
   test.pass_test()

@@ -22,7 +22,7 @@ test.must_not_exist('one_source_file.vcxproj.filters')
 
 test.must_not_exist('two_source_files.vcxproj.filters')
 
-test.must_contain('three_files_in_two_folders.vcxproj.filters', '''\
+required = '''\
   <ItemGroup>
     <ClCompile Include="..\\folder1\\a.c">
       <Filter>folder1</Filter>
@@ -34,9 +34,10 @@ test.must_contain('three_files_in_two_folders.vcxproj.filters', '''\
       <Filter>folder2</Filter>
     </ClCompile>
   </ItemGroup>
-'''.replace('\n', '\r\n'))
+'''.splitlines()
+test.must_contain('three_files_in_two_folders.vcxproj.filters', required)
 
-test.must_contain('nested_folders.vcxproj.filters', '''\
+required2 = '''\
   <ItemGroup>
     <ClCompile Include="..\\folder1\\nested\\a.c">
       <Filter>folder1\\nested</Filter>
@@ -51,7 +52,8 @@ test.must_contain('nested_folders.vcxproj.filters', '''\
       <Filter>folder1\\other</Filter>
     </ClCompile>
   </ItemGroup>
-'''.replace('\n', '\r\n'))
+'''.splitlines()
+test.must_contain('nested_folders.vcxproj.filters', required2)
 
 
 test.pass_test()

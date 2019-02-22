@@ -20,28 +20,32 @@ osx-setup-steps: &osx-setup-steps
   language: shell  # 'language: python' is not yet supported on macOS
   before_install: brew upgrade python
   install:
+    - brew install ninja
     - pip install --upgrade pip pipenv
     - pipenv install --dev
+    - pipenv install PyObjC  # This is not in the Pipfile because it breaks other platforms https://github.com/pypa/pipenv/issues/3187
 
 matrix:
   include:
-    - name: "Linux: test on Python 3.7"
+    - name: "Linux: test with make and ninja on Python 3.7"
       python: '3.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f ninja,make
+      script: pipenv run -v test -f make,ninja
 
-    - name: "Linux: test with make on Python 2.7"
+    - name: "Linux: test with make and ninja on Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f make
+      script: pipenv run -v test -f make,ninja
 
-    - name: "Windows: test with make-mock on Python 3.7"
+    - name: "Windows: test with mocks on Python 3.7"
       <<: *windows-setup-steps
-      script: py -m pipenv run -v test -f make-mock
+      env:
+        - GYP_MSVS_VERSION=2017
+      script: py -m pipenv run -v test -f make-mock,msvs-mock
 
-    - name: "macOS: test with make-mock on Python 3.7"
+    - name: "macOS: test with make and ninja on Python 3.7"
       <<: *osx-setup-steps
-      script: pipenv run -v test -f make
+      script: pipenv run -v test -f make,ninja
 
     - name: "lint with Python 2.7"
       python: '2.7'

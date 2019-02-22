@@ -21,7 +21,7 @@ build_error_code = {
   'msvs': 1,
   'ninja': 1,
   'xcode': 65,
-}[test.format]
+}.get(test.format)
 
 # By default, everything will be included.
 test.run_gyp('test1.gyp')

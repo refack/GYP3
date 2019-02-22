@@ -181,28 +181,27 @@ class Writer(object):
       raise ValueError('AddFileConfig: file "%s" not in project.' % path)
 
     # Add the config to the file node
-    spec = self._GetSpecForConfiguration('FileConfiguration', config, attrs,
-                                         tools)
+    spec = self._GetSpecForConfiguration('FileConfiguration', config, attrs, tools)
     parent.append(spec)
 
   def WriteIfChanged(self):
     """Writes the project file."""
     # First create XML content definition
     content = [
-        'VisualStudioProject',
-        {'ProjectType': 'Visual C++',
-         'Version': self.version.ProjectVersion(),
-         'Name': self.name,
-         'ProjectGUID': self.guid,
-         'RootNamespace': self.name,
-         'Keyword': 'Win32Proj'
-        },
-        self.platform_section,
-        self.tool_files_section,
-        self.configurations_section,
-        ['References'],  # empty section
-        self.files_section,
-        ['Globals']  # empty section
+      'VisualStudioProject',
+      {
+        'ProjectType': 'Visual C++',
+        'Version': self.version.project_version,
+        'Name': self.name,
+        'ProjectGUID': self.guid,
+        'RootNamespace': self.name,
+        'Keyword': 'Win32Proj'
+      },
+      self.platform_section,
+      self.tool_files_section,
+      self.configurations_section,
+      ['References'],  # empty section
+      self.files_section,
+      ['Globals']  # empty section
     ]
-    easy_xml.WriteXmlIfChanged(content, self.project_path,
-                               encoding="Windows-1252")
+    easy_xml.WriteXmlIfChanged(content, self.project_path, encoding="Windows-1252")

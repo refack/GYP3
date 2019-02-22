@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import re
 import subprocess
+import sys
 
 __all__ = ['Xcode', 'CheckFileType']
 
@@ -66,6 +67,7 @@ class Xcode(object):
       Xcode._cache['Version'] = version
     return Xcode._cache['Version']
 
+
   @staticmethod
   def SDKVersion():
     if 'SDKVersion' not in Xcode._cache:
@@ -81,8 +83,12 @@ class Xcode(object):
       Xcode._cache['SDKVersion'] = out.strip()
     return Xcode._cache['SDKVersion']
 
+
   @staticmethod
   def HasIPhoneSDK():
+    if not sys.platform == 'darwin':
+      return False
+
     if 'HasIPhoneSDK' not in Xcode._cache:
       try:
         out = run('xcrun', '--sdk', 'iphoneos', '--show-sdk-path')

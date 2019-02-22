@@ -9,66 +9,68 @@ import os
 import gyp.common
 
 
-# GUIDs for project types
-ENTRY_TYPE_GUIDS = {
+class MSVSSolutionEntry(object):
+  """
+  Set GUID from path
+  TODO(rspangler): This is fragile.
+  1. We can't just use the project filename sans path, since there could
+     be multiple projects with the same base name (for example,
+     foo/unittest.vcproj and bar/unittest.vcproj).
+  2. The path needs to be relative to $SOURCE_ROOT, so that the project
+     GUID is the same whether it's included from base/base.sln or
+     foo/bar/baz/baz.sln.
+  3. The GUID needs to be the same each time this builder is invoked, so
+     that we don't need to rebuild the solution when the project changes.
+  4. We should be able to handle pre-built project files by reading the
+     GUID from the files.
+  """
+
+  guid_seed = ""
+
+  # GUIDs for project types
+  ENTRY_TYPE_GUIDS = {
     'project': '{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}',
     'folder': '{2150E333-8FDC-42A3-9474-1A3956D46DE8}',
-}
+  }
 
-#------------------------------------------------------------------------------
-# Helper functions
+  @classmethod
+  def MakeGuid(cls, name):
+    """Returns a GUID for the specified target name.
 
+    Args:
+      name: Target name.
+    Returns:
+      A GUID-line string calculated from the name and seed.
 
-def MakeGuid(name, seed='msvs_new'):
-  """Returns a GUID for the specified target name.
+    This generates something which looks like a GUID, but depends only on the
+    name and seed.  This means the same name/seed will always generate the same
+    GUID, so that projects and solutions which refer to each other can explicitly
+    determine the GUID to refer to explicitly.  It also means that the GUID will
+    not change when the project for a target is rebuilt.
+    """
+    # Calculate a MD5 signature for the seed and name.
+    key = (str(cls.guid_seed) + str(name)).encode('utf-8')
+    d = hashlib.md5(key).hexdigest().upper()
+    # Convert most of the signature to GUID form (discard the rest)
+    guid = ('{' + d[:8] + '-' + d[8:12] + '-' + d[12:16] + '-' + d[16:20] + '-' + d[20:32] + '}')
+    return guid
 
-  Args:
-    name: Target name.
-    seed: Seed for MD5 hash.
-  Returns:
-    A GUID-line string calculated from the name and seed.
-
-  This generates something which looks like a GUID, but depends only on the
-  name and seed.  This means the same name/seed will always generate the same
-  GUID, so that projects and solutions which refer to each other can explicitly
-  determine the GUID to refer to explicitly.  It also means that the GUID will
-  not change when the project for a target is rebuilt.
-  """
-  # Calculate a MD5 signature for the seed and name.
-  key = (str(seed) + str(name)).encode('utf-8')
-  d = hashlib.md5(key).hexdigest().upper()
-  # Convert most of the signature to GUID form (discard the rest)
-  guid = ('{' + d[:8] + '-' + d[8:12] + '-' + d[12:16] + '-' + d[16:20] + '-' + d[20:32] + '}')
-  return guid
-
-#------------------------------------------------------------------------------
-
-
-class MSVSSolutionEntry(object):
-
-      # Set GUID from path
-      # TODO(rspangler): This is fragile.
-      # 1. We can't just use the project filename sans path, since there could
-      #    be multiple projects with the same base name (for example,
-      #    foo/unittest.vcproj and bar/unittest.vcproj).
-      # 2. The path needs to be relative to $SOURCE_ROOT, so that the project
-      #    GUID is the same whether it's included from base/base.sln or
-      #    foo/bar/baz/baz.sln.
-      # 3. The GUID needs to be the same each time this builder is invoked, so
-      #    that we don't need to rebuild the solution when the project changes.
-      # 4. We should be able to handle pre-built project files by reading the
-      #    GUID from the files.
+  def __init__(self, path, name, guid):
+    self.path = path
+    self.name = name
+    self.guid = guid or MSVSSolutionEntry.MakeGuid(self.path)
 
   def __lt__(self, other):
     # Sort by name then guid (so things are in order on vs2008).
     return self.name < other.name
 
 
-class MSVSFolder(MSVSSolutionEntry):
+class MSVSFolderEntry(MSVSSolutionEntry):
   """Folder in a Visual Studio project or solution."""
 
-  def __init__(self, path, name = None, entries = None,
-               guid = None, items = None):
+  guid_seed = 'msvs_folder'
+
+  def __init__(self, path, name=None, entries=None, guid=None, items=None):
     """Initializes the folder.
 
     Args:
@@ -80,59 +82,44 @@ class MSVSFolder(MSVSSolutionEntry):
       items: List of solution items to include in the folder project.  May be
           None, if the folder does not directly contain items.
     """
-    if name:
-      self.name = name
-    else:
-      self.name = os.path.basename(path)
+    super(MSVSFolderEntry, self).__init__(path, name or os.path.basename(path), guid)
     self.path = path
-    self.guid = guid
 
     # Copy passed lists (or set to empty lists)
     self.entries = sorted(list(entries or []))
     self.items = list(items or [])
 
-    self.entry_type_guid = ENTRY_TYPE_GUIDS['folder']
-  def get_guid(self):
-    if self.guid is None:
-      self.guid = MakeGuid(self.path, seed='msvs_folder')
-    return self.guid
+    self.entry_type_guid = self.ENTRY_TYPE_GUIDS['folder']
 
 
-#------------------------------------------------------------------------------
-
-
-class MSVSProject(MSVSSolutionEntry):
+class MSVSProjectEntry(MSVSSolutionEntry):
   """Visual Studio project."""
 
-  def __init__(self, path, name = None, dependencies = None, guid = None,
-               spec = None, build_file = None, config_platform_overrides = None,
-               fixpath_prefix = None):
+  guid_seed = 'msvs_new'
+
+  def __init__(self, path, name=None, dependencies=None, guid=None, spec=None, build_file=None, config_platform_overrides=None, fixpath_prefix=None):
     """Initializes the project.
 
     Args:
       path: Absolute path to the project file.
-      name: Name of project.  If None, the name will be the same as the base
-          name of the project file.
-      dependencies: List of other Project objects this project is dependent
-          upon, if not None.
-      guid: GUID to use for project, if not None.
+      name: Name of project.  If None, the name will be the same as the base name of the project file.
+      dependencies: List of other Project objects this project is dependent upon, if not None.
       spec: Dictionary specifying how to build this project.
       build_file: Filename of the .gyp file that the vcproj file comes from.
       config_platform_overrides: optional dict of configuration platforms to
           used in place of the default for this target.
       fixpath_prefix: the path used to adjust the behavior of _fixpath
     """
-    self.path = path
-    self.guid = guid
+
+    # Use project filename if name not specified
+    super(MSVSProjectEntry, self).__init__(path, name or os.path.splitext(os.path.basename(path))[0], guid)
     self.spec = spec
     self.build_file = build_file
-    # Use project filename if name not specified
-    self.name = name or os.path.splitext(os.path.basename(path))[0]
 
     # Copy passed lists (or set to empty lists)
     self.dependencies = list(dependencies or [])
 
-    self.entry_type_guid = ENTRY_TYPE_GUIDS['project']
+    self.entry_type_guid = self.ENTRY_TYPE_GUIDS['project']
 
     if config_platform_overrides:
       self.config_platform_overrides = config_platform_overrides
@@ -144,12 +131,10 @@ class MSVSProject(MSVSSolutionEntry):
   def set_dependencies(self, dependencies):
     self.dependencies = list(dependencies or [])
 
-  def get_guid(self):
-    if self.guid is None:
-      self.guid = MakeGuid(self.name)
-    return self.guid
   def set_msbuild_toolset(self, msbuild_toolset):
     self.msbuild_toolset = msbuild_toolset
+
+
 #------------------------------------------------------------------------------
 
 
@@ -210,15 +195,17 @@ class MSVSSolution(object):
       all_entries.add(e)
 
       # If this is a folder, check its entries too.
-      if isinstance(e, MSVSFolder):
+      if isinstance(e, MSVSFolderEntry):
         entries_to_check += e.entries
 
     all_entries = sorted(all_entries)
 
     # Open file and print header
     f = writer(self.path)
-    f.write('Microsoft Visual Studio Solution File, Format Version %s\r\n' % self.version.SolutionVersion())
-    f.write('# %s\r\n' % self.version.Description())
+    f.write(
+      'Microsoft Visual Studio Solution File, Format Version %s\r\n'
+      '# %s\r\n' % (self.version.solution_version, self.version.description)
+    )
 
     # Project entries
     sln_root = os.path.split(self.path)[0]
@@ -231,7 +218,7 @@ class MSVSSolution(object):
           e.entry_type_guid,          # Entry type GUID
           e.name,                     # Folder name
           folder_name,                # Folder name (again)
-          e.get_guid(),               # Entry GUID
+          e.guid,               # Entry GUID
       ))
 
       # TODO(rspangler): Need a way to configure this stuff
@@ -241,18 +228,18 @@ class MSVSSolution(object):
                 '\t\tRelease.AspNetCompiler.Debug = "False"\r\n'
                 '\tEndProjectSection\r\n')
 
-      if isinstance(e, MSVSFolder):
+      if isinstance(e, MSVSFolderEntry):
         if e.items:
           f.write('\tProjectSection(SolutionItems) = preProject\r\n')
           for i in sorted(e.items):
             f.write('\t\t%s = %s\r\n' % (i, i))
           f.write('\tEndProjectSection\r\n')
 
-      if isinstance(e, MSVSProject):
+      if isinstance(e, MSVSProjectEntry):
         if e.dependencies:
           f.write('\tProjectSection(ProjectDependencies) = postProject\r\n')
           for d in sorted(e.dependencies):
-            f.write('\t\t%s = %s\r\n' % (d.get_guid(), d.get_guid()))
+            f.write('\t\t%s = %s\r\n' % (d.guid, d.guid))
           f.write('\tEndProjectSection\r\n')
 
       f.write('EndProject\r\n')
@@ -270,9 +257,9 @@ class MSVSSolution(object):
     config_guids = []
     config_guids_overrides = {}
     for e in all_entries:
-      if isinstance(e, MSVSProject):
-        config_guids.append(e.get_guid())
-        config_guids_overrides[e.get_guid()] = e.config_platform_overrides
+      if isinstance(e, MSVSProjectEntry):
+        config_guids.append(e.guid)
+        config_guids_overrides[e.guid] = e.config_platform_overrides
     config_guids.sort()
 
     f.write('\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\r\n')
@@ -303,13 +290,13 @@ class MSVSSolution(object):
 
     # Folder mappings
     # Omit this section if there are no folders
-    if any([e.entries for e in all_entries if isinstance(e, MSVSFolder)]):
+    if any([e.entries for e in all_entries if isinstance(e, MSVSFolderEntry)]):
       f.write('\tGlobalSection(NestedProjects) = preSolution\r\n')
       for e in all_entries:
-        if not isinstance(e, MSVSFolder):
+        if not isinstance(e, MSVSFolderEntry):
           continue        # Does not apply to projects, only folders
         for subentry in e.entries:
-          f.write('\t\t%s = %s\r\n' % (subentry.get_guid(), e.get_guid()))
+          f.write('\t\t%s = %s\r\n' % (subentry.guid, e.guid))
       f.write('\tEndGlobalSection\r\n')
 
     f.write('EndGlobal\r\n')

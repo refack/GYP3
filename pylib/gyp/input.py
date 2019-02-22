@@ -978,6 +978,9 @@ def EvalSingleCondition(cond_expr, true_dict, false_dict, phase, variables, buil
   except NameError as e:
     gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' % (cond_expr_expanded, build_file))
     raise GypError(e)
+  except TypeError as e:
+    gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' % (cond_expr_expanded, build_file))
+    raise GypError(e)
 
 
 def ProcessConditionsInDict(the_dict, phase, variables, build_file):
