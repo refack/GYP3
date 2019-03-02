@@ -92,8 +92,7 @@ def ResolveTarget(build_file, target, toolset):
       # interpreting it as relative to build_file.  If parsed_build_file is
       # absolute, it is usable as a path regardless of the current directory,
       # and os.path.join will return it as-is.
-      build_file = os.path.normpath(os.path.join(os.path.dirname(build_file),
-                                                 parsed_build_file))
+      build_file = os.path.normpath(os.path.join(os.path.dirname(build_file), parsed_build_file))
       # Further (to handle cases like ../cwd), make it relative to cwd)
       if not os.path.isabs(build_file):
         build_file = RelativePath(build_file, '.')
@@ -147,31 +146,13 @@ def RelativePath(path, relative_to, follow_path_symlink=True):
     path = os.path.abspath(path)
   relative_to = os.path.realpath(relative_to)
 
-  # On Windows, we can't create a relative path to a different drive, so just
-  # use the absolute path.
+  # On Windows, we can't create a relative path to a different drive, so just use the absolute path.
   if sys.platform == 'win32':
-    if (os.path.splitdrive(path)[0].lower() !=
-        os.path.splitdrive(relative_to)[0].lower()):
+    if os.path.splitdrive(path)[0].lower() != os.path.splitdrive(relative_to)[0].lower():
       return path
 
-  # Split the paths into components.
-  path_split = path.split(os.path.sep)
-  relative_to_split = relative_to.split(os.path.sep)
-
-  # Determine how much of the prefix the two paths share.
-  prefix_len = len(os.path.commonprefix([path_split, relative_to_split]))
-
-  # Put enough ".." components to back up out of relative_to to the common
-  # prefix, and then append the part of path_split after the common prefix.
-  relative_split = [os.path.pardir] * (len(relative_to_split) - prefix_len) + \
-                   path_split[prefix_len:]
-
-  if len(relative_split) == 0:
-    # The paths were the same.
-    return ''
-
-  # Turn it back into a string and we're done.
-  return os.path.join(*relative_split)
+  rel = os.path.relpath(path, relative_to)
+  return rel
 
 
 @memoize
@@ -280,15 +261,16 @@ def EncodePOSIXShellArgument(argument):
   return encoded
 
 
-def EncodePOSIXShellList(list):
-  """Encodes |list| suitably for consumption by POSIX shells.
+def EncodePOSIXShellList(lst):
+  """
+  Encodes |lst| suitably for consumption by POSIX shells.
 
-  Returns EncodePOSIXShellArgument for each item in list, and joins them
+  Returns EncodePOSIXShellArgument for each item in lst, and joins them
   together using the space character as an argument separator.
   """
 
   encoded_arguments = []
-  for argument in list:
+  for argument in lst:
     encoded_arguments.append(EncodePOSIXShellArgument(argument))
   return ' '.join(encoded_arguments)
 
@@ -341,9 +323,10 @@ def WriteOnDiff(filename):
     def __init__(self):
       # Pick temporary file.
       tmp_fd, self.tmp_path = tempfile.mkstemp(
-          suffix='.tmp',
-          prefix=os.path.split(filename)[1] + '.gyp.',
-          dir=os.path.split(filename)[0])
+        suffix='.tmp',
+        prefix=os.path.split(filename)[1] + '.gyp.',
+        dir=os.path.split(filename)[0]
+      )
       try:
         self.tmp_file = os.fdopen(tmp_fd, 'w')
       except Exception:
@@ -368,8 +351,7 @@ def WriteOnDiff(filename):
             raise
 
         if same:
-          # The new file is identical to the old one, just get rid of the new
-          # one.
+          # The new file is identical to the old one, just get rid of the new one.
           os.unlink(self.tmp_path)
         else:
           # The new file is different from the old one, or there is no old one.
@@ -414,7 +396,6 @@ def GetFlavor(params):
     'win32': 'win',
     'darwin': 'mac',
   }
-
   if 'flavor' in params:
     return params['flavor']
   if sys.platform in flavors:
@@ -433,42 +414,47 @@ def GetFlavor(params):
     return 'zos'
   if sys.platform.startswith('os390'):
     return 'zos'
-
   return 'linux'
 
 
-def CopyTool(flavor, out_path, generator_flags={}):
-  """Finds (flock|mac|win)_tool.gyp in the gyp directory and copies it
-  to |out_path|."""
-  # aix and solaris just need flock emulation. mac and win use more complicated
-  # support scripts.
+def CopyTool(flavor, out_path, mac_toolchain_dir=None):
+  """
+  Finds (flock|mac|win)_tool.py in the gyp directory and copies it to |out_path|.
+  Refs: flock_tool.py => gyp-flock-tool
+  Refs: mac_tool.py => gyp-mac-tool
+  Refs: win_tool.py => gyp-win-tool
+  """
+  # aix and solaris just need flock emulation. mac and win use more complicated support scripts.
   prefix = {
-      'aix': 'flock',
-      'solaris': 'flock',
-      'mac': 'mac',
-      'win': 'win'
-      }.get(flavor, None)
+    'aix': 'flock',
+    'solaris': 'flock',
+    'mac': 'mac',
+    'win': 'win'
+  }.get(flavor)
   if not prefix:
     return
 
   # Slurp input file.
-  source_path = os.path.join(
-      os.path.dirname(os.path.abspath(__file__)), '%s_tool.py' % prefix)
-  with open(source_path) as source_file:
+  source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'buildtime_helpers', '%s_tool.py' % prefix)
+  with open(source_path, 'rt') as source_file:
     source = source_file.readlines()
 
   # Set custom header flags.
-  header = '# Generated by gyp. Do not edit.\n'
-  mac_toolchain_dir =  generator_flags.get('mac_toolchain_dir', None)
+  headers = [
+    source.pop(0),  # original shebang
+    '# Generated by gyp. Do not edit.\n'
+  ]
   if flavor == 'mac' and mac_toolchain_dir:
-    header += "import os;\nos.environ['DEVELOPER_DIR']='%s'\n" \
-        % mac_toolchain_dir
+    headers += [
+      'import os\n',
+      "os.environ['DEVELOPER_DIR']='%s'\n" % mac_toolchain_dir
+    ]
 
   # Add header and write it out.
   tool_path = os.path.join(out_path, 'gyp-%s-tool' % prefix)
-  with open(tool_path, 'w') as tool_file:
-    tool_file.write(
-        ''.join([source[0], header] + source[1:]))
+  with open(tool_path, 'wt') as tool_file:
+    tool_src_lines = headers + source
+    tool_file.writelines(tool_src_lines)
 
   # Make file executable.
   os.chmod(tool_path, 0o755)
@@ -479,7 +465,6 @@ def CopyTool(flavor, out_path, generator_flags={}):
 # ASPN: Python Cookbook: Remove duplicates from a sequence
 # First comment, dated 2001/10/13.
 # (Also in the printed Python Cookbook.)
-
 def uniquer(seq, idfun=None):
     if idfun is None:
         idfun = lambda x: x
@@ -500,7 +485,7 @@ class OrderedSet(collections.MutableSet):
     end += [None, end, end]         # sentinel node for doubly linked list
     self.map = {}                   # key --> [key, prev, next]
     if iterable is not None:
-      self |= iterable
+      self.update(iterable)
 
   def __len__(self):
     return len(self.map)
@@ -568,7 +553,8 @@ class CycleError(Exception):
 
 
 def TopologicallySorted(graph, get_edges):
-  r"""Topologically sort based on a user provided edge definition.
+  r"""
+  Topologically sort based on a user provided edge definition.
 
   Args:
     graph: A list of node names.
@@ -592,20 +578,21 @@ def TopologicallySorted(graph, get_edges):
   visited = set()
   visiting = set()
   ordered_nodes = []
-  def Visit(node):
-    if node in visiting:
+  def Visit(n):
+    if n in visiting:
       raise CycleError(visiting)
-    if node in visited:
+    if n in visited:
       return
-    visited.add(node)
-    visiting.add(node)
-    for neighbor in get_edges(node):
+    visited.add(n)
+    visiting.add(n)
+    for neighbor in get_edges(n):
       Visit(neighbor)
-    visiting.remove(node)
-    ordered_nodes.insert(0, node)
+    visiting.remove(n)
+    ordered_nodes.insert(0, n)
   for node in sorted(graph):
     Visit(node)
   return ordered_nodes
+
 
 def CrossCompileRequested():
   # TODO: figure out how to not build extra host objects in the

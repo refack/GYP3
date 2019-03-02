@@ -18,8 +18,10 @@ import time
 import hashlib
 import traceback
 
-import gyp.MSVSUtil
 from gyp import DebugOutput, DEBUG_GENERAL
+from gyp.common import EnsureDirExists, WriteOnDiff
+from gyp.MSVS import MSVSUtil
+
 
 if 'basestring' not in __builtins__:
   basestring = str
@@ -223,7 +225,7 @@ class MsvsSettings(object):
     ext = self.spec.get('product_extension', None)
     if ext:
       return ext
-    return gyp.MSVSUtil.TARGET_TYPE_EXT.get(self.spec['type'], '')
+    return MSVSUtil.TARGET_TYPE_EXT.get(self.spec['type'], '')
 
   def GetVSMacroEnv(self, base_to_build=None, config=None):
     """Get a dict of variables mapping internal VS macro names to their gyp
@@ -663,8 +665,8 @@ class MsvsSettings(object):
     # have changed so that simply regenerating the project files doesn't
     # cause a relink.
     build_dir_generated_name = os.path.join(build_dir, generated_name)
-    gyp.common.EnsureDirExists(build_dir_generated_name)
-    f = gyp.common.WriteOnDiff(build_dir_generated_name)
+    EnsureDirExists(build_dir_generated_name)
+    f = WriteOnDiff(build_dir_generated_name)
     f.write(generated_manifest_contents)
     f.close()
     manifest_files = [generated_name]
@@ -846,7 +848,7 @@ default_vs_version = None
 def GetVSVersion(generator_flags):
   global default_vs_version
   if not default_vs_version:
-    from gyp import MSVSVersion
+    from gyp.MSVS import MSVSVersion
     default_vs_version = MSVSVersion.SelectVisualStudioVersion(generator_flags.get('msvs_version', 'auto'))
   return default_vs_version
 

@@ -14,7 +14,7 @@ import subprocess
 import sys
 import traceback
 import gyp.common
-import gyp.simple_copy
+import gyp.lib.simple_copy
 from gyp.common import GypError, OrderedSet
 
 if not 'unicode' in __builtins__:
@@ -238,15 +238,15 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
     raise GypError("%s does not evaluate to a dictionary." % build_file_path)
 
   data[build_file_path] = build_file_data
-  aux_data[build_file_path] = {}
+  aux_data[build_file_path] = OrderedDict()
 
   # Scan for includes and merge them in.
-  if ('skip_includes' not in build_file_data or not build_file_data['skip_includes']):
+  if 'skip_includes' not in build_file_data or not build_file_data['skip_includes']:
     try:
+      includes_arg = None
       if is_target:
-        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data, includes)
-      else:
-        LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data)
+        includes_arg = includes
+      LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data, includes)
     except Exception as e:
       gyp.common.ExceptionAppend(e, 'while reading includes of ' + build_file_path)
       raise
@@ -317,7 +317,7 @@ def ProcessToolsetsInDict(data):
       if len(toolsets) > 0:
         # Optimization: only do copies if more than one toolset is specified.
         for build in toolsets[1:]:
-          new_target = gyp.simple_copy.deepcopy(target)
+          new_target = gyp.lib.simple_copy.deepcopy(target)
           new_target['toolset'] = build
           new_target_list.append(new_target)
         target['toolset'] = toolsets[0]
@@ -406,7 +406,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
       # copy with the target-specific data merged into it as the replacement
       # target dict.
       old_target_dict = build_file_data['targets'][index]
-      new_target_dict = gyp.simple_copy.deepcopy(build_file_data['target_defaults'])
+      new_target_dict = gyp.lib.simple_copy.deepcopy(build_file_data['target_defaults'])
       MergeDicts(new_target_dict, old_target_dict, build_file_path, build_file_path)
       build_file_data['targets'][index] = new_target_dict
       index += 1
@@ -694,7 +694,7 @@ def ExpandVariables(input, phase, variables, build_file):
     # contexts. However, since filtration has no chance to run on <|(),
     # this seems like the only obvious way to give them access to filters.
     if file_list:
-      processed_variables = gyp.simple_copy.deepcopy(variables)
+      processed_variables = gyp.lib.simple_copy.deepcopy(variables)
       ProcessListFiltersInDict(contents, processed_variables)
       # Recurse to expand variables in the contents
       contents = ExpandVariables(contents, phase, processed_variables, build_file)
@@ -2057,7 +2057,7 @@ def SetUpConfigurations(target, target_dict):
       else:
         key_base = key
       if not key_base in non_configuration_keys:
-        new_configuration_dict[key] = gyp.simple_copy.deepcopy(target_val)
+        new_configuration_dict[key] = gyp.lib.simple_copy.deepcopy(target_val)
 
     # Merge in configuration (with all its parents first).
     MergeConfigWithInheritance(new_configuration_dict, build_file, target_dict, configuration, [])

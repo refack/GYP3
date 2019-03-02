@@ -129,8 +129,8 @@ def print_configuration_info():
     sys.path.append(os.path.abspath('pylib'))
     print('  Win %s %s\n' % platform.win32_ver()[0:2])
     try:
-      import gyp.MSVSVersion
-      version = gyp.MSVSVersion.SelectVisualStudioVersion()
+      import gyp.MSVS.MSVSVersion
+      version = gyp.MSVS.MSVSVersion.SelectVisualStudioVersion()
       print('  MSVS %s' % version.description)
     except Exception:
       pass
