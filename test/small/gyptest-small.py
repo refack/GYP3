@@ -15,31 +15,33 @@ import unittest
 
 import TestGyp
 
+# Add pylib to the import path (so tests can import their dependencies).
+# This is consistent with the path.append done in the top file "gyp".
+# This need to happen before we init TestGyp, which changes the cwd.
+gyp_src_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pylib'))
+sys.path.insert(0, gyp_src_root)
 
 test = TestGyp.TestGyp()
 
-# Add pylib to the import path (so tests can import their dependencies).
-# This is consistant with the path.append done in the top file "gyp".
-sys.path.insert(0, os.path.join(test._cwd, 'pylib'))
-
-# Add new test suites here.
+unit_test_dir = 'gyp/unit_tests'
 files_to_test = [
-    'pylib/gyp/MSVSSettings_test.py',
-    'pylib/gyp/easy_xml_test.py',
-    'pylib/gyp/generator/msvs_test.py',
-    'pylib/gyp/generator/ninja_test.py',
-    'pylib/gyp/generator/xcode_test.py',
-    'pylib/gyp/common_test.py',
-    'pylib/gyp/input_test.py',
+  'common_test.py',
+  'easy_xml_test.py',
+  'generator_msvs_test.py',
+  'generator_ninja_test.py',
+  'generator_xcode_test.py',
+  'input_test.py',
+  'MSVSSettings_test.py',
 ]
+# Add new test suites here.
 
 # Collect all the suites from the above files.
 suites = []
 for filename in files_to_test:
   # Carve the module name out of the path.
-  name = os.path.splitext(os.path.split(filename)[1])[0]
+  name = os.path.splitext(filename)[0]
   # Find the complete module path.
-  full_filename = os.path.join(test._cwd, filename)
+  full_filename = os.path.join(gyp_src_root, unit_test_dir, filename)
   # Load the module.
   module = imp.load_source(name, full_filename)
   # Add it to the list of test suites.

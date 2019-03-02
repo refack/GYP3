@@ -16,10 +16,10 @@ import sys
 import gyp
 import gyp.common
 import gyp.msvs_emulation
-import gyp.MSVSUtil as MSVSUtil
 import gyp.xcode_emulation
 from gyp.common import GetEnvironFallback
-from gyp import ninja_syntax
+from gyp.lib import ninja_syntax
+from gyp.MSVS import MSVSUtil
 
 try:
   # noinspection PyCompatibility
@@ -1488,7 +1488,7 @@ def CalculateVariables(default_variables, params):
     global generator_extra_sources_for_rules
     generator_extra_sources_for_rules = getattr(xcode_generator, 'generator_extra_sources_for_rules', [])
   elif flavor == 'win':
-    exts = gyp.MSVSUtil.TARGET_TYPE_EXT
+    exts = MSVSUtil.TARGET_TYPE_EXT
     default_variables.setdefault('OS', 'win')
     default_variables['EXECUTABLE_SUFFIX'] = '.' + exts['executable']
     default_variables['STATIC_LIB_PREFIX'] = ''
@@ -1666,7 +1666,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params, config_name
   master_ninja_writer = ninja_syntax.Writer(master_ninja_file, width=250)
 
   # Put build-time support tools in out/{config_name}.
-  gyp.common.CopyTool(flavor, toplevel_build, generator_flags)
+  gyp.common.CopyTool(flavor, toplevel_build, generator_flags.get('mac_toolchain_dir'))
 
   # Grab make settings for CC/CXX.
   # The rules are

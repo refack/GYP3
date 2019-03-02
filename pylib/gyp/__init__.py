@@ -434,8 +434,8 @@ def gyp_main(args):
   if DEBUG_GENERAL in gyp.debug:
     DebugOutput(DEBUG_GENERAL, "generator_flags: %s", generator_flags)
 
-  # Generate all requested formats (use a set in case we got one format request
-  # twice)
+  # Generate all requested formats (use a set in case we got one format request twice)
+
   for format in set(options.formats):
     params = {
       'options': options,

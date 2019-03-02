@@ -11,7 +11,7 @@ try:
 except ImportError:
   from io import StringIO
 import unittest
-import gyp.MSVSSettings as MSVSSettings
+import gyp.MSVS.MSVSSettings as MSVSSettings
 
 
 class TestSequenceFunctions(unittest.TestCase):
