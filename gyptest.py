@@ -13,6 +13,7 @@ import platform
 import subprocess
 import sys
 import time
+from glob import glob
 
 
 def is_test_name(f):
@@ -62,6 +63,9 @@ def main(argv=None):
   for arg in args.tests:
     if os.path.isdir(arg):
       tests.extend(find_all_gyptest_files(os.path.normpath(arg)))
+    elif '*' in arg:
+      glob_match = [t for t in glob(arg) if is_test_name(os.path.basename(t))]
+      tests.extend(glob_match)
     else:
       if not is_test_name(os.path.basename(arg)):
         print(arg, 'is not a valid gyp test name.', file=sys.stderr)
@@ -179,9 +183,10 @@ class Runner(object):
         print('  stdout: |-')
         for l in stdout.splitlines():
           print('   ', l)
-      if len(stderr) and stderr != 'PASSED':
+      stderr_lines = [l for l in stderr.splitlines() if 'pydev debugger' not in l]
+      if len(stderr_lines) and stderr_lines[-1] != 'PASSED':
         print('  stderr: |-')
-        for l in stderr.splitlines():
+        for l in stderr_lines:
           print('   ', l)
       print('  ...')
 

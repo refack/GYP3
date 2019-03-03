@@ -14,6 +14,7 @@ import re
 import shlex
 import sys
 import traceback
+from collections import OrderedDict
 from gyp.common import GypError
 
 if not 'basestring' in __builtins__:
@@ -52,28 +53,28 @@ def FindBuildFiles():
   return build_files
 
 
-def Load(build_files, format, default_variables, includes, params, depth):
+def Load(build_files, output_format, default_variables, includes, params, depth):
   """
   Loads one or more specified build files.
   default_variables and includes will be copied before use.
-  Returns the generator for the specified format and the
+  Returns the generator for the specified output_format and the
   data returned by loading the specified build files.
   """
-  if '-' in format:
-    format, params['flavor'] = format.split('-', 1)
+  if '-' in output_format:
+    output_format, params['flavor'] = output_format.split('-', 1)
 
   default_variables = copy.copy(default_variables)
 
   # Default variables provided by this program and its modules should be
   # named WITH_CAPITAL_LETTERS to provide a distinct "best practice" namespace,
   # avoiding collisions with user and automatic variables.
-  default_variables['GENERATOR'] = format
+  default_variables['GENERATOR'] = output_format
   default_variables['GENERATOR_FLAVOR'] = params.get('flavor', '')
 
   # Format can be a custom python file, or by default the name of a module
   # within gyp.generator.
-  if format.endswith('.py'):
-    generator_name = os.path.splitext(format)[0]
+  if output_format.endswith('.py'):
+    generator_name = os.path.splitext(output_format)[0]
     path, generator_name = os.path.split(generator_name)
 
     # Make sure the path to the custom generator is in sys.path
@@ -84,7 +85,7 @@ def Load(build_files, format, default_variables, includes, params, depth):
     if path not in sys.path:
       sys.path.insert(0, path)
   else:
-    generator_name = 'gyp.generator.' + format
+    generator_name = 'gyp.generator.' + output_format
 
   # These parameters are passed in order (as opposed to by key)
   # because ActivePython cannot handle key parameters to __import__.
@@ -126,7 +127,7 @@ def NameValueListToDict(name_value_list):
   of the pairs.  If a string is simply NAME, then the value in the dictionary
   is set to True.  If VALUE can be converted to an integer, it is.
   """
-  result = {}
+  result = OrderedDict()
   for item in name_value_list:
     tokens = item.split('=', 1)
     if len(tokens) == 2:
@@ -321,7 +322,7 @@ def gyp_main(args):
     home_dot_gyp = None
 
   if not options.formats:
-    # If no format was given on the command line, then check the env variable.
+    # If no output_format was given on the command line, then check the env variable.
     generate_formats = []
     if options.use_environment:
       generate_formats = os.environ.get('GYP_GENERATORS', [])
@@ -432,9 +433,8 @@ def gyp_main(args):
   if DEBUG_GENERAL in gyp.debug:
     DebugOutput(DEBUG_GENERAL, "generator_flags: %s", generator_flags)
 
-  # Generate all requested formats (use a set in case we got one format request twice)
-
-  for format in set(options.formats):
+  # Generate all requested formats (use a set in case we got one output_format request twice)
+  for output_format in set(options.formats):
     params = {
       'options': options,
       'build_files': build_files,
@@ -448,7 +448,7 @@ def gyp_main(args):
     }
 
     # Start with the default variables from the command line.
-    [generator, flat_list, targets, data] = Load(build_files, format, cmdline_default_variables, includes, params, options.depth)
+    [generator, flat_list, targets, data] = Load(build_files, output_format, cmdline_default_variables, includes, params, options.depth)
 
     # TODO(mark): Pass |data| for now because the generator needs a list of
     # build files that came in.  In the future, maybe it should just accept

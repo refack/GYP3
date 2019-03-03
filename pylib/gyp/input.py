@@ -973,12 +973,15 @@ def EvalSingleCondition(cond_expr, true_dict, false_dict, phase, variables, buil
       return true_dict
     return false_dict
   except SyntaxError as e:
+    traceback.print_exc(file=sys.stderr)
     syntax_error = SyntaxError('%s while evaluating condition \'%s\' in %s at character %d.' % (str(e.args[0]), e.text, build_file, e.offset), e.filename, e.lineno, e.offset, e.text)
     raise syntax_error
   except NameError as e:
-    gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' % (cond_expr_expanded, build_file))
+    traceback.print_exc(file=sys.stderr)
+    gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s\nvariables=%r' % (cond_expr_expanded, build_file, variables))
     raise GypError(e)
   except TypeError as e:
+    traceback.print_exc(file=sys.stderr)
     gyp.common.ExceptionAppend(e, 'while evaluating condition \'%s\' in %s' % (cond_expr_expanded, build_file))
     raise GypError(e)
 
@@ -1019,8 +1022,8 @@ def ProcessConditionsInDict(the_dict, phase, variables, build_file):
   for condition in conditions_list:
     merge_dict = EvalCondition(condition, conditions_key, phase, variables, build_file)
 
-    if merge_dict != None:
-      # Expand variables and nested conditinals in the merge_dict before
+    if merge_dict is not None:
+      # Expand variables and nested conditionals in the merge_dict before
       # merging it.
       ProcessVariablesAndConditionsInDict(merge_dict, phase, variables, build_file)
 

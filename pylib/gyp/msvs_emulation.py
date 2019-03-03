@@ -17,6 +17,7 @@ import time
 import hashlib
 import traceback
 from collections import Iterable, OrderedDict
+from tempfile import gettempdir
 
 from gyp import DebugOutput, DEBUG_GENERAL
 from gyp.common import EnsureDirExists, WriteOnDiff, memoize
@@ -952,7 +953,7 @@ def _GetEnvironment(arch, vs):
   args_hash = hashlib.md5(args_slug).hexdigest()
   cache_key = 'gyp-env-cache-' + args_hash
   # The default value for %TEMP% will make all cache look ups to safely miss
-  cache_dir = os.environ.get('GYP_TEMP', os.getcwd())
+  cache_dir = os.environ.get('GYP_TEMP', gettempdir())
   cache_keyed_file = os.path.join(cache_dir, cache_key)
   if os.path.exists(cache_keyed_file):
     try:

@@ -7,6 +7,10 @@
 import copy
 import os
 
+if 'WindowsError' not in __builtins__:
+  # noinspection PyShadowingBuiltins
+  WindowsError = Exception
+
 try:
   import winreg
 except ImportError:

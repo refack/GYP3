@@ -6,6 +6,8 @@
 structures or complex types except for dicts and lists. This is
 because gyp copies so large structure that small copy overhead ends up
 taking seconds in a project the size of Chromium."""
+from collections import OrderedDict
+
 
 class Error(Exception):
   pass
@@ -52,5 +54,12 @@ def _deepcopy_dict(x):
     y[deepcopy(key)] = deepcopy(value)
   return y
 d[dict] = _deepcopy_dict
+
+def _deepcopy_ordered_dict(x):
+  y = OrderedDict()
+  for key, value in x.items():
+    y[deepcopy(key)] = deepcopy(value)
+  return y
+d[OrderedDict] = _deepcopy_ordered_dict
 
 del d

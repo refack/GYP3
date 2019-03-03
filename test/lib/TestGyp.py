@@ -12,6 +12,7 @@ import errno
 import itertools
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,14 +21,8 @@ import traceback
 
 from contextlib import contextmanager
 
-import TestCmd
-from TestCmd import IS_PY3, is_List, match_re as test_cmd_match_re
 import TestCommon
-from TestCommon import __all__
-
-__all__.extend([
-  'TestGyp',
-])
+from TestCmd import IS_PY3, is_List, match_re as test_cmd_match_re
 
 RPATH_RE = re.compile(r'Library (?:r|run)path: \[([^\]]+)\]')
 RPROG_RE = re.compile(r'\[Requesting program interpreter: ([^\]]+)\]')
@@ -179,6 +174,9 @@ class TestGypBase(TestCommon.TestCommon):
     # otherwise make the output vary from what is expected.
     os.environ['LC_ALL'] = 'C'
 
+  def __del__(self):
+    return
+
   def _complete(self, actual_stdout, expected_stdout, actual_stderr, expected_stderr, status, match):
     if sys.platform == 'darwin' and actual_stderr:
       actual_stderr = BUILDTOOLS_RE.sub('', actual_stderr)
@@ -191,11 +189,14 @@ class TestGypBase(TestCommon.TestCommon):
         expected_stdout = remove_debug_line_numbers(expected_stdout)
     return super(TestGypBase, self)._complete(actual_stdout, expected_stdout, actual_stderr, expected_stderr, status, match)
 
-  def built_file_must_exist(self, name, type=None, **kw):
+  def built_file_must_exist(self, name, type=None, remove=False, **kw):
     """
     Fails the test if the specified built file name does not exist.
     """
-    return self.must_exist(self.built_file_path(name, type, **kw))
+    path = self.built_file_path(name, type, **kw)
+    self.must_exist(path)
+    if remove:
+      os.remove(path)
 
   def built_file_must_not_exist(self, name, type=None, **kw):
     """
@@ -218,19 +219,25 @@ class TestGypBase(TestCommon.TestCommon):
     return self.must_not_contain(self.built_file_path(name, **kw), contents)
 
   def cleanup(self, condition=None):
-    if self in TestCmd._Cleanup:
-      TestCmd._Cleanup.remove(self)
-
-    if not self._dirlist:
-      return
     os.chdir(self._cwd)
     self.workdir = None
-    if condition is None:
-      condition = self.condition
-    if self._preserve[condition]:
+    if not self._dirlist:
       return
-    else:
-      super(TestGypBase, self).cleanup(condition)
+    if self._preserve.get(condition or self.condition):
+      if self.verbose:
+        for d in self._dirlist:
+          print(u"Preserved directory %s" % d, file=sys.stderr)
+      return
+    lst = self._dirlist[:]
+    lst.reverse()
+    for d in lst:
+      self.writable(d, 1)
+      shutil.rmtree(d, ignore_errors=True)
+    self._dirlist = []
+    # noinspection PyProtectedMember
+    from TestCmd import _Cleanup
+    if self in _Cleanup:
+      _Cleanup.remove(self)
 
   def fail_test(self, condition=1, function=None, skip=0, message=None):
     """Cause the test to fail.
@@ -807,7 +814,9 @@ def FindVisualStudioInstallation():
         os.environ['GYP_MSVS_VERSION'] = str(top_vs_info['catalog']['productLineVersion'])
         os.environ['GYP_BUILD_TOOL'] = msbuild_path
         return msbuild_path, True, msbuild_path
-    except:
+    except Exception as e:
+      traceback.print_exc(file=sys.stderr)
+      print(e, file=sys.stderr)
       pass
 
   possible_roots = ['%s:\\Program Files%s' % (chr(drive), suffix)
@@ -875,6 +884,7 @@ class TestGypOnMSToolchain(TestGypBase):
     output = proc.communicate()[0].decode('utf-8', 'ignore')
     assert not proc.returncode
     return output
+
 
 class TestGypNinja(TestGypOnMSToolchain):
   """
@@ -1023,17 +1033,10 @@ class TestGypMSVS(TestGypOnMSToolchain):
 
   def built_file_path(self, name, type=None, **kw):
     """
-    Returns a path to the specified file name, of the specified type,
-    as built by Visual Studio.
-
-    Built files are in a subdirectory that matches the configuration
-    name.  The default is 'Default'.
-
-    A chdir= keyword argument specifies the source directory
-    relative to which  the output subdirectory can be found.
-
-    "type" values of STATIC_LIB or SHARED_LIB append the necessary
-    prefixes and suffixes to a platform-independent library base name.
+    Returns a path to the specified file name, of the specified type, as built by Visual Studio.
+    Built files are in a subdirectory that matches the configuration name.  The default is 'Default'.
+    A chdir= keyword argument specifies the source directory relative to which  the output subdirectory can be found.
+    "type" values of STATIC_LIB or SHARED_LIB append the necessary prefixes and suffixes to a platform-independent library base name.
     """
     result = []
     chdir = kw.get('chdir')
@@ -1260,16 +1263,80 @@ class TestGypMakeMock(TestGypMake):
   format = 'make-mock'
   build_tool_list = ['dir']
   ALL = 'all'
+
   def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def built_file_must_match(self, name, contents, **kw):
+    return True
+
+  def run_built_executable(self, name, *args, **kw):
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def must_exist(self, *files):
+    return True
+
+  def built_file_must_exist(self, name, type=None, remove=False, **kw):
+    return True
+
+  def built_file_path(self, name, type=None, **kw):
+    if not os.path.exists(name):
+      self.skip_test("missing %s" % name)
+    return super(TestGypMakeMock, self).built_file_path(name, type, **kw)
+
+  def read(self, file, *args, **kwargs):
+    if isinstance(file, list):
+      file = os.path.join(*file)
+    if not os.path.exists(file):
+      self.skip_test("missing %s" % file)
+    return super(TestGypMakeMock, self).read(file, *args, **kwargs)
+
+  def initialize_build_tool(self):
+    return
 
 
 class TestGypNinjaMock(TestGypNinja):
   format = 'ninja-mock'
   build_tool_list = ['dir']
   ALL = 'all'
+
   def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def built_file_must_match(self, name, contents, **kw):
+    return True
+
+  def run_built_executable(self, name, *args, **kw):
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def must_exist(self, *files):
+    return True
+
+  def built_file_must_exist(self, name, type=None, remove=False, **kw):
+    return True
+
+  def built_file_path(self, name, type=None, **kw):
+    if not os.path.exists(name):
+      self.skip_test("missing %s" % name)
+    return super(TestGypNinjaMock, self).built_file_path(name, type, **kw)
+
+  def read(self, file, *args, **kwargs):
+    if isinstance(file, list):
+      file = os.path.join(*file)
+    if not os.path.exists(file):
+      self.skip_test("missing %s" % file)
+    return super(TestGypNinjaMock, self).read(file, *args, **kwargs)
+
+  def initialize_build_tool(self):
+    return
 
 
 class TestGypMSVSMock(TestGypMSVS):
@@ -1279,7 +1346,40 @@ class TestGypMSVSMock(TestGypMSVS):
   uses_msbuild = True
 
   def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def built_file_must_match(self, name, contents, **kw):
+    return True
+
+  def run_built_executable(self, name, *args, **kw):
+    # noinspection PyAttributeOutsideInit
+    self.stdout = lambda: self.skip_test('No stdout for mock tests')
+    return True
+
+  def must_exist(self, *files):
+    return True
+
+  def built_file_must_exist(self, name, type=None, remove=False, **kw):
+    return True
+
+  def built_file_path(self, name, type=None, **kw):
+    if not os.path.exists(name):
+      self.skip_test("missing %s" % name)
+    return super(TestGypMSVSMock, self).built_file_path(name, type, **kw)
+
+  def read(self, file, *args, **kwargs):
+    if isinstance(file, list):
+      file = os.path.join(*file)
+    if not os.path.exists(file):
+      self.skip_test("missing %s" % file)
+    return super(TestGypMSVSMock, self).read(file, *args, **kwargs)
+  def run_dumpbin(self, *dumpbin_args):
+    self.skip_test("skipping run_dumpbin")
+
+  def initialize_build_tool(self):
+    return
 
 
 format_class_list = [
