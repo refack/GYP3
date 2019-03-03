@@ -500,47 +500,60 @@ In addition, command expansions (unlike other variable expansions) may
 include nested variable expansions.  So something like this is allowed:
 
 ```
-'variables' : [
+'variables' : {
   'foo': '<!(echo Build Date <!(date))',
-],
+},
 ```
 
 expands to:
 
 ```
-'variables' : [
+'variables' : {
   'foo': 'Build Date 02:10:38 PM Fri Jul 24, 2009 -0700 PDT',
-],
+},
 ```
 
 You may also put commands into arrays in order to quote arguments (but
 note that you need to use a different string quoting character):
 
 ```
-'variables' : [
+'variables' : {
   'files': '<!(["ls", "-1", "Filename With Spaces"])',
-],
+},
 ```
 
 GYP treats command failures (as indicated by a nonzero exit status)
 during command expansion as errors.
 
+#### pymod_do_main
+
+You can use the special `pymod_do_main` symbol to get GYP to import the specified Python module, and call it's `DoMain`
+method passing any parameters given.
+
+```python
+{
+  'variables' : {
+    'res': '<!pymod_do_main(modulename par ame ters)',
+  },
+}
+```
+
 #### Example
 
-```
+```python
 {
   'sources': [
-    '!(echo filename with space.cc)',
+    '<!(echo filename with space.cc)',
   ],
   'libraries': [
-    '!@(pkg-config --libs-only-l apr-1)',
+    '<!@(pkg-config --libs-only-l apr-1)',
   ],
 }
 ```
 
 might expand to:
 
-```
+```python
 {
   'sources': [
     'filename with space.cc',  # no @, expands into a single string
@@ -558,18 +571,13 @@ Conditionals use the same set of variables used for variable expansion.
 As with variable expansion, there are two phases of conditional
 evaluation:
 
-  * “Early” or “pre” conditional evaluation, introduced in
-    [conditions](#conditions) sections.
-  * “Late,” “post,” or “target” conditional evaluation, introduced in
-    [target\_conditions](#target_conditions) sections.
+  * “Early” or “pre” conditional evaluation, introduced in [conditions](#conditions) sections.
+  * “Late”, “post”, or “target” conditional evaluation, introduced in [target\_conditions](#target_conditions) sections.
 
-The syntax for each type is identical, they differ only in the key name
-used to identify them and the timing of their evaluation.  A more
-complete description of syntax and use is provided in
-[conditions](#conditions).
+The syntax for each type is identical, they differ only in the key name used to identify them and the timing of their evaluation.
+A more complete description of syntax and use is provided in [conditions](#conditions).
 
-The difference the two phases of evaluation is described in [Early and
-Late Phases](#Early_and_Late_Phases).
+The difference the two phases of evaluation is described in [Early and Late Phases](#Early_and_Late_Phases).
 
 ## Timing of Variable Expansion and Conditional Evaluation
 
@@ -578,13 +586,11 @@ Late Phases](#Early_and_Late_Phases).
 GYP performs two phases of variable expansion and conditional evaluation:
 
   * The “early” or “pre” phase operates on [conditions](#conditions)
-    sections and the `<` form of [variable
-    expansions](#Variable_Expansions).
+    sections and the `<` form of [variable expansions](#Variable_Expansions).
   * The “late,” “post,” or “target” phase operates on
     [target\_conditions](#target_conditions) sections, the `>` form
     of [variable expansions](#Variable_Expansions),
-    and on the `!` form of [command
-    expansions](#Command_Expansions_(!,_!@)).
+    and on the `!` form of [command expansions](#Command_Expansions_(!,_!@)).
 
 These two phases are provided because there are some circumstances in
 which each is desirable.
@@ -604,7 +610,7 @@ behaviors depending on the specifics of a target.
 
 Given this input:
 
-```
+```python
 {
   'target_defaults': {
     'target_conditions': [
