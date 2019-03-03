@@ -17,7 +17,6 @@ import re
 import shlex
 import subprocess
 import sys
-import tempfile
 from gyp.common import GypError
 
 # Populated lazily by XcodeVersion, for efficiency, and to fix an issue when
@@ -200,8 +199,7 @@ class XcodeSettings(object):
           new_key = key.split("[")[0]
           settings[new_key] = settings[key]
       else:
-        print('Warning: Conditional keys not implemented, ignoring:', \
-              ' '.join(conditional_keys))
+        print('Warning: Conditional keys not implemented, ignoring:', ' '.join(conditional_keys))
       del settings[key]
 
   def _Settings(self):
@@ -424,8 +422,7 @@ class XcodeSettings(object):
     """Returns the name of the bundle binary of by this target.
     E.g. Chromium.app/Contents/MacOS/Chromium. Only valid for bundles."""
     assert self._IsBundle()
-    return os.path.join(self.GetBundleExecutableFolderPath(), \
-                        self.GetExecutableName())
+    return os.path.join(self.GetBundleExecutableFolderPath(), self.GetExecutableName())
 
   def _GetStandaloneExecutableSuffix(self):
     if 'product_extension' in self.spec:
@@ -1058,7 +1055,7 @@ class XcodeSettings(object):
         self._GetDebugInfoPostbuilds(configname, output, output_binary, quiet) +
         self._GetStripPostbuilds(configname, output_binary, quiet))
 
-  def _GetIOSPostbuilds(self, configname, output_binary):
+  def _GetIOSPostbuilds(self, configname):
     """Return a shell command to codesign the iOS output binary so it can
     be deployed to a device.  This should be run as the very last step of the
     build."""
@@ -1074,7 +1071,7 @@ class XcodeSettings(object):
     # Xcode expects XCTests to be copied into the TEST_HOST dir.
     if self._IsXCTest():
       source = os.path.join("${BUILT_PRODUCTS_DIR}", product_name)
-      test_host = os.path.dirname(settings.get('TEST_HOST'));
+      test_host = os.path.dirname(settings.get('TEST_HOST'))
       xctest_destination = os.path.join(test_host, 'PlugIns', product_name)
       postbuilds.extend(['ditto %s %s' % (source, xctest_destination)])
 
@@ -1091,7 +1088,7 @@ class XcodeSettings(object):
 
     if self._IsXCTest():
       # For device xctests, Xcode copies two extra frameworks into $TEST_HOST.
-      test_host = os.path.dirname(settings.get('TEST_HOST'));
+      test_host = os.path.dirname(settings.get('TEST_HOST'))
       frameworks_dir = os.path.join(test_host, 'Frameworks')
       platform_root = self._XcodePlatformPath(configname)
       frameworks = \
@@ -1141,13 +1138,15 @@ class XcodeSettings(object):
           XcodeSettings._codesigning_key_cache[identity] = fingerprint
     return XcodeSettings._codesigning_key_cache.get(identity, '')
 
-  def AddImplicitPostbuilds(self, configname, output, output_binary,
-                            postbuilds=[], quiet=False):
-    """Returns a list of shell commands that should run before and after
-    |postbuilds|."""
+  def AddImplicitPostbuilds(self, configname, output, output_binary, postbuilds=None, quiet=False):
+    """
+    Returns a list of shell commands that should run before and after |postbuilds|.
+    """
     assert output_binary is not None
+    if postbuilds is None:
+      postbuilds = []
     pre = self._GetTargetPostbuilds(configname, output, output_binary, quiet)
-    post = self._GetIOSPostbuilds(configname, output_binary)
+    post = self._GetIOSPostbuilds(configname)
     return pre + postbuilds + post
 
   def _AdjustLibrary(self, library, config_name=None):
@@ -1533,24 +1532,19 @@ def GetMacBundleResources(product_dir, xcode_settings, resources):
 
 
 def GetMacInfoPlist(product_dir, xcode_settings, gyp_path_to_build_path):
-  """Returns (info_plist, dest_plist, defines, extra_env), where:
-  * |info_plist| is the source plist path, relative to the
-    build directory,
-  * |dest_plist| is the destination plist path, relative to the
-    build directory,
-  * |defines| is a list of preprocessor defines (empty if the plist
-    shouldn't be preprocessed,
-  * |extra_env| is a dict of env variables that should be exported when
-    invoking |mac_tool copy-info-plist|.
+  """
+  Returns (info_plist, dest_plist, defines, extra_env), where:
+  * |info_plist| is the source plist path, relative to the build directory,
+  * |dest_plist| is the destination plist path, relative to the build directory,
+  * |defines| is a list of preprocessor defines (empty if the plist shouldn't be preprocessed,
+  * |extra_env| is a dict of env variables that should be exported when invoking |mac_tool copy-info-plist|.
 
   Only call this for mac bundle targets.
 
   Args:
-      product_dir: Path to the directory containing the output bundle,
-          relative to the build directory.
+      product_dir: Path to the directory containing the output bundle, relative to the build directory.
       xcode_settings: The XcodeSettings of the current target.
-      gyp_to_build_path: A function that converts paths relative to the
-          current gyp file to paths relative to the build direcotry.
+      gyp_path_to_build_path: A function that converts paths relative to the current gyp file to paths relative to the build direcotry.
   """
   info_plist = xcode_settings.GetPerTargetSetting('INFOPLIST_FILE')
   if not info_plist:
@@ -1724,7 +1718,7 @@ def _TopologicallySortedEnvVarKeys(env):
   # Since environment variables can refer to other variables, the evaluation
   # order is important. Below is the logic to compute the dependency graph
   # and sort it.
-  regex = re.compile(r'\$\{([a-zA-Z0-9\-_]+)\}')
+  regex = re.compile(r'\${([a-zA-Z0-9\-_]+)\}')
   def GetEdges(node):
     # Use a definition of edges such that user_of_variable -> used_varible.
     # This happens to be easier in this case, since a variable's

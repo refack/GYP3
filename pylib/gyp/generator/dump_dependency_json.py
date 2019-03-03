@@ -4,13 +4,11 @@
 
 from __future__ import print_function
 
-import collections
 import os
 import gyp
 import gyp.common
 import gyp.msvs_emulation
 import json
-import sys
 
 generator_supports_multiple_toolsets = True
 
@@ -69,7 +67,7 @@ def CalculateGeneratorInputInfo(params):
       'qualified_out_dir': qualified_out_dir,
   }
 
-def GenerateOutput(target_list, target_dicts, data, params):
+def GenerateOutput(target_list, target_dicts, _, params):
   # Map of target -> list of targets it depends on.
   edges = {}
 

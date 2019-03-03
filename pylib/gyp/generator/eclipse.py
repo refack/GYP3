@@ -114,8 +114,6 @@ def GetAllIncludeDirectories(target_list, target_dicts,
           compiler_includes_list.append(include_dir)
 
   flavor = gyp.common.GetFlavor(params)
-  if flavor == 'win':
-    generator_flags = params.get('generator_flags', {})
   for target_name in target_list:
     target = target_dicts[target_name]
     if config_name in target['configurations']:
@@ -126,6 +124,7 @@ def GetAllIncludeDirectories(target_list, target_dicts,
       # TODO(jgreenwald): Change the gyp files to not abuse cflags for this, and
       # remove this.
       if flavor == 'win':
+        generator_flags = params.get('generator_flags', {})
         msvs_settings = gyp.msvs_emulation.MsvsSettings(target, generator_flags)
         cflags = msvs_settings.GetCflags(config_name)
       else:
@@ -186,8 +185,7 @@ def GetCompilerPath(target_list, data, options):
   return 'gcc'
 
 
-def GetAllDefines(target_list, target_dicts, data, config_name, params,
-                  compiler_path):
+def GetAllDefines(target_list, target_dicts, _, config_name, params, compiler_path):
   """Calculate the defines for a project.
 
   Returns:
@@ -198,12 +196,11 @@ def GetAllDefines(target_list, target_dicts, data, config_name, params,
   # Get defines declared in the gyp files.
   all_defines = {}
   flavor = gyp.common.GetFlavor(params)
-  if flavor == 'win':
-    generator_flags = params.get('generator_flags', {})
   for target_name in target_list:
     target = target_dicts[target_name]
 
     if flavor == 'win':
+      generator_flags = params.get('generator_flags', {})
       msvs_settings = gyp.msvs_emulation.MsvsSettings(target, generator_flags)
       extra_defines = msvs_settings.GetComputedDefines(config_name)
     else:
@@ -248,14 +245,12 @@ def GetAllDefines(target_list, target_dicts, data, config_name, params,
 def WriteIncludePaths(out, eclipse_langs, include_dirs):
   """Write the includes section of a CDT settings export file."""
 
-  out.write('  <section name="org.eclipse.cdt.internal.ui.wizards.' \
-            'settingswizards.IncludePaths">\n')
+  out.write('  <section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.IncludePaths">\n')
   out.write('    <language name="holder for library settings"></language>\n')
   for lang in eclipse_langs:
     out.write('    <language name="%s">\n' % lang)
     for include_dir in include_dirs:
-      out.write('      <includepath workspace_path="false">%s</includepath>\n' %
-                include_dir)
+      out.write('      <includepath workspace_path="false">%s</includepath>\n' % include_dir)
     out.write('    </language>\n')
   out.write('  </section>\n')
 
@@ -263,78 +258,68 @@ def WriteIncludePaths(out, eclipse_langs, include_dirs):
 def WriteMacros(out, eclipse_langs, defines):
   """Write the macros section of a CDT settings export file."""
 
-  out.write('  <section name="org.eclipse.cdt.internal.ui.wizards.' \
-            'settingswizards.Macros">\n')
+  out.write('  <section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.Macros">\n')
   out.write('    <language name="holder for library settings"></language>\n')
   for lang in eclipse_langs:
     out.write('    <language name="%s">\n' % lang)
     for key in sorted(defines.keys()):
-      out.write('      <macro><name>%s</name><value>%s</value></macro>\n' %
-                (escape(key), escape(defines[key])))
+      out.write('      <macro><name>%s</name><value>%s</value></macro>\n' % (escape(key), escape(defines[key])))
     out.write('    </language>\n')
   out.write('  </section>\n')
 
 
-def GenerateOutputForConfig(target_list, target_dicts, data, params,
-                            config_name):
+def GenerateOutputForConfig(target_list, target_dicts, data, params, config_name):
   options = params['options']
   generator_flags = params.get('generator_flags', {})
 
   # build_dir: relative path from source root to our output files.
   # e.g. "out/Debug"
-  build_dir = os.path.join(generator_flags.get('output_dir', 'out'),
-                           config_name)
+  build_dir = os.path.join(generator_flags.get('output_dir', 'out'), config_name)
 
   toplevel_build = os.path.join(options.toplevel_dir, build_dir)
   # Ninja uses out/Debug/gen while make uses out/Debug/obj/gen as the
   # SHARED_INTERMEDIATE_DIR. Include both possible locations.
-  shared_intermediate_dirs = [os.path.join(toplevel_build, 'obj', 'gen'),
-                              os.path.join(toplevel_build, 'gen')]
+  shared_intermediate_dirs = [
+    os.path.join(toplevel_build, 'obj', 'gen'),
+    os.path.join(toplevel_build, 'gen')
+  ]
 
   GenerateCdtSettingsFile(target_list,
                           target_dicts,
                           data,
                           params,
                           config_name,
-                          os.path.join(toplevel_build,
-                                       'eclipse-cdt-settings.xml'),
+                          os.path.join(toplevel_build, 'eclipse-cdt-settings.xml'),
                           options,
                           shared_intermediate_dirs)
   GenerateClasspathFile(target_list,
                         target_dicts,
                         options.toplevel_dir,
                         toplevel_build,
-                        os.path.join(toplevel_build,
-                                     'eclipse-classpath.xml'))
+                        os.path.join(toplevel_build, 'eclipse-classpath.xml'))
 
 
-def GenerateCdtSettingsFile(target_list, target_dicts, data, params,
-                            config_name, out_name, options,
-                            shared_intermediate_dirs):
+def GenerateCdtSettingsFile(target_list, target_dicts, data, params, config_name, out_name, options, shared_intermediate_dirs):
   gyp.common.EnsureDirExists(out_name)
   with open(out_name, 'w') as out:
     out.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     out.write('<cdtprojectproperties>\n')
 
-    eclipse_langs = ['C++ Source File', 'C Source File', 'Assembly Source File',
-                     'GNU C++', 'GNU C', 'Assembly']
+    eclipse_langs = ['C++ Source File', 'C Source File', 'Assembly Source File', 'GNU C++', 'GNU C', 'Assembly']
     compiler_path = GetCompilerPath(target_list, data, options)
-    include_dirs = GetAllIncludeDirectories(target_list, target_dicts,
-                                            shared_intermediate_dirs,
-                                            config_name, params, compiler_path)
+    include_dirs = GetAllIncludeDirectories(target_list, target_dicts, shared_intermediate_dirs, config_name, params, compiler_path)
     WriteIncludePaths(out, eclipse_langs, include_dirs)
-    defines = GetAllDefines(target_list, target_dicts, data, config_name,
-                            params, compiler_path)
+    defines = GetAllDefines(target_list, target_dicts, data, config_name, params, compiler_path)
     WriteMacros(out, eclipse_langs, defines)
 
     out.write('</cdtprojectproperties>\n')
 
 
-def GenerateClasspathFile(target_list, target_dicts, toplevel_dir,
-                          toplevel_build, out_name):
-  '''Generates a classpath file suitable for symbol navigation and code
-  completion of Java code (such as in Android projects) by finding all
-  .java and .jar files used as action inputs.'''
+def GenerateClasspathFile(target_list, target_dicts, toplevel_dir, toplevel_build, out_name):
+  """
+  Generates a classpath file suitable for symbol navigation and code completion of Java code (such as in Android projects)
+  by finding all .java and .jar files used as action inputs.
+  """
   gyp.common.EnsureDirExists(out_name)
   result = ET.Element('classpath')
 
@@ -353,7 +338,7 @@ def GenerateClasspathFile(target_list, target_dicts, toplevel_dir,
       entry_element.set('kind', kind)
       entry_element.set('path', path)
 
-  AddElements('lib', GetJavaJars(target_list, target_dicts, toplevel_dir))
+  AddElements('lib', GetJavaJars(target_list, target_dicts))
   AddElements('src', GetJavaSourceDirs(target_list, target_dicts, toplevel_dir))
   # Include the standard JRE container and a dummy out folder
   AddElements('con', ['org.eclipse.jdt.launching.JRE_CONTAINER'])
@@ -364,8 +349,8 @@ def GenerateClasspathFile(target_list, target_dicts, toplevel_dir,
   ET.ElementTree(result).write(out_name)
 
 
-def GetJavaJars(target_list, target_dicts, toplevel_dir):
-  '''Generates a sequence of all .jars used as inputs.'''
+def GetJavaJars(target_list, target_dicts):
+  """Generates a sequence of all .jars used as inputs."""
   for target_name in target_list:
     target = target_dicts[target_name]
     for action in target.get('actions', []):
@@ -378,7 +363,7 @@ def GetJavaJars(target_list, target_dicts, toplevel_dir):
 
 
 def GetJavaSourceDirs(target_list, target_dicts, toplevel_dir):
-  '''Generates a sequence of all likely java package root directories.'''
+  """Generates a sequence of all likely java package root directories."""
   for target_name in target_list:
     target = target_dicts[target_name]
     for action in target.get('actions', []):

@@ -4,7 +4,6 @@
 
 from __future__ import print_function
 
-import collections
 import codecs
 import copy
 import hashlib
@@ -13,6 +12,9 @@ import os.path
 import re
 import subprocess
 import sys
+from collections import OrderedDict
+from io import StringIO
+
 import gyp
 import gyp.common
 import gyp.msvs_emulation
@@ -21,11 +23,6 @@ from gyp.common import GetEnvironFallback
 from gyp.lib import ninja_syntax
 from gyp.MSVS import MSVSUtil
 
-try:
-  # noinspection PyCompatibility
-  from cStringIO import StringIO
-except ImportError:
-  from io import StringIO
 
 
 generator_default_variables = {
@@ -441,7 +438,7 @@ class NinjaWriter(object):
     # otherwise we depend on dependent target's actions/rules/copies etc.
     # We never need to explicitly depend on previous target's link steps,
     # because no compile ever depends on them.
-    compile_depends_stamp = (self.target.actions_stamp or compile_depends)
+    compile_depends_stamp = self.target.actions_stamp or compile_depends
 
     # Write out the compilation steps, if any.
     link_deps = []
@@ -470,9 +467,9 @@ class NinjaWriter(object):
         if self.flavor != 'mac' or len(self.archs) == 1:
           link_deps += [self.GypPathToNinja(o) for o in obj_outputs]
         else:
-          print("Warning: Actions/rules writing object files don't work with multiarch targets, dropping. (target %s)" % spec['target_name'])
+          print("Warning: Actions/rules writing object files don't work with multi-arch targets, dropping. (target %s)" % spec['target_name'])
     elif self.flavor == 'mac' and len(self.archs) > 1:
-      link_deps = collections.defaultdict(list)
+      link_deps = OrderedDict((a, []) for a in self.archs)
 
     compile_deps = self.target.actions_stamp or actions_depends
     if self.flavor == 'win' and self.target.type == 'static_library':
@@ -551,7 +548,7 @@ class NinjaWriter(object):
       outputs += self.WriteWinIdlFiles(spec, prebuild)
 
     if self.xcode_settings and self.xcode_settings.IsIosFramework():
-      self.WriteiOSFrameworkHeaders(spec, outputs, prebuild)
+      self.WriteIOSFrameworkHeaders(spec, outputs, prebuild)
 
     stamp = self.WriteCollapsedDependencies('actions_rules_copies', outputs)
 
@@ -638,8 +635,7 @@ class NinjaWriter(object):
             needed_variables.add(var)
       needed_variables = sorted(needed_variables)
 
-      def cygwin_munge(path):
-        # pylint: disable=cell-var-from-loop
+      def cygwin_mung(path):
         if is_cygwin:
           return path.replace('\\', '/')
         return path
@@ -681,23 +677,23 @@ class NinjaWriter(object):
         extra_bindings = []
         for var in needed_variables:
           if var == 'root':
-            extra_bindings.append(('root', cygwin_munge(root)))
+            extra_bindings.append(('root', cygwin_mung(root)))
           elif var == 'dirname':
             # '$dirname' is a parameter to the rule action, which means
             # it shouldn't be converted to a Ninja path.  But we don't
             # want $!PRODUCT_DIR in there either.
             dirname_expanded = self.ExpandSpecial(dirname, self.base_to_build)
-            extra_bindings.append(('dirname', cygwin_munge(dirname_expanded)))
+            extra_bindings.append(('dirname', cygwin_mung(dirname_expanded)))
           elif var == 'source':
             # '$source' is a parameter to the rule action, which means
             # it shouldn't be converted to a Ninja path.  But we don't
             # want $!PRODUCT_DIR in there either.
             source_expanded = self.ExpandSpecial(source, self.base_to_build)
-            extra_bindings.append(('source', cygwin_munge(source_expanded)))
+            extra_bindings.append(('source', cygwin_mung(source_expanded)))
           elif var == 'ext':
             extra_bindings.append(('ext', ext))
           elif var == 'name':
-            extra_bindings.append(('name', cygwin_munge(basename)))
+            extra_bindings.append(('name', cygwin_mung(basename)))
           else:
             assert var is None, repr(var)
 
@@ -739,7 +735,7 @@ class NinjaWriter(object):
 
     return outputs
 
-  def WriteiOSFrameworkHeaders(self, spec, outputs, prebuild):
+  def WriteIOSFrameworkHeaders(self, spec, outputs, prebuild):
     """Prebuild steps to generate hmap files and copy headers to destination."""
     framework = self.ComputeMacBundleOutput()
     all_sources = spec['sources']
@@ -772,7 +768,7 @@ class NinjaWriter(object):
     """Writes ninja edges for 'mac_bundle_resources' .xcassets files.
 
     This add an invocation of 'actool' via the 'mac_tool.py' helper script.
-    It assumes that the assets catalogs define at least one imageset and
+    It assumes that the assets catalogs define at least one image-set and
     thus an Assets.car file will be generated in the application resources
     directory. If this is not the case, then the build will probably be done
     at each invocation of ninja."""
@@ -832,7 +828,7 @@ class NinjaWriter(object):
     self.ninja.build(out, 'copy_infoplist', info_plist, variables=[('env', env), ('keys', keys), ('binary', isBinary)])
     bundle_depends.append(out)
 
-  def WriteSources(self, config_name, config, sources, predepends, precompiled_header, spec):
+  def WriteSources(self, config_name, config, sources, pre_depends, precompiled_header, spec):
     """Write build rules to compile all of |sources|."""
     if self.toolset == 'host':
       self.ninja.variable('ar', '$ar_host')
@@ -844,11 +840,14 @@ class NinjaWriter(object):
       self.ninja.variable('readelf', '$readelf_host')
 
     if self.flavor != 'mac' or len(self.archs) == 1:
-      return self.WriteSourcesForArch(self.ninja, config_name, config, sources, predepends, precompiled_header, spec)
+      return self.WriteSourcesForArch(self.ninja, config_name, config, sources, pre_depends, precompiled_header, spec)
     else:
-      return dict((arch, self.WriteSourcesForArch(self.arch_subninjas[arch], config_name, config, sources, predepends, precompiled_header, spec, arch=arch)) for arch in self.archs)
+      return OrderedDict(
+        (arch, self.WriteSourcesForArch(self.arch_subninjas[arch], config_name, config, sources, pre_depends, precompiled_header, spec, arch=arch))
+        for arch in self.archs
+      )
 
-  def WriteSourcesForArch(self, ninja_file, config_name, config, sources, predepends, precompiled_header, spec, arch=None):
+  def WriteSourcesForArch(self, ninja_file, config_name, config, sources, pre_depends, precompiled_header, spec, arch=None):
     """Write build rules to compile all of |sources|."""
 
     extra_defines = []
@@ -967,7 +966,7 @@ class NinjaWriter(object):
       variables = []
       if self.flavor == 'win':
         variables, otpt, implicit = precompiled_header.GetFlagsModifications(inpt, otpt, implicit, command, cflags_c, cflags_cc, self.ExpandSpecial)
-      ninja_file.build(otpt, command, inpt, implicit=[gch for _, _, gch in implicit], order_only=predepends, variables=variables)
+      ninja_file.build(otpt, command, inpt, implicit=[gch for _, _, gch in implicit], order_only=pre_depends, variables=variables)
       outputs.append(otpt)
 
     if has_rc_source:
@@ -1210,8 +1209,7 @@ class NinjaWriter(object):
           # call that combines single-arch .a files into a fat .a file.
           self.AppendPostbuildVariable(variables, spec, self.target.binary, self.target.binary)
           self.ninja.build(self.target.binary, 'alink', inputs,
-                           # FIXME: test proving order_only=compile_deps isn't
-                           # needed.
+                           # FIXME: test proving order_only=compile_deps isn't needed.
                            variables=variables)
     else:
       self.target.binary = self.WriteLink(spec, config_name, config, link_deps, compile_deps)
@@ -1654,7 +1652,7 @@ def _AddWinLinkRules(master_ninja, embed_manifest):
 def GenerateOutputForConfig(target_list, target_dicts, data, params, config_name):
   options = params['options']
   flavor = gyp.common.GetFlavor(params)
-  generator_flags = params.get('generator_flags', {})
+  generator_flags = params.get('generator_flags', OrderedDict())
 
   # build_dir: relative path from source root to our output files.
   # e.g. "out/Debug"
@@ -1749,22 +1747,8 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params, config_name
   if mac_toolchain_dir:
     wrappers['LINK'] = "export DEVELOPER_DIR='%s' &&" % mac_toolchain_dir
 
-  # if flavor == 'win':
-  #   cl_paths = gyp.msvs_emulation.GenerateEnvironmentFiles(toplevel_build, generator_flags)
-  #   for arch, path in sorted(cl_paths.items()):
-  #     if clang_cl:
-  #       # If we have selected clang-cl, use that instead.
-  #       path = clang_cl
-  #     command = CommandWithWrapper('CC', wrappers, QuoteShellArgument(path, 'win'))
-  #     if clang_cl:
-  #       # Use clang-cl to cross-compile for x86 or x86_64.
-  #       arch_arg = {
-  #         'x86': ' -m32',
-  #         'x64': ' -m64',
-  #         'ARM64': ' -m64'
-  #       }[arch]
-  #       command += arch_arg
-  #     master_ninja_writer.variable('cl_' + arch, command)
+  if flavor == 'win':
+    gyp.msvs_emulation.GenerateEnvironmentFiles(toplevel_build, generator_flags)
 
   cc = GetEnvironFallback(['CC_target', 'CC'], cc)
   master_ninja_writer.variable('cc', CommandWithWrapper('CC', wrappers, cc))

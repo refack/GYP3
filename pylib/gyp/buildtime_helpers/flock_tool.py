@@ -6,6 +6,7 @@
 """These functions are executed via gyp-flock-tool when using the Makefile
 generator.  Used on systems that don't have a built-in flock."""
 
+# noinspection PyUnresolvedReferences
 import fcntl
 import os
 import struct
@@ -33,12 +34,14 @@ class FlockTool(object):
     return name_string.title().replace('-', '')
 
   def ExecFlock(self, lockfile, *cmd_list):
-    """Emulates the most basic behavior of Linux's flock(1)."""
-    # Rely on exception handling to report errors.
-    # Note that the stock python on SunOS has a bug
-    # where fcntl.flock(fd, LOCK_EX) always fails
-    # with EBADF, that's why we use this F_SETLK
-    # hack instead.
+    """
+    Emulates the most basic behavior of Linux's flock(1).
+
+    Rely on exception handling to report errors.
+    Note that the stock python on SunOS has a bug where fcntl.flock(fd, LOCK_EX) always fails with EBADF,
+    that's why we use this F_SETLK hack instead.
+    """
+    # noinspection PyUnresolvedReferences
     fd = os.open(lockfile, os.O_WRONLY|os.O_NOCTTY|os.O_CREAT, 0o666)
     if sys.platform.startswith('aix'):
       # Python on AIX is compiled with LARGEFILE support, which changes the

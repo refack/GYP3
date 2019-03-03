@@ -136,34 +136,28 @@ ASCII, you won't encounter difficulties because ASCII is a UTF-8 subset.
 Strings of class unicode are handled properly and encoded in UTF-8 when
 a project file is output.
 """
-
-import gyp.common
+from functools import cmp_to_key
 import posixpath
 import re
 import struct
 import sys
+import gyp.common
+
 
 # hashlib is supplied as of Python 2.5 as the replacement interface for sha
 # and other secure hashes.  In 2.6, sha is deprecated.  Import hashlib if
 # available, avoiding a deprecation warning under 2.6.  Import sha otherwise,
 # preserving 2.4 compatibility.
 try:
-  import hashlib
-  _new_sha1 = hashlib.sha1
+  from hashlib import sha1 as sha
 except ImportError:
-  import sha
-  _new_sha1 = sha.new
+  # noinspection PyUnresolvedReferences,PyCompatibility
+  from sha import new as sha
 
-try:
-  # basestring was removed in python3.
-  basestring
-except NameError:
+if 'basestring' not in __builtins__:
   basestring = str
 
-try:
-  # cmp was removed in python3.
-  cmp
-except NameError:
+if 'cmp' not in __builtins__:
   def cmp(a, b):
     return (a > b) - (a < b)
 
@@ -433,7 +427,7 @@ class XCObject(object):
       hash.update(data)
 
     if seed_hash is None:
-      seed_hash = _new_sha1()
+      seed_hash = sha()
 
     hash = seed_hash.copy()
 
@@ -2219,8 +2213,8 @@ class XCTarget(XCRemoteObject):
     'productName':            [0, str,                 0, 1],
   })
 
-  def __init__(self, properties=None, id=None, parent=None,
-               force_outdir=None, force_prefix=None, force_extension=None):
+  # noinspection PyUnusedLocal
+  def __init__(self, properties=None, id=None, parent=None, force_outdir=None, force_prefix=None, force_extension=None):
     # super
     XCRemoteObject.__init__(self, properties, id, parent)
 
@@ -2280,12 +2274,10 @@ class XCTarget(XCRemoteObject):
     return self._properties['buildConfigurationList'].GetBuildSetting(key)
 
   def SetBuildSetting(self, key, value):
-    return self._properties['buildConfigurationList'].SetBuildSetting(key, \
-                                                                      value)
+    return self._properties['buildConfigurationList'].SetBuildSetting(key, value)
 
   def AppendBuildSetting(self, key, value):
-    return self._properties['buildConfigurationList'].AppendBuildSetting(key, \
-                                                                         value)
+    return self._properties['buildConfigurationList'].AppendBuildSetting(key, value)
 
   def DelBuildSetting(self, key):
     return self._properties['buildConfigurationList'].DelBuildSetting(key)
@@ -2541,9 +2533,9 @@ class PBXNativeTarget(XCTarget):
        'productType' in self._properties and \
        self._properties['productType'] != static_library_type and \
        'productType' in other._properties and \
-       (other._properties['productType'] == static_library_type or \
-        ((other._properties['productType'] == shared_library_type or \
-          other._properties['productType'] == framework_type) and \
+       (other._properties['productType'] == static_library_type or
+        ((other._properties['productType'] == shared_library_type or
+          other._properties['productType'] == framework_type) and
          ((not other.HasBuildSetting('MACH_O_TYPE')) or
           other.GetBuildSetting('MACH_O_TYPE') != 'mh_bundle'))):
 
@@ -2581,8 +2573,7 @@ class PBXProject(XCContainerPortal):
   _schema = XCContainerPortal._schema.copy()
   _schema.update({
     'attributes':             [0, dict,                0, 0],
-    'buildConfigurationList': [0, XCConfigurationList, 1, 1,
-                               XCConfigurationList()],
+    'buildConfigurationList': [0, XCConfigurationList, 1, 1, XCConfigurationList()],
     'compatibilityVersion':   [0, str,                 0, 1, 'Xcode 3.2'],
     'hasScannedForEncodings': [0, int,                 0, 1, 1],
     'mainGroup':              [0, PBXGroup,            1, 1, PBXGroup()],
@@ -2595,8 +2586,7 @@ class PBXProject(XCContainerPortal):
   def __init__(self, properties=None, id=None, parent=None, path=None):
     self.path = path
     self._other_pbxprojects = {}
-    # super
-    return XCContainerPortal.__init__(self, properties, id, parent)
+    super(PBXProject, self).__init__(properties, id, parent)
 
   def Name(self):
     name = self.path
@@ -2689,14 +2679,14 @@ class PBXProject(XCContainerPortal):
     }
 
     (source_tree, path) = SourceTreeAndPathFromPath(path)
-    if source_tree != None and source_tree in source_tree_groups:
+    if source_tree is not None and source_tree in source_tree_groups:
       (group_func, hierarchical) = source_tree_groups[source_tree]
       group = group_func()
-      return (group, hierarchical)
+      return group, hierarchical
 
     # TODO(mark): make additional choices based on file extension.
 
-    return (self.SourceGroup(), True)
+    return self.SourceGroup(), True
 
   def AddOrGetFileInRootGroup(self, path):
     """Returns a PBXFileReference corresponding to path in the correct group
@@ -2719,9 +2709,7 @@ class PBXProject(XCContainerPortal):
   def SortGroups(self):
     # Sort the children of the mainGroup (like "Source" and "Products")
     # according to their defined order.
-    self._properties['mainGroup']._properties['children'] = \
-        sorted(self._properties['mainGroup']._properties['children'],
-               cmp=lambda x,y: x.CompareRootGroup(y))
+    self._properties['mainGroup']._properties['children'].sort(key=cmp_to_key(XCHierarchicalElement.CompareRootGroup))
 
     # Sort everything else by putting group before files, and going
     # alphabetically by name within sections of groups and files.  SortGroup
@@ -2767,9 +2755,6 @@ class PBXProject(XCContainerPortal):
 
     if not 'projectReferences' in self._properties:
       self._properties['projectReferences'] = []
-
-    product_group = None
-    project_ref = None
 
     if not other_pbxproject in self._other_pbxprojects:
       # This project file isn't yet linked to the other one.  Establish the
@@ -2969,8 +2954,7 @@ class XCProjectFile(XCObject):
       self._XCPrint(file, 0, '{ ')
     else:
       self._XCPrint(file, 0, '{\n')
-    for property, value in sorted(self._properties.iteritems(),
-                                  cmp=lambda x, y: cmp(x, y)):
+    for property, value in sorted(self._properties.items()):
       if property == 'objects':
         self._PrintObjects(file)
       else:

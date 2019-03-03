@@ -37,10 +37,10 @@ import gyp.common
 import gyp.xcode_emulation
 
 try:
-  # maketrans moved to str in python3.
-  _maketrans = string.maketrans
-except NameError:
   _maketrans = str.maketrans
+except NameError:
+  # noinspection PyUnresolvedReferences
+  _maketrans = string.maketrans
 
 generator_default_variables = {
   'EXECUTABLE_PREFIX': '',
@@ -334,7 +334,7 @@ def WriteRules(target_name, rules, extra_sources, extra_deps, path_to_gyp, outpu
 
   Args:
     target_name: the name of the CMake target being generated.
-    actions: the Gyp 'actions' dict for this target.
+    rules: the Gyp 'rules' dict for this target.
     extra_sources: [(<cmake_src>, <src>)] to append with generated source files.
     extra_deps: [<cmake_taget>] to append with generated targets.
     path_to_gyp: relative path from CMakeLists.txt being generated to
@@ -444,7 +444,7 @@ def WriteCopies(target_name, copies, extra_deps, path_to_gyp, output):
 
   Args:
     target_name: the name of the CMake target being generated.
-    actions: the Gyp 'actions' dict for this target.
+    copies: the Gyp 'copies' dict for this target.
     extra_deps: [<cmake_taget>] to append with generated targets.
     path_to_gyp: relative path from CMakeLists.txt being generated to
         the Gyp file in which the target being generated is defined.
@@ -1145,7 +1145,7 @@ def GenerateOutputForConfig(target_list, target_dicts, data, params, config_to_u
   output.close()
 
 
-def PerformBuild(data, configurations, params):
+def PerformBuild(_, configurations, params):
   options = params['options']
   generator_flags = params['generator_flags']
 

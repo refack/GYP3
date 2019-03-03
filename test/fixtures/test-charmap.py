@@ -7,7 +7,8 @@ def main():
   if not encoding:
     return False
 
-  sys.setdefaultencoding(encoding)
+  # noinspection PyUnresolvedReferences
+  hasattr(sys, 'setdefaultencoding') and sys.setdefaultencoding(encoding)
   textmap = {
     'cp936': u'\u4e2d\u6587',
     'cp1252': u'Lat\u012Bna',

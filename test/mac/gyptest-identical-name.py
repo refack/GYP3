@@ -28,9 +28,6 @@ import TestGyp
 
 import sys
 
-def IgnoreOutput(string, expected_string):
-  return True
-
 if sys.platform == 'darwin':
   test = TestGyp.TestGyp(formats=['xcode'])
 

@@ -9,8 +9,6 @@ Verifies that failing actions make the build fail reliably, even when there
 are multiple actions in one project.
 """
 
-import os
-import sys
 import TestGyp
 import TestCmd
 

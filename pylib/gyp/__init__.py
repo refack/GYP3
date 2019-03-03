@@ -296,7 +296,6 @@ def gyp_main(args):
 
   # Set up the configuration directory (defaults to ~/.gyp)
   if not options.config_dir:
-    home = None
     home_dot_gyp = None
     if options.use_environment:
       home_dot_gyp = os.environ.get('GYP_CONFIG_DIR', None)
@@ -309,7 +308,7 @@ def gyp_main(args):
         home_vars.append('USERPROFILE')
       for home_var in home_vars:
         home = os.getenv(home_var)
-        if home != None:
+        if home is not None:
           home_dot_gyp = os.path.join(home, '.gyp')
           if not os.path.exists(home_dot_gyp):
             home_dot_gyp = None
@@ -398,7 +397,6 @@ def gyp_main(args):
   # -D on the command line sets variable defaults - D isn't just for define,
   # it's for default.  Perhaps there should be a way to force (-F?) a
   # variable's value so that it can't be overridden by anything else.
-  cmdline_default_variables = {}
   defines = []
   if options.use_environment:
     defines += ShlexEnv('GYP_DEFINES')

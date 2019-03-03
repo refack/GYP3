@@ -19,52 +19,33 @@ __author__ = 'nsylvain (Nicolas Sylvain)'
 import os
 import sys
 
-from xml.dom.minidom import parse
-from xml.dom.minidom import Node
+from xml.dom.minidom import parse, Node
 
-try:
-  # cmp was removed in python3.
-  cmp
-except NameError:
-  def cmp(a, b):
-    return (a > b) - (a < b)
 
-REPLACEMENTS = dict()
+REPLACEMENTS = {}
 ARGUMENTS = None
 
 
-class CmpTuple(object):
-  """Compare function between 2 tuple."""
-  def __call__(self, x, y):
-    return cmp(x[0], y[0])
+def get_node_string(node):
+  node_string = "node"
+  node_string += node.nodeName
+  if node.nodeValue:
+    node_string += node.nodeValue
 
+  if node.attributes:
+    # We first sort by name, if present.
+    node_string += node.getAttribute("Name")
 
-class CmpNode(object):
-  """Compare function between 2 xml nodes."""
+    all_nodes = []
+    for (name, value) in node.attributes.items():
+      all_nodes.append((name, value))
 
-  def __call__(self, x, y):
-    def get_string(node):
-      node_string = "node"
-      node_string += node.nodeName
-      if node.nodeValue:
-        node_string += node.nodeValue
+    all_nodes.sort(key=lambda x: x[0])
+    for (name, value) in all_nodes:
+      node_string += name
+      node_string += value
 
-      if node.attributes:
-        # We first sort by name, if present.
-        node_string += node.getAttribute("Name")
-
-        all_nodes = []
-        for (name, value) in node.attributes.items():
-          all_nodes.append((name, value))
-
-        all_nodes.sort(CmpTuple())
-        for (name, value) in all_nodes:
-          node_string += name
-          node_string += value
-
-      return node_string
-
-    return cmp(get_string(x), get_string(y))
+  return node_string
 
 
 def PrettyPrintNode(node, indent=0):
@@ -195,7 +176,7 @@ def CleanupVcproj(node):
 
 
   # Sort the list.
-  node_array.sort(CmpNode())
+  node_array.sort(key=get_node_string)
 
   # Insert the nodes in the correct order.
   for new_node in node_array:
@@ -209,7 +190,7 @@ def CleanupVcproj(node):
     node.appendChild(new_node)
 
 
-def GetConfiguationNodes(vcproj):
+def GetConfigurationNodes(vcproj):
   #TODO(nsylvain): Find a better way to navigate the xml.
   nodes = []
   for node in vcproj.childNodes:
@@ -306,7 +287,7 @@ def main(argv):
 
   # First thing we need to do is find the Configuration Node and merge them
   # with the vsprops they include.
-  for configuration_node in GetConfiguationNodes(dom.documentElement):
+  for configuration_node in GetConfigurationNodes(dom.documentElement):
     # Get the property sheets associated with this configuration.
     vsprops = configuration_node.getAttribute('InheritedPropertySheets')
 

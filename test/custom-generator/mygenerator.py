@@ -4,10 +4,10 @@
 
 """Custom gyp generator that doesn't do much."""
 
-import gyp.common
-
 generator_default_variables = {}
 
+
+# noinspection PyUnusedLocal
 def GenerateOutput(target_list, target_dicts, data, params):
   f = open("MyBuildFile", "w")
   f.write("Testing...\n")

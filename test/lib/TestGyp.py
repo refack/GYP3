@@ -21,7 +21,7 @@ import traceback
 from contextlib import contextmanager
 
 import TestCmd
-from TestCmd import _Cleanup, IS_PY3
+from TestCmd import IS_PY3, is_List, match_re as test_cmd_match_re
 import TestCommon
 from TestCommon import __all__
 
@@ -82,6 +82,7 @@ def LocalEnv(local_env):
     os.environ.update(old_env)
 
 
+# noinspection PyAttributeOutsideInit
 class TestGypBase(TestCommon.TestCommon):
   """
   Class for controlling end-to-end tests of gyp generators.
@@ -217,9 +218,8 @@ class TestGypBase(TestCommon.TestCommon):
     return self.must_not_contain(self.built_file_path(name, **kw), contents)
 
   def cleanup(self, condition=None):
-    global _Cleanup
-    if self in _Cleanup:
-      _Cleanup.remove(self)
+    if self in TestCmd._Cleanup:
+      TestCmd._Cleanup.remove(self)
 
     if not self._dirlist:
       return
@@ -523,15 +523,13 @@ class TestGypCMake(TestGypBase):
   build_tool_list = ['cmake']
   ALL = 'all'
 
-  def cmake_build(self, gyp_file, target=None, **kw):
+  def cmake_build(self, **kw):
     arguments = kw.get('arguments', [])[:]
 
     self.build_tool_list = ['cmake']
     self.initialize_build_tool()
 
-    chdir = os.path.join(kw.get('chdir', '.'),
-                         'out',
-                         self.configuration_dirname())
+    chdir = os.path.join(kw.get('chdir', '.'), 'out', self.configuration_dirname())
     kw['chdir'] = chdir
 
     arguments.append('-G')
@@ -545,7 +543,7 @@ class TestGypCMake(TestGypBase):
 
     self.run(program=self.build_tool, **kw)
 
-  def ninja_build(self, gyp_file, target=None, **kw):
+  def ninja_build(self, _, target=None, **kw):
     arguments = kw.get('arguments', [])[:]
 
     self.build_tool_list = ['ninja']
@@ -575,7 +573,7 @@ class TestGypCMake(TestGypBase):
     else:
       if not isinstance(status, collections.Iterable): status = (status,)
       kw['status'] = list(itertools.chain((0,), status))
-    self.cmake_build(gyp_file, target, **kw)
+    self.cmake_build(**kw)
     kw['status'] = status
     self.ninja_build(gyp_file, target, **kw)
 
@@ -644,7 +642,7 @@ class TestGypMake(TestGypBase):
     else:
       message_target = target
     kw['stdout'] = "make: Nothing to be done for ['`]%s'.\n" % message_target
-    kw['match'] = TestCmd.match_re
+    kw['match'] = test_cmd_match_re
     return self.build(gyp_file, target, **kw)
 
   def run_built_executable(self, name, *args, **kw):
@@ -851,22 +849,20 @@ class TestGypOnMSToolchain(TestGypBase):
     # devenv_dir = os.path.split(devenv_path)[0]
 
     # Check for location of Community install (in VS2017, at least).
-    vcvars_path = os.path.join(devenv_path, '..', '..', '..', '..', 'VC',
-                               'Auxiliary', 'Build', 'vcvars32.bat')
+    vcvars_path = os.path.join(devenv_path, '..', '..', '..', '..', 'VC', 'Auxiliary', 'Build', 'vcvars32.bat')
     if os.path.exists(vcvars_path):
       return os.path.abspath(vcvars_path)
 
-    vsvars_path = os.path.join(devenv_path, '..', '..', 'Tools',
-                               'vsvars32.bat')
+    vsvars_path = os.path.join(devenv_path, '..', '..', 'Tools', 'vsvars32.bat')
     return os.path.abspath(vsvars_path)
 
+  # noinspection PyAttributeOutsideInit
   def initialize_build_tool(self):
     super(TestGypOnMSToolchain, self).initialize_build_tool()
     if sys.platform in ('win32', 'cygwin'):
       build_tools = FindVisualStudioInstallation()
       self.devenv_path, self.uses_msbuild, self.msbuild_path = build_tools
-      self.vsvars_path = TestGypOnMSToolchain._ComputeVsvarsPath(
-          self.devenv_path)
+      self.vsvars_path = TestGypOnMSToolchain._ComputeVsvarsPath(self.devenv_path)
 
   def run_dumpbin(self, *dumpbin_args):
     """Run the dumpbin tool with the specified arguments, and capturing and
@@ -1154,9 +1150,9 @@ class TestGypXcode(TestGypBase):
     match = kw.pop('match', self.match)
     def match_filter_xcode(actual, expected):
       if actual:
-        if not TestCmd.is_List(actual):
+        if not is_List(actual):
           actual = actual.split('\n')
-        if not TestCmd.is_List(expected):
+        if not is_List(expected):
           expected = expected.split('\n')
         actual = [a for a in actual
                     if 'No recorder, buildTask: <Xcode3BuildTask:' not in a and

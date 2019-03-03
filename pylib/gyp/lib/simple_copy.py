@@ -20,8 +20,7 @@ def deepcopy(x):
   try:
     return _deepcopy_dispatch[type(x)](x)
   except KeyError:
-    raise Error('Unsupported type %s for deepcopy. Use copy.deepcopy ' +
-                'or expand simple_copy support.' % type(x))
+    raise Error('Unsupported type %s for deepcopy. Use copy.deepcopy or expand simple_copy support.' % type(x))
 
 _deepcopy_dispatch = d = {}
 
@@ -29,14 +28,14 @@ def _deepcopy_atomic(x):
   return x
 
 try:
+  # noinspection PyUnresolvedReferences
   _string_types = (str, unicode)
-# There's no unicode in python3
 except NameError:
   _string_types = (str, )
 
 try:
+  # noinspection PyUnresolvedReferences
   _integer_types = (int, long)
-# There's no long in python3
 except NameError:
   _integer_types = (int, )
 

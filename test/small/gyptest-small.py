@@ -21,7 +21,7 @@ import TestGyp
 gyp_src_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pylib'))
 sys.path.insert(0, gyp_src_root)
 
-test = TestGyp.TestGyp()
+#test = TestGyp.TestGyp()
 
 unit_test_dir = 'gyp/unit_tests'
 files_to_test = [
@@ -52,6 +52,5 @@ all_tests = unittest.TestSuite(suites)
 # Run all the tests.
 result = unittest.TextTestRunner(verbosity=2).run(all_tests)
 if result.failures or result.errors:
-  test.fail_test()
+  sys.exit(1)
 
-test.pass_test()

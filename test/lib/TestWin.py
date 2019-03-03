@@ -60,7 +60,6 @@ class Registry(object):
     Return:
       stdout from reg.exe, or None for failure.
     """
-    text = None
     try:
       text = self._QueryBase('Sysnative', key, value)
     except OSError as e:

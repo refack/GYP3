@@ -215,7 +215,7 @@ def CheckNode(node, keypath):
     raise TypeError("Unknown AST node at key path '" + '.'.join(keypath) + "': " + repr(node))
 
 
-def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
+def LoadOneBuildFile(build_file_path, data, aux_data, includes):
   if build_file_path in data:
     return data[build_file_path]
 
@@ -224,7 +224,6 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
   else:
     raise GypError("%s not found (cwd: %s)" % (build_file_path, os.getcwd()))
 
-  build_file_data = None
   try:
     build_file_data = CheckedEval(build_file_contents)
   except SyntaxError as e:
@@ -243,9 +242,6 @@ def LoadOneBuildFile(build_file_path, data, aux_data, includes, is_target):
   # Scan for includes and merge them in.
   if 'skip_includes' not in build_file_data or not build_file_data['skip_includes']:
     try:
-      includes_arg = None
-      if is_target:
-        includes_arg = includes
       LoadBuildFileIncludesIntoDict(build_file_data, build_file_path, data, aux_data, includes)
     except Exception as e:
       gyp.common.ExceptionAppend(e, 'while reading includes of ' + build_file_path)
@@ -276,7 +272,7 @@ def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data, include
 
     gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Included File: '%s'", include)
 
-    MergeDicts(subdict, LoadOneBuildFile(include, data, aux_data, None, False), subdict_path, include)
+    MergeDicts(subdict, LoadOneBuildFile(include, data, aux_data, None), subdict_path, include)
 
   # Recurse into subdictionaries.
   for k, v in subdict.items():
@@ -361,7 +357,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
 
   gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Target Build File '%s'", build_file_path)
 
-  build_file_data = LoadOneBuildFile(build_file_path, data, aux_data, includes, True)
+  build_file_data = LoadOneBuildFile(build_file_path, data, aux_data, includes)
 
   # Store DEPTH for later use in generators.
   build_file_data['_DEPTH'] = depth
@@ -669,7 +665,6 @@ def ExpandVariables(input, phase, variables, build_file):
 
     # Capture these now so we can adjust them later.
     replace_start = match_group.start('replace')
-    replace_end = match_group.end('replace')
 
     # Find the ending paren, and re-evaluate the contained string.
     (c_start, c_end) = FindEnclosingBracketGroup(input_str[replace_start:])
@@ -714,6 +709,7 @@ def ExpandVariables(input, phase, variables, build_file):
     # expansion in the input string.
     expand_to_list = '@' in match['type'] and input_str == replacement
 
+    build_file_dir = None
     if run_command or file_list:
       # Find the build file's directory, so commands can be run or file lists
       # generated relative to it.
@@ -776,8 +772,6 @@ def ExpandVariables(input, phase, variables, build_file):
       if cached_value is None:
         gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Executing command '%s' in directory '%s'", contents, build_file_dir)
 
-        replacement = ''
-
         if command_string == 'pymod_do_main':
           # <!pymod_do_main(modulename param eters) loads |modulename| as a
           # python module and then calls that module's DoMain() function,
@@ -785,19 +779,25 @@ def ExpandVariables(input, phase, variables, build_file):
           # that don't load quickly, this can be faster than
           # <!(python modulename param eters). Do this in |build_file_dir|.
           oldwd = os.getcwd()  # Python doesn't like os.open('.'): no fchdir.
-          if build_file_dir:  # build_file_dir may be None (see above).
+          if build_file_dir is not None:  # build_file_dir may be None (see above).
+            # noinspection PyTypeChecker
             os.chdir(build_file_dir)
           try:
-
             parsed_contents = shlex.split(contents)
             try:
               py_module = __import__(parsed_contents[0])
             except ImportError as e:
               raise GypError("Error importing pymod_do_main module (%s): %s" % (parsed_contents[0], e))
             replacement = str(py_module.DoMain(parsed_contents[1:])).rstrip()
+          except Exception as e:
+            err_info = traceback.format_exc()
+            print(e, file=sys.stderr)
+            print(err_info, file=sys.stderr)
+
+
           finally:
             os.chdir(oldwd)
-          assert replacement != None
+          assert replacement is not None
         elif command_string:
           raise GypError("Unknown command string '%s' in '%s'." % (command_string, contents))
         else:
@@ -816,8 +816,9 @@ def ExpandVariables(input, phase, variables, build_file):
 
           if p.wait() != 0 or p_stderr:
             sys.stderr.write(p_stderr.decode('utf-8'))
-            # Simulate check_call behavior, since check_call only exists
-            # in python 2.5 and later.
+            print("cmd=%r" % contents , file=sys.stderr)
+            print("cwd=%s" % os.getcwd() , file=sys.stderr)
+            print("build_file_dir=%s" % build_file_dir , file=sys.stderr)
             raise GypError("Call to '%s' returned exit status %d while in %s." % (contents, p.returncode, build_file))
           replacement = p_stdout.decode('utf-8').rstrip()
 
@@ -867,7 +868,6 @@ def ExpandVariables(input, phase, variables, build_file):
         output = shlex.split(str(replacement))
     else:
       # Expanding in string context.
-      encoded_replacement = ''
       if type(replacement) is list:
         # When expanding a list into string context, turn the list items
         # into a string in a way that will work with a subprocess call.
@@ -2330,8 +2330,8 @@ def ValidateRulesInTarget(target, target_dict, extra_sources_for_rules):
       raise GypError('rule_sources must not exist in input, target %s rule %s' % (target, rule_name))
 
     rule_sources = []
-    source_keys = ['sources']
-    source_keys.extend(extra_sources_for_rules)
+    source_keys = {'sources'}
+    source_keys.update(extra_sources_for_rules)
     for source_key in source_keys:
       for source in target_dict.get(source_key, []):
         (source_root, source_extension) = os.path.splitext(source)
@@ -2344,7 +2344,7 @@ def ValidateRulesInTarget(target, target_dict, extra_sources_for_rules):
       rule['rule_sources'] = rule_sources
 
 
-def ValidateRunAsInTarget(target, target_dict, build_file):
+def ValidateRunAsInTarget(target_dict, build_file):
   target_name = target_dict.get('target_name')
   run_as = target_dict.get('run_as')
   if not run_as:
@@ -2364,8 +2364,8 @@ def ValidateRunAsInTarget(target, target_dict, build_file):
     raise GypError("The 'environment' for 'run_as' in target %s in file %s should be a dictionary." % (target_name, build_file))
 
 
-def ValidateActionsInTarget(target, target_dict, build_file):
-  '''Validates the inputs to the actions in a target.'''
+def ValidateActionsInTarget(target_dict):
+  """Validates the inputs to the actions in a target."""
   target_name = target_dict.get('target_name')
   actions = target_dict.get('actions', [])
   for action in actions:
@@ -2608,8 +2608,8 @@ def Load(build_files, variables, includes, depth, generator_input_info, root_tar
     ValidateTargetType(target, target_dict)
     ValidateSourcesInTarget(target, target_dict)
     ValidateRulesInTarget(target, target_dict, extra_sources_for_rules)
-    ValidateRunAsInTarget(target, target_dict, build_file)
-    ValidateActionsInTarget(target, target_dict, build_file)
+    ValidateRunAsInTarget(target_dict, build_file)
+    ValidateActionsInTarget(target_dict)
 
   # Generators might not expect ints.  Turn them into strs.
   TurnIntIntoStrInDict(data)

@@ -7,23 +7,7 @@
 import os
 import glob
 from typing import Dict
-
-try:
-  import winreg
-except ImportError:
-  try:
-    import _winreg as winreg
-  except ImportError:
-    class winreg(object):
-      HKEY_LOCAL_MACHINE = ''
-      @staticmethod
-      def OpenKey(root, key):
-        return
-
-      @staticmethod
-      def QueryValueEx(key, val):
-        return
-
+from gyp.MSVS.MSVSUtil import TryQueryRegistryValue
 
 msvs_version_map = {
   'auto': ('16.0', '15.0', '14.0', '12.0', '10.0', '9.0', '8.0', '11.0'),
@@ -285,7 +269,7 @@ def _DetectVisualStudioVersion(wanted_version, force_express):
       r'Software\Wow6432Node\Microsoft\VCExpress\%s' % version
     ]
     for key in keys:
-      path = _TryQueryRegistryValue(key, 'InstallDir')
+      path = TryQueryRegistryValue(key, 'InstallDir')
       if not path:
         continue
       # Check for full.
@@ -308,7 +292,7 @@ def _DetectVisualStudioVersion(wanted_version, force_express):
       r'Software\Wow6432Node\Microsoft\VisualStudio\SxS\VS7'
     ]
     for key in keys2:
-      path = _TryQueryRegistryValue(key, version)
+      path = TryQueryRegistryValue(key, version)
       if not path:
         continue
       if version == '15.0':
@@ -321,15 +305,6 @@ def _DetectVisualStudioVersion(wanted_version, force_express):
         return _CreateVersion(version_to_year[version] + 'e', os.path.join(path, '..'), sdk_based=True)
 
   return None
-
-
-def _TryQueryRegistryValue(key, value, root=winreg.HKEY_LOCAL_MACHINE):
-  try:
-    with winreg.OpenKey(root, key) as kh:
-      query_value = winreg.QueryValueEx(kh, value)
-      return query_value[0]
-  except WindowsError:
-    return None
 
 
 def SelectVisualStudioVersion(wanted_version='auto'):
@@ -374,11 +349,11 @@ def WindowsTargetPlatformVersion(possible_sdk_versions):
   key_template = r'Software\%sMicrosoft\Microsoft SDKs\Windows\%s'
   keys = [(key_template % (sub, ver)) for ver in versions_args for sub in ['', 'Wow6432Node\\',]]
   for key in keys:
-    sdk_dir = _TryQueryRegistryValue(key, 'InstallationFolder')
+    sdk_dir = TryQueryRegistryValue(key, 'InstallationFolder')
     if not sdk_dir:
       continue
     # Find a matching entry in sdk_dir\include.
-    product_version = _TryQueryRegistryValue(key, 'ProductVersion')
+    product_version = TryQueryRegistryValue(key, 'ProductVersion')
     sdk_include_dir = os.path.join(sdk_dir, 'include')
     if not os.path.isdir(sdk_include_dir):
       continue

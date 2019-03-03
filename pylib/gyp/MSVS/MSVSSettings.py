@@ -19,10 +19,7 @@ from __future__ import print_function
 import sys
 import re
 
-try:
-  # basestring was removed in python3.
-  basestring
-except NameError:
+if 'basestring' not in __builtins__:
   basestring = str
 
 # Dictionaries of settings validators. The key is the tool name, the value is
@@ -306,6 +303,7 @@ def _MSVSOnly(tool, name, setting_type):
     setting_type: the type of this setting.
   """
 
+  # noinspection PyUnusedLocal
   def _Translate(unused_value, unused_msbuild_settings):
     # Since this is for MSVS only settings, no translation will happen.
     pass

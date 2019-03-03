@@ -6,11 +6,9 @@ import re
 import os
 import locale
 
-try:
-  # reduce moved to functools in python3.
-  reduce
-except NameError:
+if 'reduce' not in __builtins__:
   from functools import reduce
+
 
 def XmlToString(content, encoding='utf-8', pretty=False):
   """ Writes the XML content to disk, touching the file only if it has changed.

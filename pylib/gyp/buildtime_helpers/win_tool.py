@@ -16,7 +16,6 @@ import re
 import shutil
 import subprocess
 import stat
-import string
 import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -661,8 +661,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
   xcode_targets = {}
   xcode_target_to_target_dict = {}
   for qualified_target in target_list:
-    [build_file, target_name, toolset] = \
-        gyp.common.ParseQualifiedTarget(qualified_target)
+    [build_file, target_name, toolset] = gyp.common.ParseQualifiedTarget(qualified_target)
 
     spec = target_dicts[qualified_target]
     if spec['toolset'] != 'target':

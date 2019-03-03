@@ -25,7 +25,6 @@ from __future__ import print_function
 
 import os
 import re
-import sys
 import subprocess
 import gyp
 import gyp.common
@@ -765,8 +764,8 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     mac_bundle_deps = []
 
     if self.is_mac_bundle:
-      self.output = self.ComputeMacBundleOutput(spec)
-      self.output_binary = self.ComputeMacBundleBinaryOutput(spec)
+      self.output = self.ComputeMacBundleOutput()
+      self.output_binary = self.ComputeMacBundleBinaryOutput()
     else:
       self.output = self.output_binary = self.ComputeOutput(spec)
 
@@ -792,8 +791,7 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
 
     # Rules must be early like actions.
     if 'rules' in spec:
-      self.WriteRules(spec['rules'], extra_sources, extra_outputs,
-                      extra_mac_bundle_resources, part_of_all)
+      self.WriteRules(spec['rules'], extra_sources, extra_outputs, extra_mac_bundle_resources)
 
     if 'copies' in spec:
       self.WriteCopies(spec['copies'], extra_outputs, part_of_all)
@@ -812,12 +810,8 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
         # libtool on OS X generates warnings for duplicate basenames in the same
         # target.
         _ValidateSourcesForOSX(spec, all_sources)
-      self.WriteSources(
-          configs, deps, all_sources, extra_outputs,
-          extra_link_deps, part_of_all,
-          gyp.xcode_emulation.MacPrefixHeader(
-              self.xcode_settings, lambda p: Sourceify(self.Absolutify(p)),
-              self.Pchify))
+      self.WriteSources(configs, deps, all_sources, extra_outputs,extra_link_deps,
+          gyp.xcode_emulation.MacPrefixHeader(self.xcode_settings, lambda p: Sourceify(self.Absolutify(p)), self.Pchify))
       sources = [x for x in all_sources if Compilable(x)]
       if sources:
         self.WriteLn(SHARED_HEADER_SUFFIX_RULES_COMMENT1)
@@ -983,8 +977,7 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     self.WriteLn()
 
 
-  def WriteRules(self, rules, extra_sources, extra_outputs,
-                 extra_mac_bundle_resources, part_of_all):
+  def WriteRules(self, rules, extra_sources, extra_outputs, extra_mac_bundle_resources):
     """Write Makefile code for any 'rules' from the gyp input.
 
     extra_sources: a list that will be filled in with newly generated source
@@ -1186,14 +1179,10 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     # plists can contain envvars and substitute them into the file.
     self.WriteSortedXcodeEnv(
         out, self.GetSortedXcodeEnv(additional_settings=extra_env))
-    self.WriteDoCmd([out], [info_plist], 'mac_tool,,,copy-info-plist',
-                    part_of_all=True)
+    self.WriteDoCmd([out], [info_plist], 'mac_tool,,,copy-info-plist', part_of_all=True)
     bundle_deps.append(out)
 
-
-  def WriteSources(self, configs, deps, sources,
-                   extra_outputs, extra_link_deps,
-                   part_of_all, precompiled_header):
+  def WriteSources(self, configs, deps, sources, extra_outputs, extra_link_deps, precompiled_header):
     """Write Makefile code for any 'sources' from the gyp input.
     These are source files necessary to build the current target.
 
@@ -1411,14 +1400,14 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     return os.path.join(path, self.ComputeOutputBasename(spec))
 
 
-  def ComputeMacBundleOutput(self, spec):
+  def ComputeMacBundleOutput(self):
     """Return the 'output' (full output path) to a bundle output directory."""
     assert self.is_mac_bundle
     path = generator_default_variables['PRODUCT_DIR']
     return os.path.join(path, self.xcode_settings.GetWrapperName())
 
 
-  def ComputeMacBundleBinaryOutput(self, spec):
+  def ComputeMacBundleBinaryOutput(self):
     """Return the 'output' (full output path) to the binary in a bundle."""
     path = generator_default_variables['PRODUCT_DIR']
     return os.path.join(path, self.xcode_settings.GetExecutablePath())
@@ -1446,10 +1435,8 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     return (gyp.common.uniquer(deps), gyp.common.uniquer(link_deps))
 
 
-  def WriteDependencyOnExtraOutputs(self, target, extra_outputs):
-    self.WriteMakeRule([self.output_binary], extra_outputs,
-                       comment = 'Build our special outputs first.',
-                       order_only = True)
+  def WriteDependencyOnExtraOutputs(self, extra_outputs):
+    self.WriteMakeRule([self.output_binary], extra_outputs, comment='Build our special outputs first.', order_only=True)
 
 
   def WriteTarget(self, spec, configs, deps, link_deps, bundle_deps,
@@ -1465,11 +1452,8 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     self.WriteLn('### Rules for final target.')
 
     if extra_outputs:
-      self.WriteDependencyOnExtraOutputs(self.output_binary, extra_outputs)
-      self.WriteMakeRule(extra_outputs, deps,
-                         comment=('Preserve order dependency of '
-                                  'special output on deps.'),
-                         order_only = True)
+      self.WriteDependencyOnExtraOutputs(extra_outputs)
+      self.WriteMakeRule(extra_outputs, deps, comment='Preserve order dependency of special output on deps.', order_only=True)
 
     target_postbuilds = {}
     if self.type != 'none':
@@ -1702,10 +1686,9 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
       values = ' \\\n\t' + ' \\\n\t'.join(value_list)
     self.fp.write('%s :=%s\n\n' % (variable, values))
 
-
-  def WriteDoCmd(self, outputs, inputs, command, part_of_all, comment=None,
-                 postbuilds=False):
-    """Write a Makefile rule that uses do_cmd.
+  def WriteDoCmd(self, outputs, inputs, command, part_of_all=False, comment=None, postbuilds=False):
+    """
+    Write a Makefile rule that uses do_cmd.
 
     This makes the outputs dependent on the command line that was run,
     as well as support the V= make command line flag.
@@ -1714,11 +1697,14 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     if postbuilds:
       assert ',' not in command
       suffix = ',,1'  # Tell do_cmd to honor $POSTBUILDS
-    self.WriteMakeRule(outputs, inputs,
-                       actions = ['$(call do_cmd,%s%s)' % (command, suffix)],
-                       comment = comment,
-                       command = command,
-                       force = True)
+    self.WriteMakeRule(
+      outputs,
+      inputs,
+      actions=['$(call do_cmd,%s%s)' % (command, suffix)],
+      comment=comment,
+      command=command,
+      force=True
+    )
     # Add our outputs to the list of targets we read depfiles from.
     # all_deps is only used for deps file reading, and for deps files we replace
     # spaces with ? because escaping doesn't work with make's $(sort) and
@@ -1727,9 +1713,9 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     self.WriteLn('all_deps += %s' % ' '.join(outputs))
 
 
-  def WriteMakeRule(self, outputs, inputs, actions=None, comment=None,
-                    order_only=False, force=False, phony=False, command=None):
-    """Write a Makefile rule, with some extra tricks.
+  def WriteMakeRule(self, outputs, inputs, actions=None, comment=None, order_only=False, force=False, phony=False, command=None):
+    """
+    Write a Makefile rule, with some extra tricks.
 
     outputs: a list of outputs for the rule (note: this is not directly
              supported by make; see comments below)
@@ -1982,7 +1968,7 @@ def WriteAutoRegenerationRule(params, root_makefile, makefile_name,
                      build_files_args)})
 
 
-def PerformBuild(data, configurations, params):
+def PerformBuild(_, configurations, params):
   options = params['options']
   for config in configurations:
     arguments = ['make']

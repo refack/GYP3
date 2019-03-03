@@ -8,7 +8,6 @@ build systems, primarily ninja.
 """
 
 import codecs
-import collections
 import os
 import pickle
 import re
@@ -17,10 +16,11 @@ import sys
 import time
 import hashlib
 import traceback
+from collections import Iterable, OrderedDict
 
 from gyp import DebugOutput, DEBUG_GENERAL
-from gyp.common import EnsureDirExists, WriteOnDiff
-from gyp.MSVS import MSVSUtil
+from gyp.common import EnsureDirExists, WriteOnDiff, memoize
+from gyp.MSVS.MSVSUtil import TARGET_TYPE_EXT, TryQueryRegistryValue
 
 
 if 'basestring' not in __builtins__:
@@ -99,7 +99,7 @@ def _AddPrefix(element, prefix):
   """Add |prefix| to |element| or each subelement if element is iterable."""
   if element is None:
     return element
-  if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
+  if isinstance(element, Iterable) and not isinstance(element, basestring):
     return [prefix + e for e in element]
   else:
     return prefix + element
@@ -111,7 +111,7 @@ def _DoRemapping(element, map_arg):
   if map_arg is not None and element is not None:
     if not callable(map_arg):
       map_arg = map_arg.get  # Assume it's a dict, otherwise a callable to do the remap.
-    if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
+    if isinstance(element, Iterable) and not isinstance(element, basestring):
       element = filter(None, [map_arg(elem) for elem in element])
     else:
       element = map_arg(element)
@@ -123,7 +123,7 @@ def _AppendOrReturn(append, element):
   then add |element| to it, adding each item in |element| if it's a list or
   tuple."""
   if append is not None and element is not None:
-    if isinstance(element, collections.Iterable) and not isinstance(element, basestring):
+    if isinstance(element, Iterable) and not isinstance(element, basestring):
       append.extend(element)
     else:
       append.append(element)
@@ -131,46 +131,15 @@ def _AppendOrReturn(append, element):
     return element
 
 
+@memoize
 def _FindDirectXInstallation():
-  """Try to find an installation location for the DirectX SDK. Check for the
+  """
+  Try to find an installation location for the DirectX SDK. Check for the
   standard environment variable, and if that doesn't exist, try to find
-  via the registry. May return None if not found in either location."""
-  # Return previously calculated value, if there is one
-  if hasattr(_FindDirectXInstallation, 'dxsdk_dir'):
-    return _FindDirectXInstallation.dxsdk_dir
-
-  dxsdk_dir = os.environ.get('DXSDK_DIR')
-  if not dxsdk_dir:
-    # Setup params to pass to and attempt to launch reg.exe.
-    cmd = ['reg.exe', 'query', r'HKLM\Software\Microsoft\DirectX', '/s']
-    out = subprocess.check_output(cmd).decode('utf-8')
-    for line in out.splitlines():
-      if 'InstallPath' in line:
-        dxsdk_dir = line.split('    ')[3] + "\\"
-
-  # Cache return value
-  _FindDirectXInstallation.dxsdk_dir = dxsdk_dir
+  via the registry. May return None if not found in either location.
+  """
+  dxsdk_dir = os.environ.get('DXSDK_DIR', TryQueryRegistryValue('Software\Microsoft\DirectX', 'InstallPath'))
   return dxsdk_dir
-
-
-def GetGlobalVSMacroEnv(vs_version):
-  """Get a dict of variables mapping internal VS macro names to their gyp
-  equivalents. Returns all variables that are independent of the target."""
-  env = {}
-  # '$(VSInstallDir)' and '$(VCInstallDir)' are available when and only when
-  # Visual Studio is actually installed.
-  if vs_version.path:
-    env['$(VCInstallDir)'] = os.path.join(vs_version.path, 'VC\\')
-  # Chromium uses DXSDK_DIR in include/lib paths, but it may or may not be
-  # set. This happens when the SDK is sync'd via src-internal, rather than
-  # by typical end-user installation of the SDK. If it's not set, we don't
-  # want to leave the unexpanded variable in the path, so simply strip it.
-  dxsdk_dir = _FindDirectXInstallation()
-  env['$(DXSDK_DIR)'] = dxsdk_dir if dxsdk_dir else ''
-  # Try to find an installation location for the Windows DDK by checking
-  # the WDK_DIR environment variable, may be None.
-  env['$(WDK_DIR)'] = os.environ.get('WDK_DIR', '')
-  return env
 
 
 # noinspection PyUnresolvedReferences
@@ -225,7 +194,7 @@ class MsvsSettings(object):
     ext = self.spec.get('product_extension', None)
     if ext:
       return ext
-    return MSVSUtil.TARGET_TYPE_EXT.get(self.spec['type'], '')
+    return TARGET_TYPE_EXT.get(self.spec['type'], '')
 
   def GetVSMacroEnv(self, base_to_build=None, config=None):
     """Get a dict of variables mapping internal VS macro names to their gyp
@@ -235,7 +204,7 @@ class MsvsSettings(object):
     target_dir = base_to_build + '\\' if base_to_build else ''
     target_ext = '.' + self.GetExtension()
     target_file_name = target_name + target_ext
-
+    VSInstallDir = self.vs_version.path or ''
     replacements = {
         '$(InputName)': '${root}',
         '$(InputPath)': '${source}',
@@ -249,8 +218,19 @@ class MsvsSettings(object):
         '$(TargetFileName)': target_file_name,
         '$(TargetName)': target_name,
         '$(TargetPath)': os.path.join(target_dir, target_file_name),
+        # '$(VSInstallDir)' and '$(VCInstallDir)' are available when and only when
+        # Visual Studio is actually installed.
+        '$(VSInstallDir)': VSInstallDir,
+        '$(VCInstallDir)': os.path.join(VSInstallDir, 'VC\\'),
+        # Chromium uses DXSDK_DIR in include/lib paths, but it may or may not be
+        # set. This happens when the SDK is sync'd via src-internal, rather than
+        # by typical end-user installation of the SDK. If it's not set, we don't
+        # want to leave the unexpanded variable in the path, so simply strip it.
+        '$(DXSDK_DIR)': _FindDirectXInstallation() or '',
+        # Try to find an installation location for the Windows DDK by checking
+        # the WDK_DIR environment variable, may be None.
+        '$(WDK_DIR)': os.environ.get('WDK_DIR', ''),
     }
-    replacements.update(GetGlobalVSMacroEnv(self.vs_version))
     return replacements
 
   def ConvertVSMacros(self, s, base_to_build=None, config=None):
@@ -282,6 +262,7 @@ class MsvsSettings(object):
       self.base_path = [base_path]
       self.append = append
 
+    # noinspection PyShadowingBuiltins
     def __call__(self, name, map=None, prefix='', default=None):
       # noinspection PyProtectedMember
       return self.parent._GetAndMunge(self.field, self.base_path + [name], default=default, prefix=prefix, append=self.append, map_arg=map)
@@ -882,7 +863,7 @@ def _ExtractImportantEnvironment(output_of_set, arch):
       'temp',
       'tmp',
       )
-  env = collections.OrderedDict()
+  env = OrderedDict()
   # This occasionally happens and leads to misleading SYSTEMROOT error messages
   # if not caught here.
   cl_find = 'cl.exe'
@@ -912,6 +893,7 @@ def _ExtractImportantEnvironment(output_of_set, arch):
   return env
 
 
+# TODO(refack) Pass only one arch
 def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags):
   """
   It's not sufficient to have the absolute path to the compiler, linker,
@@ -933,22 +915,17 @@ def GenerateEnvironmentFiles(toplevel_build_dir, generator_flags):
     toplevel_build_dir (str): root dir of build tree
     generator_flags (OrderedDict): flags passed to the generator
   """
-  archs = ('x86', 'x64')
-  cl_paths = collections.OrderedDict()
-  if generator_flags.get('ninja_use_custom_environment_files', 0):
-    for arch in archs:
-      cl_paths[arch] = 'cl.exe'
-    return cl_paths
-
   vs = GetVSVersion(generator_flags)
+
+  if generator_flags.get('ninja_use_custom_environment_files', False) or not vs.path:
+    return
+
+  archs = ('x86', 'x64')
   for arch in archs:
     env = _GetEnvironment(arch, vs)
     env_block = NUL.join(encode(k) + '=' + encode(v) for k, v in env.items()) + NUL + NUL
     with open(os.path.join(toplevel_build_dir, 'environment.' + arch), 'wb') as f:
       f.write(env_block)
-
-    cl_paths[arch] = env['GYP_CL_PATH']
-  return cl_paths
 
 
 def _GetEnvironment(arch, vs):
@@ -996,8 +973,7 @@ def _GetEnvironment(arch, vs):
   # Extract environment variables for subprocesses.
   std_out = subprocess.check_output(args, shell=True, stderr=subprocess.STDOUT).decode('utf-8')
   end_time = time.clock()
-  if DEBUG_GENERAL in gyp.debug:
-    DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
+  DebugOutput(DEBUG_GENERAL, "vcvars %s time: %f" % (' '.join(args), end_time - start_time))
   env = _ExtractImportantEnvironment(std_out, arch)
   try:
     with open(cache_keyed_file, mode='wb') as f:

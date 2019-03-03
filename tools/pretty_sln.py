@@ -19,7 +19,7 @@ __author__ = 'nsylvain (Nicolas Sylvain)'
 import os
 import re
 import sys
-import pretty_vcproj
+from . import pretty_vcproj
 
 def BuildProject(project, built, projects, deps):
   # if all dependencies are done, we can build it, otherwise we try to build the

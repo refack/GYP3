@@ -32,8 +32,6 @@ to change.
 
 
 import gyp.common
-import errno
-import os
 import pprint
 
 
@@ -74,11 +72,10 @@ for v in _generator_identity_variables:
   generator_default_variables[v] = '<(%s)' % v
 
 
-def GenerateOutput(target_list, target_dicts, data, params):
+def GenerateOutput(target_list, _, data, params):
   output_files = {}
   for qualified_target in target_list:
-    [input_file, target] = \
-        gyp.common.ParseQualifiedTarget(qualified_target)[0:2]
+    [input_file, __] = gyp.common.ParseQualifiedTarget(qualified_target)[0:2]
 
     if input_file[-4:] != '.gyp':
       continue
