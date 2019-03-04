@@ -20,6 +20,14 @@ could be completely written to add a feature or fix a bug
 so long as they continue to support the functional behaviors
 defined by the tests:  building programs, shared libraries, etc.
 
+## Prerequisites
+
+* Python 3 in the path
+    * Using python 2 causes "only strings in environment" errors
+* Target toolchain to be tested against
+    * Running a test for a given toolchain will tell you if something is
+      missing.
+
 ## "Hello, world!" GYP test configuration
 
 Here is an actual test configuration,
