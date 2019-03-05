@@ -698,32 +698,6 @@ class TestGypMake(TestGypBase):
     result.append(self.built_file_basename(name, type, **kw))
     return self.workpath(*result)
 
-class TestGypMakeMock(TestGypMake):
-  format = 'make-mock'
-  build_tool_list = ['dir']
-  ALL = 'all'
-  def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
-
-
-class TestGypNinjaMock(TestGypMake):
-  format = 'ninja-mock'
-  build_tool_list = ['dir']
-  ALL = 'all'
-  def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
-
-
-class TestGypMSVSMock(TestGypMake):
-  format = 'msvs-mock'
-  build_tool_list = ['dir']
-  ALL = 'all'
-  uses_msbuild = True
-
-  def build(self, gyp_file, target=None, **kw):
-    self.pass_test()
-
-
 def ConvertToCygpath(path):
   """Convert to cygwin path if we are using cygwin."""
   if sys.platform == 'cygwin':
@@ -829,11 +803,10 @@ def FindVisualStudioInstallation():
         args2 = ['cmd.exe', '/d', '/c',
                  'cd', '/d', inst_path,
                  '&', 'dir', '/b', '/s', 'msbuild.exe']
-        msbuild_exes = subprocess.check_output(args2).strip().split(b'\r\n')
-        msbuild_exes = [m.decode('utf-8') for m in msbuild_exes]
+        msbuild_exes = subprocess.check_output(args2).strip().splitlines()
       if len(msbuild_exes):
-        msbuild_path = msbuild_exes[0]
-        os.environ['GYP_MSVS_VERSION'] = top_vs_info['catalog']['productLineVersion']
+        msbuild_path = str(msbuild_exes[0].decode('utf-8'))
+        os.environ['GYP_MSVS_VERSION'] = str(top_vs_info['catalog']['productLineVersion'])
         os.environ['GYP_BUILD_TOOL'] = msbuild_path
         return msbuild_path, True, msbuild_path
     except:
@@ -1285,6 +1258,32 @@ class TestGypXcodeNinja(TestGypXcode):
         self.report_not_up_to_date()
         self.fail_test()
     return result
+
+
+class TestGypMakeMock(TestGypMake):
+  format = 'make-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  def build(self, gyp_file, target=None, **kw):
+    self.pass_test()
+
+
+class TestGypNinjaMock(TestGypNinja):
+  format = 'ninja-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  def build(self, gyp_file, target=None, **kw):
+    self.pass_test()
+
+
+class TestGypMSVSMock(TestGypMSVS):
+  format = 'msvs-mock'
+  build_tool_list = ['dir']
+  ALL = 'all'
+  uses_msbuild = True
+
+  def build(self, gyp_file, target=None, **kw):
+    self.pass_test()
 
 
 format_class_list = [

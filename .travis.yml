@@ -9,15 +9,17 @@ linux-setup-steps: &linux-setup-steps
 
 windows-setup-steps: &windows-setup-steps
   os: windows
-  language: cpp  # 'language: python' is not yet supported on Windows
-  before_install: choco install python3
+  language: shell  # 'language: python' is not yet supported on Windows
+  env:
+    - GYP_MSVS_VERSION=2017
+    - PYTHONUNBUFFERED=1
   install:
-    - py -m pip install --upgrade pip pipenv
-    - py -m pipenv install --dev
+    - python -m pip install --upgrade pip pipenv
+    - python -m pipenv install --dev
 
 osx-setup-steps: &osx-setup-steps
   os: osx
-  language: shell  # 'language: python' is not yet supported on macOS
+  language: cpp  # 'language: python' is not yet supported on macOS
   before_install: brew upgrade python
   install:
     - brew install ninja
@@ -37,11 +39,19 @@ matrix:
       <<: *linux-setup-steps
       script: pipenv run -v test -f make,ninja
 
-    - name: "Windows: test with mocks on Python 3.7"
+    - name: "Windows: test with mocks on Python 3"
       <<: *windows-setup-steps
       env:
-        - GYP_MSVS_VERSION=2017
-      script: py -m pipenv run -v test -f make-mock,msvs-mock
+        - PATH=/c/Python37:$PATH
+      before_install: choco install python3
+      script: python -m pipenv run -v test -f make-mock,msvs-mock
+
+    - name: "Windows: test with mocks on Python 2"
+      <<: *windows-setup-steps
+      env:
+        - PATH=/c/Python27:$PATH
+      before_install: choco install python2
+      script: python -m pipenv run -v test -f make-mock,msvs-mock
 
     - name: "macOS: test with make and ninja on Python 3.7"
       <<: *osx-setup-steps

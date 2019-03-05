@@ -17,7 +17,6 @@ import sys
 import time
 import hashlib
 import traceback
-from typing import Dict
 
 import gyp.MSVSUtil
 from gyp import DebugOutput, DEBUG_GENERAL
@@ -25,7 +24,6 @@ from gyp import DebugOutput, DEBUG_GENERAL
 if 'basestring' not in __builtins__:
   basestring = str
 
-vcvars_cache = dict()
 windows_quoter_regex = re.compile(r'(\\*)"')
 
 utf8encoder = codecs.getencoder('utf-8')
@@ -213,8 +211,8 @@ class MsvsSettings(object):
     if unsupported:
       raise Exception('\n'.join(unsupported))
 
-    self.msvs_configuration_platform = {}   # type: Dict[str, str]
-    self.msvs_target_platform = {}          # type: Dict[str, str]
+    self.msvs_configuration_platform = {}
+    self.msvs_target_platform = {}
 
   def GetExtension(self):
     """Returns the extension for the target, with no leading dot.
