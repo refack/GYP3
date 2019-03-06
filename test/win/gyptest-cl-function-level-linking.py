@@ -40,14 +40,12 @@ if sys.platform == 'win32':
   # separate comdat entries.
 
   CheckForSectionString(
-      test.built_file_path(Object('test_fll_on', 'function-level-linking.obj'),
-                           chdir=CHDIR),
+    test.built_file_path(Object('test_fll_on', 'function-level-linking.obj'), chdir=CHDIR),
       look_for,
       should_exist=True)
 
   CheckForSectionString(
-      test.built_file_path(Object('test_fll_off', 'function-level-linking.obj'),
-                           chdir=CHDIR),
+    test.built_file_path(Object('test_fll_off', 'function-level-linking.obj'), chdir=CHDIR),
       look_for,
       should_exist=False)
 

@@ -44,8 +44,7 @@ if sys.platform == 'darwin':
       'Embedded/Test Framework.framework', chdir='framework')
 
   # Check that rebuilding the target a few times works.
-  dep_bundle = test.built_file_path('Dependency Bundle.framework',
-                                    chdir='framework')
+  dep_bundle = test.built_file_path('Dependency Bundle.framework', chdir='framework')
   mtime = os.path.getmtime(dep_bundle)
   atime = os.path.getatime(dep_bundle)
   for i in range(3):

@@ -8,7 +8,7 @@
       'target_name': 'enable_winrt_81_revision_dll',
       'type': 'shared_library',
       'msvs_enable_winrt': 1,
-      'msvs_application_type_revision': '8.1'
+      'msvs_application_type_revision': '8.1',
       'sources': [
         'dllmain.cc',
       ],
@@ -17,7 +17,7 @@
       'target_name': 'enable_winrt_82_revision_dll',
       'type': 'shared_library',
       'msvs_enable_winrt': 1,
-      'msvs_application_type_revision': '8.2'
+      'msvs_application_type_revision': '8.2',
       'sources': [
         'dllmain.cc',
       ],
@@ -26,18 +26,10 @@
       'target_name': 'enable_winrt_invalid_revision_dll',
       'type': 'shared_library',
       'msvs_enable_winrt': 1,
-      'msvs_application_type_revision': '999'
+      'msvs_application_type_revision': '999',
       'sources': [
         'dllmain.cc',
       ],
-    },
-      'msvs_settings': {
-        'VCLinkerTool': {
-          'AdditionalDependencies': [
-            '%(AdditionalDependencies)',
-          ],
-        },
-      },
     },
   ]
 }

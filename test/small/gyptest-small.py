@@ -28,7 +28,7 @@ files_to_test = [
   'common_test.py',
   'easy_xml_test.py',
   'generator_msvs_test.py',
-  'generator_ninja_test.py',
+  'NinjaWriter_test.py',
   'generator_xcode_test.py',
   'input_test.py',
   'MSVSSettings_test.py',

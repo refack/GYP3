@@ -25,9 +25,8 @@ if test.format == 'cmake':
 # Command-line define
 test.run_gyp('defines.gyp', '-D', 'OS=fakeos')
 test.build('defines.gyp', stderr=expect_stderr)
-test.built_file_must_exist('fakeosprogram', type=test.EXECUTABLE)
 # Clean up the exe so subsequent tests don't find an old exe.
-os.remove(test.built_file_path('fakeosprogram', type=test.EXECUTABLE))
+test.built_file_must_exist('fakeosprogram', type=test.EXECUTABLE, remove=True)
 
 # Without "OS" override, fokeosprogram shouldn't be built.
 test.run_gyp('defines.gyp')

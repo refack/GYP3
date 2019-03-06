@@ -32,8 +32,7 @@ if sys.platform == 'darwin':
   #test.run_built_executable('aliasing_default', chdir=CHDIR, stdout="1\n")
   # For now, just check the generated ninja file:
   if test.format == 'ninja':
-    contents = open(test.built_file_path('obj/aliasing_default.ninja',
-                                         chdir=CHDIR)).read()
+    contents = open(test.built_file_path('obj/aliasing_default.ninja', chdir=CHDIR)).read()
     if 'strict-aliasing' in contents:
       test.fail_test()
 

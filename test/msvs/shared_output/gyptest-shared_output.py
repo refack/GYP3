@@ -23,19 +23,17 @@ test.run_gyp('hello.gyp')
 test.set_configuration('Baz')
 
 test.build('there/there.gyp', test.ALL)
-test.must_exist(os.path.join(test.workdir, 'foo', 'there.exe'))
-test.must_exist(os.path.join(test.workdir, 'foo', 'bar', 'there.obj'))
+test.must_exist(test.built_file_path('foo/there.exe'))
+test.must_exist(test.built_file_path('foo/bar/there.obj'))
 
 test.build('hello.gyp', test.ALL)
-test.must_exist(os.path.join(test.workdir, 'foo', 'hello.exe'))
-test.must_exist(os.path.join(test.workdir, 'foo', 'bar', 'hello.obj'))
+test.must_exist(test.built_file_path('foo/hello.exe'))
+test.must_exist(test.built_file_path('foo/bar/hello.obj'))
 
 if test.format == 'msvs':
   if test.uses_msbuild:
-    test.must_contain('pull_in_there.vcxproj',
-      '<IntDir>$(OutDir)bar\\</IntDir>')
+    test.must_contain('pull_in_there.vcxproj', '<IntDir>$(OutDir)bar\\</IntDir>')
   else:
-    test.must_contain('pull_in_there.vcproj',
-      'IntermediateDirectory="$(OutDir)bar\\"')
+    test.must_contain('pull_in_there.vcproj', 'IntermediateDirectory="$(OutDir)bar\\"')
 
 test.pass_test()

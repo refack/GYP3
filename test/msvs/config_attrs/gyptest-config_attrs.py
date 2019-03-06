@@ -36,6 +36,6 @@ test.run_gyp('hello.gyp')
 
 test.build('hello.gyp')
 
-test.must_exist(expected_exe_file)
+test.built_file_must_exist(expected_exe_file)
 
 test.pass_test()

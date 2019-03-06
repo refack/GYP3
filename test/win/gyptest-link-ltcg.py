@@ -12,33 +12,36 @@ import TestGyp
 
 import sys
 
-if sys.platform == 'win32':
-  test = TestGyp.TestGyp(formats=['msvs', 'ninja'])
+if not sys.platform == 'win32':
+  print('Only for Windows')
+  sys.exit(2)
 
-  CHDIR = 'linker-flags'
-  test.run_gyp('ltcg.gyp', chdir=CHDIR)
+test = TestGyp.TestGyp(formats=['msvs', 'ninja'])
 
-  # Here we expect LTCG is able to inline functions beyond compile unit.
-  # Note: This marker is embedded in 'inline_test_main.cc'
-  INLINE_MARKER = '==== inlined ===='
+CHDIR = 'linker-flags'
+test.run_gyp('ltcg.gyp', chdir=CHDIR)
 
-  # link.exe generates following lines when LTCG is enabled.
-  # Note: Future link.exe may or may not generate them. Update as needed.
-  LTCG_LINKER_MESSAGES = ['Generating code', 'Finished generating code']
+# Here we expect LTCG is able to inline functions beyond compile unit.
+# Note: This marker is embedded in 'inline_test_main.cc'
+INLINE_MARKER = '==== inlined ===='
 
-  # test 'LinkTimeCodeGenerationOptionDefault'
-  test.build('ltcg.gyp', 'test_ltcg_off', chdir=CHDIR)
-  test.run_built_executable('test_ltcg_off', chdir=CHDIR)
-  test.must_not_contain_any_line(test.stdout(), [INLINE_MARKER])
+# link.exe generates following lines when LTCG is enabled.
+# Note: Future link.exe may or may not generate them. Update as needed.
+LTCG_LINKER_MESSAGES = ['Generating code', 'Finished generating code']
 
-  # test 'LinkTimeCodeGenerationOptionUse'
-  test.build('ltcg.gyp', 'test_ltcg_on', chdir=CHDIR)
-  if test.format == 'ninja':
-    # Make sure ninja win_tool.py filters out noisy lines.
-    test.must_not_contain_any_line(test.stdout(), LTCG_LINKER_MESSAGES)
-  elif test.format == 'msvs':
-    test.must_contain_any_line(test.stdout(), LTCG_LINKER_MESSAGES)
-  test.run_built_executable('test_ltcg_on', chdir=CHDIR)
-  test.must_contain_any_line(test.stdout(), [INLINE_MARKER])
+# test 'LinkTimeCodeGenerationOptionDefault'
+test.build('ltcg.gyp', 'test_ltcg_off', chdir=CHDIR)
+test.run_built_executable('test_ltcg_off', chdir=CHDIR)
+test.must_not_contain_any_line(test.stdout(), [INLINE_MARKER])
 
-  test.pass_test()
+# test 'LinkTimeCodeGenerationOptionUse'
+test.build('ltcg.gyp', 'test_ltcg_on', chdir=CHDIR)
+if test.format == 'ninja':
+  # Make sure ninja win_tool.py filters out noisy lines.
+  test.must_not_contain_any_line(test.stdout(), LTCG_LINKER_MESSAGES)
+elif test.format == 'msvs':
+  test.must_contain_any_line(test.stdout(), LTCG_LINKER_MESSAGES)
+test.run_built_executable('test_ltcg_on', chdir=CHDIR)
+test.must_contain_any_line(test.stdout(), [INLINE_MARKER])
+
+test.pass_test()

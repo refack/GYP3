@@ -53,17 +53,14 @@ if sys.platform == 'win32':
   test.build('enable-uac.gyp', test.ALL, chdir=CHDIR)
 
   # The following binaries must contain a manifest embedded.
-  test.fail_test(not extract_manifest(test.built_file_path(
-    'enable_uac.exe', chdir=CHDIR), 1))
-  test.fail_test(not extract_manifest(test.built_file_path(
-    'enable_uac_no.exe', chdir=CHDIR), 1))
-  test.fail_test(not extract_manifest(test.built_file_path(
-    'enable_uac_admin.exe', chdir=CHDIR), 1))
+  test.fail_test(not extract_manifest(test.built_file_path('enable_uac.exe', chdir=CHDIR), 1))
+  test.fail_test(not extract_manifest(test.built_file_path('enable_uac_no.exe', chdir=CHDIR), 1))
+  test.fail_test(not extract_manifest(test.built_file_path('enable_uac_admin.exe', chdir=CHDIR), 1))
 
   # Verify that <requestedExecutionLevel level="asInvoker" uiAccess="false" />
   # is present.
   manifest = parseString(extract_manifest(
-      test.built_file_path('enable_uac.exe', chdir=CHDIR), 1))
+    test.built_file_path('enable_uac.exe', chdir=CHDIR), 1))
   execution_level = manifest.getElementsByTagName('requestedExecutionLevel')
   test.fail_test(len(execution_level) != 1)
   execution_level = execution_level[0].attributes
@@ -84,14 +81,14 @@ if sys.platform == 'win32':
 
   # Verify that <requestedExecutionLevel> is not in the menifest.
   manifest = parseString(extract_manifest(
-      test.built_file_path('enable_uac_no.exe', chdir=CHDIR), 1))
+    test.built_file_path('enable_uac_no.exe', chdir=CHDIR), 1))
   execution_level = manifest.getElementsByTagName('requestedExecutionLevel')
   test.fail_test(len(execution_level) != 0)
 
   # Verify that <requestedExecutionLevel level="requireAdministrator"
   # uiAccess="true" /> is present.
   manifest = parseString(extract_manifest(
-      test.built_file_path('enable_uac_admin.exe', chdir=CHDIR), 1))
+    test.built_file_path('enable_uac_admin.exe', chdir=CHDIR), 1))
   execution_level = manifest.getElementsByTagName('requestedExecutionLevel')
   test.fail_test(len(execution_level) != 1)
   execution_level = execution_level[0].attributes

@@ -22,22 +22,18 @@ if sys.platform == 'win32':
   # which style the debug information was created from, so we resort to just
   # verifying the flags are correct on the command line.
 
-  ninja_file = test.built_file_path('obj/test-debug-format-off.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test-debug-format-off.ninja', chdir=CHDIR)
   test.must_not_contain(ninja_file, '/Z7')
   test.must_not_contain(ninja_file, '/Zi')
   test.must_not_contain(ninja_file, '/ZI')
 
-  ninja_file = test.built_file_path('obj/test-debug-format-oldstyle.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test-debug-format-oldstyle.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Z7')
 
-  ninja_file = test.built_file_path('obj/test-debug-format-pdb.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test-debug-format-pdb.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Zi')
 
-  ninja_file = test.built_file_path('obj/test-debug-format-editcontinue.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test-debug-format-editcontinue.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/ZI')
 
   test.pass_test()

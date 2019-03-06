@@ -15,16 +15,16 @@ import sys
 import TestGyp
 
 if int(os.environ.get('GYP_MSVS_VERSION', 0)) < 2010:
-  sys.exit(0)
+  sys.exit(2)
 
-test = TestGyp.TestGyp(formats=['msvs'], workdir='workarea_all')
+test = TestGyp.TestGyp(formats=['msvs', '!mock'], workdir='workarea_all')
 
 # without the flag set
 test.run_gyp('external.gyp')
 test.build('external.gyp', target='external')
 test.must_not_exist('external_builder.out')
-test.must_exist('msbuild_rule.out')
-test.must_exist('msbuild_action.out')
+test.built_file_must_exist('msbuild_rule.out')
+test.built_file_must_exist('msbuild_action.out')
 test.must_match('msbuild_rule.out', 'msbuild_rule.py hello.z a b c')
 test.must_match('msbuild_action.out', 'msbuild_action.py x y z')
 os.remove('msbuild_rule.out')

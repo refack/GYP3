@@ -10,20 +10,23 @@ stdout."""
 import sys
 import TestGyp
 
-if sys.platform == 'win32':
-  test = TestGyp.TestGyp(formats=['msvs'])
+if not sys.platform == 'win32':
+  exit(2)
 
-  test.run_gyp('rules-stdout-stderr.gyp')
-  test.build('rules-stdout-stderr.gyp', test.ALL)
+test = TestGyp.TestGyp(formats=['msvs'])
 
-  expected_stdout_lines = [
-    'testing stdout',
-    'This will go to stdout',
+test.run_gyp('rules-stdout-stderr.gyp')
+test.must_contain('test.vcxproj', 'test.targets')
 
-    # Note: stderr output from rules will go to the build's stdout.
-    'testing stderr',
-    'This will go to stderr',
-  ]
-  test.must_contain_all_lines(test.stdout(), expected_stdout_lines)
+expected_stdout_lines = [
+  'testing stdout',
+  'This will go to stdout',
 
-  test.pass_test()
+  # Note: stderr output from rules will go to the build's stdout.
+  'testing stderr',
+  'This will go to stderr',
+]
+test.build('rules-stdout-stderr.gyp', test.ALL)
+test.must_contain_all_lines(test.stdout(), expected_stdout_lines)
+
+test.pass_test()

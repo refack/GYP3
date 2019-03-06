@@ -42,9 +42,7 @@ if sys.platform == 'darwin':
       chdir='framework')
 
   # Info.plist
-  info_plist = test.built_file_path(
-      'Test Framework.framework/Versions/A/Resources/Info.plist',
-      chdir='framework')
+  info_plist = test.built_file_path('Test Framework.framework/Versions/A/Resources/Info.plist', chdir='framework')
   test.must_exist(info_plist)
   test.must_contain(info_plist, 'com.yourcompany.Test_Framework')
 
@@ -67,8 +65,7 @@ if sys.platform == 'darwin':
       chdir='framework')
 
   # Check that no other files get added to the bundle.
-  if set(ls(test.built_file_path('Test Framework.framework',
-                                 chdir='framework'))) != \
+  if set(ls(test.built_file_path('Test Framework.framework', chdir='framework'))) != \
      set(['Versions/A/Test Framework',
           'Versions/A/Resources/Info.plist',
           'Versions/A/Resources/English.lproj/InfoPlist.strings',

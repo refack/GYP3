@@ -48,58 +48,45 @@ if sys.platform == 'win32':
   ninja_file = test.built_file_path('obj/test_opt_fpo_off.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Oy-')
 
-  ninja_file = test.built_file_path('obj/test_opt_intrinsic.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_intrinsic.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Oi')
   test.must_not_contain(ninja_file, '/Oi-')
 
-  ninja_file = test.built_file_path('obj/test_opt_intrinsic_off.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_intrinsic_off.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Oi-')
 
-  ninja_file = test.built_file_path('obj/test_opt_inline_off.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_inline_off.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Ob0')
 
-  ninja_file = test.built_file_path('obj/test_opt_inline_manual.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_inline_manual.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Ob1')
 
-  ninja_file = test.built_file_path('obj/test_opt_inline_auto.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_inline_auto.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Ob2')
 
-  ninja_file = test.built_file_path('obj/test_opt_neither.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_neither.ninja', chdir=CHDIR)
   test.must_not_contain(ninja_file, '/Os')
   test.must_not_contain(ninja_file, '/Ot')
 
-  ninja_file = test.built_file_path('obj/test_opt_size.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_size.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Os')
 
-  ninja_file = test.built_file_path('obj/test_opt_speed.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_speed.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/Ot')
 
-  ninja_file = test.built_file_path('obj/test_opt_wpo.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_wpo.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/GL')
 
-  ninja_file = test.built_file_path('obj/test_opt_sp.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_sp.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/GF')
 
-  ninja_file = test.built_file_path('obj/test_opt_sp_off.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_sp_off.ninja', chdir=CHDIR)
   test.must_not_contain(ninja_file, '/GF')
 
-  ninja_file = test.built_file_path('obj/test_opt_fso.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_fso.ninja', chdir=CHDIR)
   test.must_contain(ninja_file, '/GT')
 
-  ninja_file = test.built_file_path('obj/test_opt_fso_off.ninja',
-      chdir=CHDIR)
+  ninja_file = test.built_file_path('obj/test_opt_fso_off.ninja', chdir=CHDIR)
   test.must_not_contain(ninja_file, '/GT')
 
   test.pass_test()

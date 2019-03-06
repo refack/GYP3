@@ -25,8 +25,8 @@ test.run_built_executable('program', chdir=CHDIR, stdout=expect)
 # Change what's written to the generated header, regyp and rebuild, and check
 # that the change makes it to the executable and that the build is clean.
 test.sleep()
-test.write('generated-header/test.gyp',
-           test.read('generated-header/test.gyp').replace('foobar', 'barbaz'))
+content = test.read('generated-header/test.gyp').replace('foobar', 'barbaz')
+test.write('generated-header/test.gyp', content)
 
 test.run_gyp('test.gyp', chdir=CHDIR)
 test.build('test.gyp', 'program', chdir=CHDIR)

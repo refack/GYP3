@@ -32,7 +32,7 @@ test.build('mylib.gyp', target='prog')
 # We expect the library to be copied to $PRODUCT_DIR.
 standalone_static_library_dir = test.EXECUTABLE
 path_to_lib = os.path.split(
-    test.built_file_path('mylib', type=standalone_static_library_dir))[0]
+  test.built_file_path('mylib', type=standalone_static_library_dir))[0]
 lib_name = test.built_file_basename('mylib', type=test.STATIC_LIB)
 path = os.path.join(path_to_lib, lib_name)
 test.must_exist(path)

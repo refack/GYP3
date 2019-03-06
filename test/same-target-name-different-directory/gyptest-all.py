@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# Copyright (c) 2012 Google Inc. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 """
 Test cases when multiple targets in different directories have the same name.
 """
@@ -11,12 +5,6 @@ Test cases when multiple targets in different directories have the same name.
 import TestGyp
 
 test = TestGyp.TestGyp(formats=['ninja', 'make'])
-
-# xcode-ninja fails to generate a project due to id collisions
-# cf. https://code.google.com/p/gyp/issues/detail?id=461
-if test.format == 'xcode-ninja':
-  test.skip_test()
-
 test.run_gyp('subdirs.gyp', chdir='src')
 
 test.relocate('src', 'relocate/src')

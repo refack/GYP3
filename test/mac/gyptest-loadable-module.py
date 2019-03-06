@@ -28,17 +28,14 @@ if sys.platform == 'darwin':
   test.build('test.gyp', test.ALL, chdir=CHDIR)
 
   # Binary.
-  binary = test.built_file_path(
-      'test_loadable_module.plugin/Contents/MacOS/test_loadable_module',
-      chdir=CHDIR)
+  binary = test.built_file_path('test_loadable_module.plugin/Contents/MacOS/test_loadable_module', chdir=CHDIR)
   test.must_exist(binary)
   MH_BUNDLE = 8
   if struct.unpack('4I', open(binary, 'rb').read(16))[3] != MH_BUNDLE:
     test.fail_test()
 
   # Info.plist.
-  info_plist = test.built_file_path(
-      'test_loadable_module.plugin/Contents/Info.plist', chdir=CHDIR)
+  info_plist = test.built_file_path('test_loadable_module.plugin/Contents/Info.plist', chdir=CHDIR)
   test.must_exist(info_plist)
   test.must_contain(info_plist, """
 	<key>CFBundleExecutable</key>

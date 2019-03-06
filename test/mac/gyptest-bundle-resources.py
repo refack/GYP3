@@ -22,8 +22,7 @@ if sys.platform in ('darwin'):
 
 
 def check_attribs(path, expected_exec_bit):
-  out_path = test.built_file_path(
-      os.path.join('resource.app/Contents/Resources', path), chdir=CHDIR)
+  out_path = test.built_file_path(os.path.join('resource.app/Contents/Resources', path), chdir=CHDIR)
 
   in_stat = os.stat(os.path.join(CHDIR, path))
   out_stat = os.stat(out_path)

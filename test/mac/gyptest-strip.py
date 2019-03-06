@@ -58,9 +58,8 @@ if sys.platform == 'darwin':
   CheckNsyms(OutPath('strip_nonglobal'), 6)
   CheckNsyms(OutPath('strip_debugging'), 7)
   CheckNsyms(OutPath('strip_all_custom_flags'), 0)
-  CheckNsyms(test.built_file_path(
-      'strip_all_bundle.framework/Versions/A/strip_all_bundle', chdir='strip'),
-      0)
+  CheckNsyms(test.built_file_path('strip_all_bundle.framework/Versions/A/strip_all_bundle', chdir='strip'),
+             0)
   CheckNsyms(OutPath('strip_save'), 7)
 
   test.pass_test()

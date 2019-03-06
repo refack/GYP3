@@ -74,7 +74,7 @@ Hello from func5.c
 
 def run_builddir(prog, expect):
   dir = 'relocate/builddir/Default/'
-  test.run(program=test.workpath(dir + prog), stdout=expect)
+  test.run_built_executable(test.workpath(dir + prog), stdout=expect)
 
 run_builddir('prog1', expect1)
 run_builddir('prog2', expect2)

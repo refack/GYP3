@@ -41,9 +41,7 @@ if sys.platform == 'darwin' and TestMac.Xcode.Version()>="0600":
       'ExtensionContainer.app/PlugIns/ActionExtension.appex',
       chdir='extension')
 
-  path = test.built_file_path(
-      'ExtensionContainer.app/PlugIns/ActionExtension.appex/ActionExtension',
-      chdir='extension')
+  path = test.built_file_path('ExtensionContainer.app/PlugIns/ActionExtension.appex/ActionExtension', chdir='extension')
   CheckStrip(path, "ActionViewController")
   CheckEntrypoint(path, "_NSExtensionMain")
 

@@ -29,9 +29,7 @@ if sys.platform == 'darwin' and TestMac.Xcode.Version() >= '0600':
       chdir='app-bundle')
 
   # Info.plist
-  info_plist = test.built_file_path(
-      os.path.join(test_app_path, 'Info.plist'),
-      chdir='app-bundle')
+  info_plist = test.built_file_path(os.path.join(test_app_path, 'Info.plist'), chdir='app-bundle')
   # Resources
   test.built_file_must_exist(
       os.path.join(test_app_path, 'English.lproj/InfoPlist.strings'),

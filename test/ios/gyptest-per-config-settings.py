@@ -105,11 +105,9 @@ if sys.platform == 'darwin':
   for configuration in test_configs:
     test.set_configuration(configuration)
     test.build('test-device.gyp', 'test_app', chdir='app-bundle')
-    result_file = test.built_file_path('Test App Gyp.app/Test App Gyp',
-                                       chdir='app-bundle')
+    result_file = test.built_file_path('Test App Gyp.app/Test App Gyp', chdir='app-bundle')
     test.must_exist(result_file)
-    info_plist = test.built_file_path('Test App Gyp.app/Info.plist',
-                                      chdir='app-bundle')
+    info_plist = test.built_file_path('Test App Gyp.app/Info.plist', chdir='app-bundle')
     plist = plistlib.readPlist(info_plist)
     xcode_version = TestMac.Xcode.Version()
     if xcode_version >= '0720':
@@ -168,17 +166,14 @@ if sys.platform == 'darwin':
 
     if HasCerts() and configuration == 'Default-iphoneos':
       test.build('test-device.gyp', 'sig_test', chdir='app-bundle')
-      result_file = test.built_file_path('sigtest.app/sigtest',
-                                         chdir='app-bundle')
+      result_file = test.built_file_path('sigtest.app/sigtest', chdir='app-bundle')
       CheckSignature(result_file)
-      info_plist = test.built_file_path('sigtest.app/Info.plist',
-                                        chdir='app-bundle')
+      info_plist = test.built_file_path('sigtest.app/Info.plist', chdir='app-bundle')
 
       plist = plistlib.readPlist(info_plist)
       CheckPlistvalue(plist, 'UIDeviceFamily', [1])
 
-      entitlements_file = test.built_file_path('sig_test.xcent',
-                                               chdir='app-bundle')
+      entitlements_file = test.built_file_path('sig_test.xcent', chdir='app-bundle')
       if os.path.isfile(entitlements_file):
         expected_entitlements = open(entitlements_file).read()
         CheckEntitlements(result_file, expected_entitlements)
