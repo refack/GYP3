@@ -20,9 +20,9 @@ windows-setup-steps: &windows-setup-steps
 osx-setup-steps: &osx-setup-steps
   os: osx
   language: cpp  # 'language: python' is not yet supported on macOS
-  before_install: brew upgrade python
+  # before_install: brew upgrade python  # takes too long
   install:
-    - brew install ninja
+    - HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
     - pip install --upgrade pip pipenv
     - pipenv install --dev
     - pipenv install PyObjC  # This is not in the Pipfile because it breaks other platforms https://github.com/pypa/pipenv/issues/3187
