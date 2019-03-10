@@ -54,7 +54,7 @@ def match_modulo_line_numbers(contents_a, contents_b):
   return TestCommon.match_exact(contents_a, contents_b)
 
 
-def mk_temp_dir(workdir):
+def mk_temp_dir(workdir, hint=''):
   # Put test output in out/testworkarea by default.
   # Use temporary names so there are no collisions.
   workdir = workdir or 'testworkarea'
@@ -62,7 +62,14 @@ def mk_temp_dir(workdir):
   # Create work area if it doesn't already exist.
   if not os.path.isdir(workdir):
     os.makedirs(workdir)
-  return tempfile.mktemp(prefix='testgyp.', dir=workdir)
+  if hint:
+    slug = re.sub(r'[/.\\]', '_', hint)
+    dir_name = os.path.join(workdir, slug)
+    if os.path.exists(dir_name):
+      shutil.rmtree(dir_name)
+    return dir_name
+  else:
+    return tempfile.mktemp(prefix='testgyp.', dir=workdir)
 
 
 @contextmanager
@@ -131,7 +138,8 @@ class TestGypBase(TestCommon.TestCommon):
     if 'description' not in kw:
       bt = [t[0] for t in traceback.extract_stack() if 'gyptest' in t[0]]
       kw['description'] = bt and bt.pop()
-    kw['workdir'] = mk_temp_dir(kw.get('workdir'))
+    kw_workdir = kw.get('workdir')
+    kw['workdir'] = mk_temp_dir(kw_workdir, kw['description'])
     kw_formats = kw.pop('formats', [])
 
     if not gyp:

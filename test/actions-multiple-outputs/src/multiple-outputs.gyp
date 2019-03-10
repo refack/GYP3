@@ -10,6 +10,7 @@
       'actions': [
         {
           'action_name': 'action1',
+          'external': 'true',
           'inputs': [],
           'outputs': [
             '<(PRODUCT_DIR)/out1.txt',

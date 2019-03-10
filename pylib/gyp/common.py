@@ -152,6 +152,8 @@ def RelativePath(path, relative_to, follow_path_symlink=True):
       return path
 
   rel = os.path.relpath(path, relative_to)
+  if rel == '.':
+    rel = ''
   return rel
 
 
