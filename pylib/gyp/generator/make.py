@@ -23,6 +23,7 @@
 from __future__ import print_function
 
 import os
+import posixpath as path
 import re
 import subprocess
 import gyp
@@ -221,7 +222,7 @@ def WriteAutoRegenerationRule(params, root_makefile, makefile_name, build_files,
 
   gyp_binary = gyp.common.FixIfRelativePath(params['gyp_binary'], options.toplevel_dir)
   if not gyp_binary.startswith(os.sep):
-    gyp_binary = os.path.join('.', gyp_binary)
+    gyp_binary = path.join('.', gyp_binary)
 
   root_makefile.write(
     "quiet_cmd_regen_makefile = ACTION Regenerating $@\n"
@@ -261,12 +262,12 @@ def GenerateOutput(target_list, target_dicts, data, params):
     # paths relative to the source root for the master makefile.  Grab
     # the path of the .gyp file as the base to relativize against.
     # E.g. "foo/bar" when we're constructing targets for "foo/bar/baz.gyp".
-    base_makefile_path = gyp.common.RelativePath(os.path.dirname(build_file_arg), options.depth)
+    base_makefile_path = gyp.common.RelativePath(path.dirname(build_file_arg), options.depth)
     # We write the file in the base_makefile_path directory.
-    output_makefile = os.path.join(options.depth, base_makefile_path, base_name)
+    output_makefile = path.join(options.depth, base_makefile_path, base_name)
     if options.generator_output:
-      output_makefile = os.path.join(options.depth, options.generator_output, base_makefile_path, base_name)
-    base_makefile_path = gyp.common.RelativePath(os.path.dirname(build_file_arg), options.toplevel_dir)
+      output_makefile = path.join(options.depth, options.generator_output, base_makefile_path, base_name)
+    base_makefile_path = gyp.common.RelativePath(path.dirname(build_file_arg), options.toplevel_dir)
     return base_makefile_path, output_makefile
 
   # TODO:  search for the first non-'Default' target.  This can go
@@ -284,9 +285,9 @@ def GenerateOutput(target_list, target_dicts, data, params):
 
   srcdir = '.'
   makefile_name = 'Makefile' + options.suffix
-  makefile_path = os.path.join(options.toplevel_dir, makefile_name)
+  makefile_path = path.join(options.toplevel_dir, makefile_name)
   if options.generator_output:
-    makefile_path = os.path.join(options.toplevel_dir, options.generator_output, makefile_name)
+    makefile_path = path.join(options.toplevel_dir, options.generator_output, makefile_name)
     srcdir = gyp.common.RelativePath(srcdir, options.generator_output)
     Sourceify.srcdir_prefix = '$(srcdir)/'
 
@@ -407,7 +408,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
     WriteRootHeaderSuffixRules(root_makefile)
 
   # Put build-time support tools next to the root Makefile.
-  dest_path = os.path.dirname(makefile_path)
+  dest_path = path.dirname(makefile_path)
   gyp.common.CopyTool(flavor, dest_path)
 
   # Find the list of targets that derive from the gyp file(s) being built.
@@ -437,7 +438,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
         gyp.common.UnrelativePath(included_file, build_file),
         options.toplevel_dir
       )
-      abs_include_file = os.path.abspath(relative_include_file)
+      abs_include_file = path.abspath(relative_include_file)
       # If the include file is from the ~/.gyp dir, we should use absolute path
       # so that relocating the src dir doesn't break the path.
       if params['home_dot_gyp'] and abs_include_file.startswith(params['home_dot_gyp']):
@@ -458,7 +459,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
 
     # Our root_makefile lives at the source root.  Compute the relative path
     # from there to the output_file for including.
-    mkfile_rel_path = gyp.common.RelativePath(output_file, os.path.dirname(makefile_path))
+    mkfile_rel_path = gyp.common.RelativePath(output_file, path.dirname(makefile_path))
     include_list.add(mkfile_rel_path)
 
   assert writer
@@ -468,14 +469,14 @@ def GenerateOutput(target_list, target_dicts, data, params):
     # The paths in build_files were relativized above, so undo that before
     # testing against the non-relativized items in target_list and before
     # calculating the Makefile path.
-    build_file_path = os.path.join(depth_rel_path, build_file)
+    build_file_path = path.join(depth_rel_path, build_file)
     related_gyp_targets = [t for t in target_list if t.startswith(build_file) and t in needed_targets]
     # Only generate Makefiles for gyp files with targets.
     if not related_gyp_targets:
       continue
-    build_file_name = "%s.Makefile" % os.path.splitext(os.path.basename(build_file))[0]
+    build_file_name = "%s.Makefile" % path.splitext(path.basename(build_file))[0]
     _, submake_output_file = CalculateMakefilePath(build_file_path, build_file_name)
-    makefile_rel_path = gyp.common.RelativePath(os.path.dirname(makefile_path), os.path.dirname(submake_output_file))
+    makefile_rel_path = gyp.common.RelativePath(path.dirname(makefile_path), path.dirname(submake_output_file))
     gyp_targets_names = [target_dicts[t]['target_name'] for t in related_gyp_targets]
     writer.WriteSubMake(submake_output_file, makefile_rel_path, gyp_targets_names, builddir_name)
 
@@ -547,7 +548,7 @@ def CalculateGeneratorInputInfo(params):
   output_dir = params['options'].generator_output or \
                params['options'].toplevel_dir
   builddir_name = generator_flags.get('output_dir', 'out')
-  qualified_out_dir = os.path.normpath(os.path.join(
+  qualified_out_dir = path.normpath(path.join(
     output_dir, builddir_name, 'gypfiles'))
 
   global generator_filelist_paths

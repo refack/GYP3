@@ -17,12 +17,20 @@
     {
       'target_name': 'lower',
       'type': 'none',
-      'actions': [{
-        'action_name': 'lower_action',
-        'inputs': ['input.txt'],
-        'outputs': ['<(PRODUCT_DIR)/out1.txt', '<(PRODUCT_DIR)/out2.txt'],
-        'action': ['python', 'rcopy.py', '<@(_inputs)', '<@(_outputs)'],
-      }],
+      'actions': [
+        {
+          'action_name': 'lower_action',
+          'external': 'true',
+          'inputs': ['input.txt'],
+          'outputs': ['<(PRODUCT_DIR)/out1.txt', '<(PRODUCT_DIR)/out2.txt'],
+          'action': ['python', 'rcopy.py', '<@(_inputs)', '<@(_outputs)'],
+        },
+        {
+          'action_name': 'lower_action2',
+          'inputs': ['input.txt'],
+          'outputs': ['<(PRODUCT_DIR)/out2.1.txt'],
+          'action': ['python', 'rcopy.py', '<@(_inputs)', '<@(_outputs)'],
+        }],
     },
   ],
 }

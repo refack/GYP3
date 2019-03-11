@@ -5,7 +5,7 @@
 # found in the LICENSE file.
 
 """
-Verifies actions with multiple outputs & dependncies will correctly rebuild.
+Verifies actions with multiple outputs & dependencies will correctly rebuild.
 
 This is a regression test for crrev.com/1177163002.
 """
@@ -17,10 +17,6 @@ import os
 import sys
 import time
 
-if sys.platform in ('darwin', 'win32'):
-  print("This test is currently disabled: https://crbug.com/483696.")
-  sys.exit(0)
-
 test = TestGyp.TestGyp()
 
 TESTDIR='relocate/src'
@@ -30,6 +26,7 @@ test.relocate('src', TESTDIR)
 def build_and_check(content):
   test.write(TESTDIR + '/input.txt', content)
   test.build('action.gyp', 'upper', chdir=TESTDIR)
+  test.up_to_date('action.gyp', 'upper', chdir=TESTDIR)
   test.built_file_must_match('result.txt', content, chdir=TESTDIR)
 
 build_and_check('Content for first build.')
