@@ -10,7 +10,7 @@ are multiple actions in one project.
 """
 
 import TestGyp
-import TestCmd
+from SConsLib import TestCmd
 
 test = TestGyp.TestGyp(formats=['msvs'], workdir='workarea_all')
 

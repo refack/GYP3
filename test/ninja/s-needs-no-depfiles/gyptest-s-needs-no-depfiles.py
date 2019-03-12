@@ -12,7 +12,6 @@ linux).
 
 import os
 import sys
-import TestCommon
 import TestGyp
 
 # NOTE(fischman): Each generator uses depfiles (or not) differently, so this is

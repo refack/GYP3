@@ -77,7 +77,7 @@ def main(argv=None):
       print(test)
     sys.exit(0)
 
-  os.environ['PYTHONPATH'] = os.path.abspath('test/lib')
+  os.environ['PYTHONPATH'] = os.path.abspath('testlib')
 
   if args.verbose:
     print_configuration_info()

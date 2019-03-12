@@ -9,7 +9,6 @@ Tests the msvs specific msvs_target_platform option.
 """
 
 import TestGyp
-import TestCommon
 
 
 def RunX64(exe, stdout):

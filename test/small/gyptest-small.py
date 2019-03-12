@@ -13,17 +13,14 @@ import os
 import sys
 import unittest
 
-import TestGyp
 
 # Add pylib to the import path (so tests can import their dependencies).
 # This is consistent with the path.append done in the top file "gyp".
 # This need to happen before we init TestGyp, which changes the cwd.
-gyp_src_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pylib'))
+gyp_src_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, gyp_src_root)
 
-#test = TestGyp.TestGyp()
 
-unit_test_dir = 'gyp/unit_tests'
 files_to_test = [
   'common_test.py',
   'easy_xml_test.py',
@@ -41,7 +38,7 @@ for filename in files_to_test:
   # Carve the module name out of the path.
   name = os.path.splitext(filename)[0]
   # Find the complete module path.
-  full_filename = os.path.join(gyp_src_root, unit_test_dir, filename)
+  full_filename = os.path.join(gyp_src_root, 'gyp', 'unit_tests', filename)
   # Load the module.
   module = imp.load_source(name, full_filename)
   # Add it to the list of test suites.

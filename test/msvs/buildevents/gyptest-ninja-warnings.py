@@ -9,7 +9,7 @@ Verifies that ninja errors out when encountering msvs_prebuild/msvs_postbuild.
 """
 
 import sys
-import TestCmd
+from SConsLib import TestCmd
 import TestGyp
 
 
@@ -17,13 +17,13 @@ if sys.platform == 'win32':
   test = TestGyp.TestGyp(formats=['ninja'])
 
   test.run_gyp('buildevents.gyp',
-      status=1,
-      stderr=r'.*msvs_prebuild not supported \(target main\).*',
-      match=TestCmd.match_re_dotall)
+               status=1,
+               stderr=r'.*msvs_prebuild not supported \(target main\).*',
+               match=TestCmd.match_re_dotall)
 
   test.run_gyp('buildevents.gyp',
-      status=1,
-      stderr=r'.*msvs_postbuild not supported \(target main\).*',
-      match=TestCmd.match_re_dotall)
+               status=1,
+               stderr=r'.*msvs_postbuild not supported \(target main\).*',
+               match=TestCmd.match_re_dotall)
 
   test.pass_test()

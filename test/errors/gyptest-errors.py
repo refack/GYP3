@@ -8,11 +8,8 @@
 Test that two targets with the same name generates an error.
 """
 
-import os
-import sys
-
 import TestGyp
-import TestCmd
+from SConsLib import TestCmd
 
 # TODO(sbc): Remove the use of match_re below, done because scons
 # error messages were not consistent with other generators.

@@ -12,8 +12,7 @@ solib's public API hasn't changed.
 from __future__ import print_function
 
 import os
-import sys
-import TestCommon
+from SConsLib import TestCommon
 import TestGyp
 
 # NOTE(fischman): This test will not work with other generators because the

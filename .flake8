@@ -1,3 +1,0 @@
-[flake8]
-exclude = .venv,out,test/lib/TestCmd.py,test/lib/TestUnit
-select = E9,F8
