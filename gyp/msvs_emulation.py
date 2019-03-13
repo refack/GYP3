@@ -200,7 +200,11 @@ class MsvsSettings(object):
   def GetVSMacroEnv(self, base_to_build=None, config=None):
     """Get a dict of variables mapping internal VS macro names to their gyp
     equivalents."""
-    target_platform = 'Win32' if self.GetArch(config) == 'x86' else 'x64'
+    target_arch = self.GetArch(config)
+    if target_arch == 'x86':
+      target_platform = 'Win32'
+    else:
+      target_platform = target_arch
     target_name = self.spec.get('product_prefix', '') + self.spec.get('product_name', self.spec['target_name'])
     target_dir = base_to_build + '\\' if base_to_build else ''
     target_ext = '.' + self.GetExtension()
@@ -276,7 +280,7 @@ class MsvsSettings(object):
     if not platform:  # If no specific override, use the configuration's.
       platform = configuration_platform
     # Map from platform to architecture.
-    return {'Win32': 'x86', 'x64': 'x64'}.get(platform, 'x86')
+    return {'Win32': 'x86', 'x64': 'x64', 'ARM64': 'arm64'}.get(platform, 'x86')
 
   def _TargetConfig(self, config):
     """Returns the target-specific configuration."""
@@ -475,7 +479,10 @@ class MsvsSettings(object):
     lib = self._GetWrapper(self, self.msvs_settings[config], 'VCLibrarianTool', append=libflags)
     libflags.extend(self._GetAdditionalLibraryDirectories('VCLibrarianTool', config, gyp_to_build_path))
     lib('LinkTimeCodeGeneration', map={'true': '/LTCG'})
-    lib('TargetMachine', map={'1': 'X86', '17': 'X64', '3': 'ARM'}, prefix='/MACHINE:')
+    # TODO: These 'map' values come from machineTypeOption enum,
+    # and does not have an official value for ARM64 in VS2017 (yet).
+    # It needs to verify the ARM64 value when machineTypeOption is updated.
+    lib('TargetMachine', map={'1': 'X86', '17': 'X64', '3': 'ARM', '18': 'ARM64'}, prefix='/MACHINE:')
     lib('AdditionalOptions')
     return libflags
 
@@ -514,7 +521,10 @@ class MsvsSettings(object):
     ld = self._GetWrapper(self, self.msvs_settings[config], 'VCLinkerTool', append=ldflags)
     self._GetDefFileAsLdflags(ldflags, gyp_to_build_path)
     ld('GenerateDebugInformation', map={'true': '/DEBUG'})
-    ld('TargetMachine', map={'1': 'X86', '17': 'X64', '3': 'ARM'}, prefix='/MACHINE:')
+    # TODO: These 'map' values come from machineTypeOption enum,
+    # and does not have an official value for ARM64 in VS2017 (yet).
+    # It needs to verify the ARM64 value when machineTypeOption is updated.
+    ld('TargetMachine', map={'1': 'X86', '17': 'X64', '3': 'ARM', '18': 'ARM64'}, prefix='/MACHINE:')
     ldflags.extend(self._GetAdditionalLibraryDirectories('VCLinkerTool', config, gyp_to_build_path))
     ld('DelayLoadDLLs', prefix='/DELAYLOAD:')
     ld('TreatLinkerWarningAsErrors', prefix='/WX', map={'true': '', 'false': ':NO'})
@@ -764,7 +774,9 @@ class MsvsSettings(object):
     output = [header, dlldata, iid, proxy]
     variables = [('tlb', tlb), ('h', header), ('dlldata', dlldata), ('iid', iid), ('proxy', proxy)]
     # TODO(scottmg): Are there configuration settings to set these flags?
-    target_platform = 'win32' if self.GetArch(config) == 'x86' else 'x64'
+    target_platform = self.GetArch(config)
+    if target_platform == 'x86':
+      target_platform = 'win32'
     flags = ['/char', 'signed', '/env', target_platform, '/Oicf']
     return outdir, output, variables, flags
 
