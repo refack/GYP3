@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import collections
 import errno
+import gzip
 import itertools
 import os
 import re
@@ -960,7 +961,12 @@ class TestGypMSVS(TestGypOnMSToolchain):
   #
   # Note:  we must use devenv.com to be able to capture build output.
   # Directly executing devenv.exe only sends output to BuildLog.htm.
-  build_tool_list = [None, 'devenv.com']
+  build_tool_list = [None]
+
+  def __init__(self, gyp=None, **kw):
+    super(TestGypMSVS, self).__init__(gyp=None, **kw)
+    self.is_new_msbuild = '15.0' in self.build_tool or 'Current' in self.build_tool
+    self.msbuild_binlog_path = ''
 
   def initialize_build_tool(self):
     super(TestGypMSVS, self).initialize_build_tool()
@@ -971,40 +977,46 @@ class TestGypMSVS(TestGypOnMSToolchain):
     Runs a Visual Studio build using the configuration generated
     from the specified gyp_file.
     """
-    if '15.0' in self.build_tool or 'Current' in self.build_tool:
-      configuration = '/p:Configuration=' + (
+    arguments = kw.get('arguments', [])[:]
+    if self.is_new_msbuild:
+      binlog_filename = '%s.binlog' % self.description.replace(os.path.sep, '_').replace('.', '_')
+      self.msbuild_binlog_path = os.path.join(kw.get('chdir', ''), binlog_filename)
+      arguments.append('-binaryLogger:ProjectImports=None;LogFile=%s' % binlog_filename)
+
+      configuration = '-p:Configuration=' + (
         self.configuration or self.configuration_buildname())
-      build = '/t'
+
+      build_target = ''
       if target not in (None, self.ALL, self.DEFAULT):
-        build += ':' + target
+        build_target += ':' + target
       if clean:
-        build += ':Clean'
+        build_target += ':Clean'
       elif rebuild:
-        build += ':Rebuild'
-      elif ':' not in build:
-        build += ':Build'
-      arguments = kw.get('arguments', [])[:]
-      arguments.extend([gyp_file.replace('.gyp', '.sln'),
-                        build, configuration])
+        build_target += ':Rebuild'
+      elif ':' not in build_target:
+        build_target += ':Build'
+      build = '-t%s' % build_target
     else:
+      if self.configuration:
+        arguments.extend(['/ProjectConfig', self.configuration])
+
+      if target not in (None, self.ALL, self.DEFAULT):
+        arguments.extend(['/Project', target])
+
       configuration = self.configuration_buildname()
+
       if clean:
         build = '/Clean'
       elif rebuild:
         build = '/Rebuild'
       else:
         build = '/Build'
-      arguments = kw.get('arguments', [])[:]
-      arguments.extend([gyp_file.replace('.gyp', '.sln'),
-                        build, configuration])
       # Note:  the Visual Studio generator doesn't add an explicit 'all'
       # target, so we just treat it the same as the default.
-      if target not in (None, self.ALL, self.DEFAULT):
-        arguments.extend(['/Project', target])
-      if self.configuration:
-        arguments.extend(['/ProjectConfig', self.configuration])
+    arguments.extend([gyp_file.replace('.gyp', '.sln'), build, configuration])
     kw['arguments'] = arguments
     return self.run(program=self.build_tool, **kw)
+
   def up_to_date(self, gyp_file, target=None, **kw):
     r"""
     Verifies that a build of the specified Visual Studio target is up to date.
@@ -1022,13 +1034,20 @@ class TestGypMSVS(TestGypOnMSToolchain):
     """
     result = self.build(gyp_file, target, **kw)
     if not result:
-      stdout = self.stdout()
+      if self.is_new_msbuild:
+        with gzip.open(self.msbuild_binlog_path, 'r') as f:
+          content = f.read()
+          if 'is newer than' in content:
+            self.report_not_up_to_date()
+            self.fail_test()
+      else:
+        stdout = self.stdout()
 
-      m = self.up_to_date_re.search(stdout)
-      up_to_date = m and int(m.group(1)) > 0
-      if not up_to_date:
-        self.report_not_up_to_date()
-        self.fail_test()
+        m = self.up_to_date_re.search(stdout)
+        up_to_date = m and int(m.group(1)) > 0
+        if not up_to_date:
+          self.report_not_up_to_date()
+          self.fail_test()
     return result
 
   def built_file_path(self, name, type=None, **kw):
