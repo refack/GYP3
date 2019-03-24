@@ -19,8 +19,7 @@ if sys.platform == 'win32':
   test.run_gyp('additional-options.gyp', chdir=CHDIR)
 
   # Warning level not overidden, must fail.
-  test.build('additional-options.gyp', 'test_additional_none', chdir=CHDIR,
-      status=1)
+  test.build('additional-options.gyp', 'test_additional_none', chdir=CHDIR, status=1)
 
   # Warning level is overridden, must succeed.
   test.build('additional-options.gyp', 'test_additional_one', chdir=CHDIR)

@@ -485,11 +485,11 @@ def ConvertToMSBuildSettings(msvs_settings, stderr=sys.stderr):
 
 
 def ValidateMSVSSettings(settings, stderr=sys.stderr):
-  """Validates that the names of the settings are valid for MSVS.
+  """
+  Validates that the names of the settings are valid for MSVS.
 
   Args:
-      settings: A dictionary.  The key is the tool name.  The values are
-          themselves dictionaries of settings and their values.
+      settings (dict): The key is the tool name.  The values are themselves dictionaries of settings and their values.
       stderr: The stream receiving the error messages.
   """
   _ValidateSettings(_msvs_validators, settings, stderr)
@@ -507,35 +507,31 @@ def ValidateMSBuildSettings(settings, stderr=sys.stderr):
 
 
 def _ValidateSettings(validators, settings, stderr):
-  """Validates that the settings are valid for MSBuild or MSVS.
+  """
+  Validates that the settings are valid for MSBuild or MSVS.
 
   We currently only validate the names of the settings, not their values.
 
   Args:
-      validators: A dictionary of tools and their validators.
-      settings: A dictionary.  The key is the tool name.  The values are
-          themselves dictionaries of settings and their values.
+      validators (dict): Tools and their validators.
+      settings (dict): The key is the tool name.  The values are themselves dictionaries of settings and their values.
       stderr: The stream receiving the error messages.
   """
-  for tool_name in settings:
-    if tool_name in validators:
-      tool_validators = validators[tool_name]
-      for setting, value in settings[tool_name].items():
-        if setting in tool_validators:
-          try:
-            tool_validators[setting](value)
-          except ValueError as e:
-            print(('Warning: for %s/%s, %s' %
-                              (tool_name, setting, e)), file=stderr)
-        else:
-          _ValidateExclusionSetting(setting,
-                                    tool_validators,
-                                    ('Warning: unrecognized setting %s/%s' %
-                                     (tool_name, setting)),
-                                    stderr)
-
-    else:
-      print(('Warning: unrecognized tool %s' % tool_name), file=stderr)
+  for tool_name, tool_settings in settings.items():
+    tool_validators = validators.get(tool_name, None)
+    if not tool_validators:
+      print('Warning: unrecognized tool %s' % tool_name, file=stderr)
+      continue
+    for setting_name, value in tool_settings.items():
+      if setting_name in tool_validators:
+        validator = tool_validators[setting_name]
+        try:
+          validator(value)
+        except ValueError as e:
+          print('Warning: for %s/%s, %s' % (tool_name, setting_name, e), file=stderr)
+      else:
+        error_msg = 'Warning: unrecognized setting %s/%s' % (tool_name, setting_name)
+        _ValidateExclusionSetting(setting_name, tool_validators, error_msg, stderr)
 
 
 # MSVS and MBuild names of the tools.

@@ -6,8 +6,14 @@
 
 import os
 import glob
-from typing import Dict
 from gyp.MSVS.MSVSUtil import TryQueryRegistryValue
+
+try:
+  from typing import Dict
+except ImportError:
+  Dict = None
+
+MSVS_VERSION_AUTO = 'auto'
 
 msvs_version_map = {
   'auto': ('16.0', '15.0', '14.0', '12.0', '10.0', '9.0', '8.0', '11.0'),
@@ -246,13 +252,15 @@ def _CreateVersion(name, path, sdk_based=False):
   """
   Sets up MSVS project generation.
 
-  Setup is based off the GYP_MSVS_VERSION environment variable or whatever is auto-detected if GYP_MSVS_VERSION
-  is not explicitly specified. If a version is passed in that doesn't match a value in versions python will throw a error.
+  Args:
+    name (str): The year like SKU name
+    path (string): Path to root of toolset install (e.g. C:\Program Files (x86)\Microsoft Visual Studio\2017)
+    sdk_based (bool): Is this a Visual Studio or an SDK with vc_toolset
   """
-  if path:
-    path = os.path.normpath(path)
-  version = MSVS_VERSIONS[str(name)]
-  version.path = path
+  version = MSVS_VERSIONS.get(name)
+  if not version:
+    raise ValueError("Could not find a Visual Studio version named %s" % name)
+  version.path = os.path.normpath(path)
   version.sdk_based = sdk_based
   return version
 
@@ -293,30 +301,25 @@ def _DetectVisualStudioVersion(wanted_version, force_express):
     ]
     for key in keys2:
       path = TryQueryRegistryValue(key, version)
-      if not path:
+      if not path or not os.path.exists(path):
         continue
-      if version == '15.0':
-        if os.path.exists(path):
-          return _CreateVersion('2017', path)
-      elif version == '16.0':
-        if os.path.exists(path):
-          return _CreateVersion('2019', path)
-      elif version != '14.0':  # There is no Express edition for 2015.
+      if version > '13.0':
+        return _CreateVersion(version_to_year[version], path)
+      else:
         return _CreateVersion(version_to_year[version] + 'e', os.path.join(path, '..'), sdk_based=True)
 
   return None
 
 
 def SelectVisualStudioVersion(wanted_version='auto'):
-  """Select which version of Visual Studio projects to generate.
+  """
+  Select which version of Visual Studio projects to generate.
 
   Arguments:
-    wanted_version: Hook to allow caller to force a particular version (vs auto).
+    wanted_version (str): Hook to allow caller to force a particular version (vs. the default 'auto').
   Returns:
     An object representing a visual studio project format version.
   """
-  wanted_version = str(wanted_version)
-
   override_path = os.environ.get('GYP_MSVS_OVERRIDE_PATH')
   gyp_env_version = os.environ.get('GYP_MSVS_VERSION', wanted_version)
   if override_path:
@@ -332,7 +335,7 @@ def SelectVisualStudioVersion(wanted_version='auto'):
     return version
   if wanted_version != 'auto':
     # Even if we did not actually detect a version, we fake it
-    return _CreateVersion(wanted_version, None)
+    return _CreateVersion(wanted_version, '')
   raise ValueError('Could not locate Visual Studio installation.')
 
 

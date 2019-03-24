@@ -1849,10 +1849,8 @@ def _InitNinjaFlavor(params, target_list, target_dicts):
 def CalculateVariables(default_variables, params):
   """Generated variables that require params to be known."""
 
-  generator_flags = params.get('generator_flags', {})
-
   # Select project file format version (if unset, default to auto detecting).
-  msvs_version = generator_flags.get('msvs_version', 'auto')
+  msvs_version = str(params['generator_flags'].get('msvs_version', 'auto'))
   msvs_version = MSVSVersion.SelectVisualStudioVersion(msvs_version)
   # Stash msvs_version for later (so we don't have to probe the system twice).
   params['msvs_version'] = msvs_version
@@ -1940,7 +1938,7 @@ def GenerateOutput(target_list, target_dicts, data, params):
     _InitNinjaFlavor(params, target_list, target_dicts)
 
   # Prepare the set of configurations.
-  configs = set()
+  configs = OrderedSet()
   for qualified_target in target_list:
     spec = target_dicts[qualified_target]
     for config_name, config in spec['configurations'].items():
@@ -2945,8 +2943,7 @@ def _FinalizeMSBuildSettings(spec, configuration):
     converted = True
     msvs_settings = configuration.get('msvs_settings', {})
     msbuild_settings = MSVSSettings.ConvertToMSBuildSettings(msvs_settings)
-  include_dirs, midl_include_dirs, resource_include_dirs = \
-      _GetIncludeDirs(configuration)
+  include_dirs, midl_include_dirs, resource_include_dirs = _GetIncludeDirs(configuration)
   libraries = _GetLibraries(spec)
   library_dirs = _GetLibraryDirs(configuration)
   out_file, _, msbuild_tool = _GetOutputFilePathAndTool(spec, msbuild=True)
@@ -2960,8 +2957,7 @@ def _FinalizeMSBuildSettings(spec, configuration):
     for ignored_setting in ignored_settings:
       value = configuration.get(ignored_setting)
       if value:
-        print('Warning: The automatic conversion to MSBuild does not handle '
-              '%s.  Ignoring setting of %s' % (ignored_setting, str(value)))
+        print('Warning: The automatic conversion to MSBuild does not handle %s. Ignoring setting value of %s' % (ignored_setting, value))
 
   defines = [_EscapeCppDefineForMSBuild(d) for d in defines]
   disabled_warnings = _GetDisabledWarnings(configuration)
