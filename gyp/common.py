@@ -2,15 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from __future__ import with_statement
-
 import collections
 import errno
 import filecmp
 import os.path
 import re
+import shlex
 import tempfile
 import sys
+
+# A list of types that are treated as linkable.
+from collections import OrderedDict
+
+linkable_types = [
+  'executable',
+  'shared_library',
+  'loadable_module',
+  'mac_kernel_extension',
+  'windows_driver',
+]
+
+PATH_FIXING_EXCEPTION_RE = re.compile(r'''["']?[-/$<>^]''')
 
 
 # A minimal memoizing decorator. It'll blow up if the args aren't immutable,
@@ -19,6 +31,7 @@ class memoize(object):
   def __init__(self, func):
     self.func = func
     self.cache = {}
+
   def __call__(self, *args):
     try:
       return self.cache[args]
@@ -53,23 +66,30 @@ def FindQualifiedTargets(target, qualified_list):
   return [t for t in qualified_list if ParseQualifiedTarget(t)[1] == target]
 
 
-def ParseQualifiedTarget(target):
-  # Splits a qualified target into a build file, target name and toolset.
+def ParseQualifiedTarget(target_name):
+  """
+  Splits a qualified target name into a build file, target name and toolset.
+  NOTE: rsplit is used to disambiguate the Windows drive letter separator.
 
-  # NOTE: rsplit is used to disambiguate the Windows drive letter separator.
-  target_split = target.rsplit(':', 1)
+  Args:
+    target_name: a target name
+
+  Returns:
+    List[str]: input split into [build_file, target_name, toolset]
+  """
+  target_split = target_name.rsplit(':', 1)
   if len(target_split) == 2:
-    [build_file, target] = target_split
+    [build_file, target_name] = target_split
   else:
     build_file = None
 
-  target_split = target.rsplit('#', 1)
+  target_split = target_name.rsplit('#', 1)
   if len(target_split) == 2:
-    [target, toolset] = target_split
+    [target_name, toolset] = target_split
   else:
     toolset = None
 
-  return [build_file, target, toolset]
+  return [build_file, target_name, toolset]
 
 
 def ResolveTarget(build_file, target, toolset):
@@ -238,6 +258,7 @@ _quote = re.compile('[\t\n #$%&\'()*;<=>?[{|}~]|^$')
 # shells, there is no room for error here by ignoring !.
 _escape = re.compile(r'(["\\`])')
 
+
 def EncodePOSIXShellArgument(argument):
   """Encodes |argument| suitably for consumption by POSIX shells.
 
@@ -320,6 +341,7 @@ def WriteOnDiff(filename):
 
   class Writer(object):
     """Wrapper around file which only covers the target if it differs."""
+
     def __init__(self):
       # Pick temporary file.
       tmp_fd, self.tmp_path = tempfile.mkstemp(
@@ -466,24 +488,25 @@ def CopyTool(flavor, out_path, mac_toolchain_dir=None):
 # First comment, dated 2001/10/13.
 # (Also in the printed Python Cookbook.)
 def uniquer(seq, idfun=None):
-    if idfun is None:
-        idfun = lambda x: x
-    seen = {}
-    result = []
-    for item in seq:
-        marker = idfun(item)
-        if marker in seen: continue
-        seen[marker] = 1
-        result.append(item)
-    return result
+  if idfun is None:
+    idfun = lambda x: x
+  seen = {}
+  result = []
+  for item in seq:
+    marker = idfun(item)
+    if marker in seen:
+      continue
+    seen[marker] = 1
+    result.append(item)
+  return result
 
 
 # Based on http://code.activestate.com/recipes/576694/.
 class OrderedSet(collections.MutableSet):
   def __init__(self, iterable=None):
     self.end = end = []
-    end += [None, end, end]         # sentinel node for doubly linked list
-    self.map = {}                   # key --> [key, prev, next]
+    end += [None, end, end]  # sentinel node for doubly linked list
+    self.map = {}  # key --> [key, prev, next]
     if iterable is not None:
       self.update(iterable)
 
@@ -546,8 +569,10 @@ class OrderedSet(collections.MutableSet):
 
 class CycleError(Exception):
   """An exception raised when an unexpected cycle is detected."""
+
   def __init__(self, nodes):
     self.nodes = nodes
+
   def __str__(self):
     return 'CycleError: cycle involving: ' + str(self.nodes)
 
@@ -578,6 +603,7 @@ def TopologicallySorted(graph, get_edges):
   visited = set()
   visiting = set()
   ordered_nodes = []
+
   def Visit(n):
     if n in visiting:
       raise CycleError(visiting)
@@ -589,6 +615,7 @@ def TopologicallySorted(graph, get_edges):
       Visit(neighbor)
     visiting.remove(n)
     ordered_nodes.insert(0, n)
+
   for node in sorted(graph):
     Visit(node)
   return ordered_nodes
@@ -604,3 +631,113 @@ def CrossCompileRequested():
           os.environ.get('AR_target') or
           os.environ.get('CC_target') or
           os.environ.get('CXX_target'))
+
+
+def Filter(l, item):
+  """Removes item from l."""
+  res = OrderedSet(l)
+  res.remove(item)
+  return list(res)
+
+
+def NameValueListToDict(name_value_list):
+  """
+  Takes an array of strings of the form 'NAME=VALUE' and creates a dictionary
+  of the pairs.  If a string is simply NAME, then the value in the dictionary
+  is set to True.  If VALUE can be converted to an integer, it is.
+  """
+  result = OrderedDict()
+  for item in name_value_list:
+    tokens = item.split('=', 1)
+    if len(tokens) == 2:
+      key, value = tokens
+      result[key] = int(value) if IsStrCanonicalInt(value) else value
+    else:
+      # No value supplied, treat it as a boolean and set it.
+      result[tokens[0]] = True
+  return result
+
+
+def ShlexEnv(env_name):
+  flags = os.environ.get(env_name, [])
+  if flags:
+    flags = shlex.split(flags)
+  return flags
+
+
+def FormatOpt(opt, value):
+  if opt.startswith('--'):
+    return '%s=%s' % (opt, value)
+  return opt + value
+
+
+def IsStrCanonicalInt(string):
+  """
+  Returns True if |string| is in its canonical integer form.
+
+  The canonical form is such that str(int(string)) == string.
+  """
+  if type(string) is str:
+    # This function is called a lot so for maximum performance, avoid
+    # involving regexps which would otherwise make the code much
+    # shorter. Regexps would need twice the time of this function.
+    if string:
+      if string == "0":
+        return True
+      if string[0] == "-":
+        string = string[1:]
+        if not string:
+          return False
+      if '1' <= string[0] <= '9':
+        return string.isdigit()
+
+  return False
+
+
+# Look for the bracket that matches the first bracket seen in a
+# string, and return the start and end as a tuple.  For example, if
+# the input is something like "<(foo <(bar)) blah", then it would
+# return (1, 13), indicating the entire string except for the leading
+# "<" and trailing " blah".
+LEFT_BRACKETS = set('{[(')
+RIGHT_BRACKETS = {'}': '{', ']': '[', ')': '('}
+def FindEnclosingBracketGroup(input_str):
+  stack = []
+  start = -1
+  for index, char in enumerate(input_str):
+    if char in LEFT_BRACKETS:
+      stack.append(char)
+      if start == -1:
+        start = index
+    elif char in RIGHT_BRACKETS:
+      if not stack:
+        return -1, -1
+      if stack.pop() != RIGHT_BRACKETS[char]:
+        return -1, -1
+      if not stack:
+        return start, index + 1
+  return -1, -1
+
+
+def MakePathRelative(to_file, fro_file, item):
+  """
+  If item is a relative path, it's relative to the build file dict that it's coming from.
+  Fix it up to make it relative to the build file dict that  it's going into.
+  Exception: any |item| that begins with these special characters is returned without modification.
+    /   Used when a path is already absolute (shortcut optimization; such paths would be returned as absolute anyway)
+    $   Used for build environment variables
+    -   Used for some build environment flags (such as -lapr-1 in a "libraries" section)
+    <   Used for our own variable and command expansions (see ExpandVariables)
+    >   Used for our own variable and command expansions (see ExpandVariables)
+    ^   Used for our own variable and command expansions (see ExpandVariables)
+
+    "/' Used when a value is quoted.  If these are present, then we check the second character instead.
+  """
+  if to_file == fro_file or PATH_FIXING_EXCEPTION_RE.match(item):
+    return item
+  else:
+    relative_from_to = RelativePath(os.path.dirname(fro_file), os.path.dirname(to_file))
+    ret = os.path.normpath(os.path.join(relative_from_to, item)).replace('\\', '/')
+    if item[-1] == '/':
+      ret += '/'
+    return ret

@@ -27,7 +27,7 @@ files_to_test = [
   'generator_msvs_test.py',
   'NinjaWriter_test.py',
   'generator_xcode_test.py',
-  'input_test.py',
+  'dependency_graph_test.py',
   'MSVSSettings_test.py',
 ]
 # Add new test suites here.

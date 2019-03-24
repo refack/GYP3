@@ -11,11 +11,9 @@ import gyp.input
 import optparse
 import os.path
 import re
-import shlex
 import sys
 import traceback
-from collections import OrderedDict
-from gyp.common import GypError
+from gyp.common import GypError, NameValueListToDict, ShlexEnv, FormatOpt
 
 if not 'basestring' in __builtins__:
   basestring = str
@@ -117,44 +115,9 @@ def Load(build_files, output_format, default_variables, includes, params, depth)
   }
 
   # Process the input specific to this generator.
-  result = gyp.input.Load(build_files, default_variables, includes[:], depth, generator_input_info, params['root_targets'])
-  return [generator] + result
-
-
-def NameValueListToDict(name_value_list):
-  """
-  Takes an array of strings of the form 'NAME=VALUE' and creates a dictionary
-  of the pairs.  If a string is simply NAME, then the value in the dictionary
-  is set to True.  If VALUE can be converted to an integer, it is.
-  """
-  result = OrderedDict()
-  for item in name_value_list:
-    tokens = item.split('=', 1)
-    if len(tokens) == 2:
-      # If we can make it an int, use that, otherwise, use the string.
-      try:
-        token_value = int(tokens[1])
-      except ValueError:
-        token_value = tokens[1]
-      # Set the variable to the supplied value.
-      result[tokens[0]] = token_value
-    else:
-      # No value supplied, treat it as a boolean and set it.
-      result[tokens[0]] = True
-  return result
-
-
-def ShlexEnv(env_name):
-  flags = os.environ.get(env_name, [])
-  if flags:
-    flags = shlex.split(flags)
-  return flags
-
-
-def FormatOpt(opt, value):
-  if opt.startswith('--'):
-    return '%s=%s' % (opt, value)
-  return opt + value
+  aux_includes = includes[:]
+  flat_list, targets, data = gyp.input.Load(build_files, default_variables, aux_includes, depth, generator_input_info, params['root_targets'])
+  return generator, flat_list, targets, data
 
 
 def RegenerateAppendFlag(flag, values, predicate, env_name, options):
@@ -326,7 +289,7 @@ def gyp_main(args):
     generate_formats = []
     if options.use_environment:
       generate_formats = os.environ.get('GYP_GENERATORS', [])
-    if generate_formats:
+    if generate_formats and isinstance(generate_formats, basestring):
       generate_formats = re.split(r'[\s,]', generate_formats)
     if generate_formats:
       options.formats = generate_formats
@@ -448,7 +411,7 @@ def gyp_main(args):
     }
 
     # Start with the default variables from the command line.
-    [generator, flat_list, targets, data] = Load(build_files, output_format, cmdline_default_variables, includes, params, options.depth)
+    generator, flat_list, targets, data = Load(build_files, output_format, cmdline_default_variables, includes, params, options.depth)
 
     # TODO(mark): Pass |data| for now because the generator needs a list of
     # build files that came in.  In the future, maybe it should just accept
