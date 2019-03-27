@@ -17,7 +17,7 @@ if sys.platform == 'win32':
 
   CHDIR = 'idl-rules'
   test.run_gyp('basic-idl.gyp', chdir=CHDIR)
-  for platform in ['Win32', 'x64']:
+  for platform in ['Win32', 'x64', 'ARM64']:
     test.set_configuration('Debug|%s' % platform)
     test.build('basic-idl.gyp', test.ALL, chdir=CHDIR)
 
@@ -25,4 +25,4 @@ if sys.platform == 'win32':
     if test.format == 'ninja' and 'Processing' in test.stdout():
       test.fail_test()
 
-    test.pass_test()
+  test.pass_test()

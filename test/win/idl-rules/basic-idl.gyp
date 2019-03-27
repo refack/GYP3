@@ -15,6 +15,10 @@
         'inherit_from': ['Debug'],
         'msvs_configuration_platform': 'x64',
       },
+      'Debug_ARM64': {
+        'inherit_from': ['Debug'],
+        'msvs_configuration_platform': 'ARM64',
+      },
     },
   },
   'targets': [
