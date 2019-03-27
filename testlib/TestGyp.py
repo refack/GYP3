@@ -429,6 +429,12 @@ class TestGypBase(TestCommon.TestCommon):
     else:
       return 'Default'
 
+  def configuration_platform(self):
+    if self.configuration and '|' in self.configuration:
+      return self.configuration.split('|')[1]
+    else:
+      return ''
+
   def configuration_buildname(self):
     if self.configuration:
       return self.configuration
@@ -802,7 +808,10 @@ def FindVisualStudioInstallation():
         '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
       ]
       vswhere_json = subprocess.check_output(args1)
-      top_vs_info = json.loads(vswhere_json)[0]
+      vswhere_infos = json.loads(vswhere_json)
+      if len(vswhere_infos) == 0:
+        raise IOError("vswhere did not find any MSVS instances.")
+      top_vs_info = vswhere_infos[0]
       if top_vs_info:
         inst_path = top_vs_info['installationPath']
         args2 = ['cmd.exe', '/d', '/c',
@@ -972,8 +981,6 @@ class TestGypMSVS(TestGypOnMSToolchain):
     from the specified gyp_file.
     """
     if '15.0' in self.build_tool or 'Current' in self.build_tool:
-      configuration = '/p:Configuration=' + (
-        self.configuration or self.configuration_buildname())
       build = '/t'
       if target not in (None, self.ALL, self.DEFAULT):
         build += ':' + target
@@ -984,10 +991,13 @@ class TestGypMSVS(TestGypOnMSToolchain):
       elif ':' not in build:
         build += ':Build'
       arguments = kw.get('arguments', [])[:]
-      arguments.extend([gyp_file.replace('.gyp', '.sln'),
-                        build, configuration])
+      configuration_arg = '/p:Configuration=%s' % self.configuration_dirname()
+      arguments.extend([gyp_file.replace('.gyp', '.sln'), build, configuration_arg])
+      platform = self.configuration_platform()
+      if platform:
+        arguments.append('/p:Platform=%s' % platform)
     else:
-      configuration = self.configuration_buildname()
+      configuration_arg = self.configuration_buildname()
       if clean:
         build = '/Clean'
       elif rebuild:
@@ -995,8 +1005,7 @@ class TestGypMSVS(TestGypOnMSToolchain):
       else:
         build = '/Build'
       arguments = kw.get('arguments', [])[:]
-      arguments.extend([gyp_file.replace('.gyp', '.sln'),
-                        build, configuration])
+      arguments.extend([gyp_file.replace('.gyp', '.sln'), build, configuration_arg])
       # Note:  the Visual Studio generator doesn't add an explicit 'all'
       # target, so we just treat it the same as the default.
       if target not in (None, self.ALL, self.DEFAULT):

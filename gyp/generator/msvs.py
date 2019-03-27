@@ -2565,7 +2565,7 @@ def _GenerateMSBuildRuleXmlFile(xml_path, msbuild_rules):
 
 def _GetConfigurationAndPlatform(name, settings):
   configuration = name.rsplit('_', 1)[0]
-  platform = settings.get('msvs_configuration_platform', 'Win32')
+  platform = settings.get('msvs_configuration_platform', 'x64')
   return configuration, platform
 
 

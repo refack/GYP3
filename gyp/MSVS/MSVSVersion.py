@@ -6,7 +6,6 @@
 
 import os
 import glob
-from typing import Dict
 from gyp.MSVS.MSVSUtil import TryQueryRegistryValue
 
 msvs_version_map = {
@@ -130,7 +129,7 @@ class VisualStudioVersion(object):
     return script_data
 
 
-MSVS_VERSIONS = { # type: Dict[str, VisualStudioVersion]
+MSVS_VERSIONS = {
   '2019':
     VisualStudioVersion(
       short_name='2019',
