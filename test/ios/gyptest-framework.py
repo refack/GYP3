@@ -1,37 +1,24 @@
-#!/usr/bin/env python
-
-# Copyright 2016 Google Inc. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 """
 Verifies that ios app frameworks are built correctly.
 """
 
 import TestGyp
-import TestMac
-import subprocess
-import sys
+from XCodeDetect import XCodeDetect
 
-if sys.platform == 'darwin' and TestMac.Xcode.Version()>="0700":
+test = TestGyp.TestGyp(formats=['ninja'], platforms=['darwin'])
 
-  test = TestGyp.TestGyp(formats=['ninja'])
-  if test.format == 'xcode-ninja':
-    test.skip_test()
+if XCodeDetect.Version() < '0700':
+  test.skip_test('Skip test on XCode < 0700')
 
-  test.run_gyp('framework.gyp', chdir='framework')
+if test.format == 'xcode-ninja':
+  test.skip_test()
 
-  test.build('framework.gyp', 'iOSFramework', chdir='framework')
+test.run_gyp('framework.gyp', chdir='framework')
 
-  test.built_file_must_exist(
-      'iOSFramework.framework/Headers/iOSFramework.h',
-      chdir='framework')
-  test.built_file_must_exist(
-      'iOSFramework.framework/Headers/Thing.h',
-      chdir='framework')
-  test.built_file_must_exist(
-      'iOSFramework.framework/iOSFramework',
-      chdir='framework')
+test.build('framework.gyp', 'iOSFramework', chdir='framework')
 
-  test.pass_test()
+test.built_file_must_exist('iOSFramework.framework/Headers/iOSFramework.h', chdir='framework')
+test.built_file_must_exist('iOSFramework.framework/Headers/Thing.h', chdir='framework')
+test.built_file_must_exist('iOSFramework.framework/iOSFramework', chdir='framework')
 
+test.pass_test()

@@ -9,20 +9,12 @@ Verifies that IPHONEOS_DEPLOYMENT_TARGET works.
 """
 
 import TestGyp
+import XCodeDetect
 
-import sys
+test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'], platforms=['darwin'])
 
-import TestMac
-
-if sys.platform != 'darwin':
-  print('Test only for macOS')
-  sys.exit(2)
-
-if not TestMac.Xcode.HasIPhoneSDK():
-  print('IPhone SDK not installed')
-  sys.exit(2)
-
-test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'])
+if not XCodeDetect.XCodeDetect.HasIPhoneSDK():
+  test.skip_test('IPhone SDK not installed')
 
 test.run_gyp('deployment-target.gyp', chdir='deployment-target')
 

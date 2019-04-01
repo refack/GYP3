@@ -741,42 +741,43 @@ def FindMSBuildInstallation(msvs_version = 'auto'):
   Looks in the registry to find install location of MSBuild.
   MSBuild before v4.0 will not build c++ projects, so only use newer versions.
   """
-  import TestWin
-  registry = TestWin.Registry()
+  from gyp.MSVS.MSVSVersion import TryQueryRegistryValue
 
   msvs_to_msbuild = {
-      '2013': r'12.0',
-      '2012': r'4.0',  # Really v4.0.30319 which comes with .NET 4.5.
-      '2010': r'4.0'}
+    '2015': '14.0',
+    '2013': '12.0',
+    '2012': '4.0',  # Really v4.0.30319 which comes with .NET 4.5.
+    '2010': '4.0'
+  }
 
-  msbuild_basekey = r'HKLM\SOFTWARE\Microsoft\MSBuild\ToolsVersions'
-  if not registry.KeyExists(msbuild_basekey):
+  msbuild_base_key = r'SOFTWARE\Microsoft\MSBuild\ToolsVersions'
+  if not TryQueryRegistryValue(msbuild_base_key):
     print('Error: could not find MSBuild base registry entry')
     return None
 
-  msbuild_version = None
+  msbuild_key = ''
+  found_msbuild_ver = ''
   if msvs_version in msvs_to_msbuild:
     msbuild_test_version = msvs_to_msbuild[msvs_version]
-    if registry.KeyExists(msbuild_basekey + '\\' + msbuild_test_version):
-      msbuild_version = msbuild_test_version
+    msbuild_key = msbuild_base_key + '\\' + msbuild_test_version
+    if TryQueryRegistryValue(msbuild_key):
+      found_msbuild_ver = msbuild_test_version
     else:
-      print('Warning: Environment variable GYP_MSVS_VERSION specifies "%s" '
-            'but corresponding MSBuild "%s" was not found.' %
-            (msvs_version, msbuild_version))
-  if not msbuild_version:
-    for msvs_version in sorted(msvs_to_msbuild, reverse=True):
+      print('Warning: Environment variable GYP_MSVS_VERSION specifies "%s" but corresponding MSBuild "%s" was not found.' % (msvs_version, found_msbuild_ver))
+  if not found_msbuild_ver:
+    for msvs_version in sorted(msvs_to_msbuild.keys(), reverse=True):
       msbuild_test_version = msvs_to_msbuild[msvs_version]
-      if registry.KeyExists(msbuild_basekey + '\\' + msbuild_test_version):
-        msbuild_version = msbuild_test_version
+      msbuild_key = msbuild_base_key + '\\' + msbuild_test_version
+      if TryQueryRegistryValue(msbuild_key):
+        found_msbuild_ver = msbuild_test_version
         break
-  if not msbuild_version:
-    print('Error: could not find MSBuild registry entry')
+  if not found_msbuild_ver:
+    print('Error: could not find am MSBuild registry entry')
     return None
 
-  msbuild_path = registry.GetValue(msbuild_basekey + '\\' + msbuild_version,
-                                   'MSBuildToolsPath')
+  msbuild_path = TryQueryRegistryValue(msbuild_key, 'MSBuildToolsPath')
   if not msbuild_path:
-    print('Error: could not get MSBuild registry entry value')
+    print('Error: could not get MSBuildToolsPath registry entry value for MSBuild version %s' % found_msbuild_ver)
     return None
 
   return os.path.join(msbuild_path, 'MSBuild.exe')
@@ -1409,8 +1410,46 @@ def TestGyp(**kw):
   """
   Returns an appropriate TestGyp* instance for a specified GYP format.
   """
-  format = kw.pop('format', os.environ.get('TESTGYP_FORMAT'))
+  disable = kw.pop('disable', None)
+  if disable:
+    print("This test is currently disabled: https://crbug.com/483696.")
+    sys.exit(2)
+  platforms = kw.pop('platforms', None)
+  if platforms:
+    excluded_platforms = {f[1:] for f in platforms if f[0] == '!'}
+    explicit_platforms = {f for f in platforms if f[0] != '!'}
+    platform = sys.platform
+    platform_mismatch = ''
+    if platform in excluded_platforms:
+      platform_mismatch = 'Test excluded for platform %s' % platform
+    if platform not in explicit_platforms:
+      platform_mismatch = 'Test not explicitly included for platforms %s' % platform
+    if platform_mismatch:
+      print(platform_mismatch)
+      sys.exit(2)
+
+  fmt = kw.pop('format', os.environ.get('TESTGYP_FORMAT'))
   for format_class in format_class_list:
-    if format == format_class.format:
+    if fmt == format_class.format:
       return format_class(**kw)
-  raise Exception("unknown format %r" % format)
+  raise Exception("unknown format %r" % fmt)
+
+
+def CheckFileType_macOS(test, file, archs):
+  """Check that |file| contains exactly |archs| or fails |test|."""
+  proc = subprocess.Popen(['lipo', '-info', file], stdout=subprocess.PIPE)
+  o = proc.communicate()[0].decode('utf-8').strip()
+  assert not proc.returncode
+  if len(archs) == 1:
+    pattern = re.compile('^Non-fat file: (.*) is architecture: (.*)$')
+  else:
+    pattern = re.compile('^Architectures in the fat file: (.*) are: (.*)$')
+  match = pattern.match(o)
+  if match is None:
+    print('Output does not match expected pattern: %s' % pattern.pattern)
+    test.fail_test()
+  else:
+    found_file, found_archs = match.groups()
+    if found_file != file or set(found_archs.split()) != set(archs):
+      print('Expected file %s with arch %s, got %s with arch %s' % (file, ' '.join(archs), found_file, found_archs))
+      test.fail_test()

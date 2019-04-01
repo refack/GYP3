@@ -287,11 +287,11 @@ def InsertLargePdbShims(target_list, target_dicts, gyp_vars):
   return target_list, target_dicts
 
 
-def TryQueryRegistryValue(key, value, root=winreg.HKEY_LOCAL_MACHINE):
+def TryQueryRegistryValue(key, value=None, root=winreg.HKEY_LOCAL_MACHINE):
   try:
     with winreg.OpenKey(root, key) as kh:
-      query_value = winreg.QueryValueEx(kh, value)
-      return query_value[0]
+      value, value_type = winreg.QueryValueEx(kh, value)
+      return value
   except WindowsError:
     return None
 

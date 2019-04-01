@@ -15,6 +15,8 @@ import sys
 import time
 from glob import glob
 
+gyp_root = os.path.abspath(os.path.dirname(__file__))
+os.environ['PYTHONPATH'] = os.pathsep.join([os.path.join(gyp_root, 'gyp'), os.path.join(gyp_root, 'testlib'), os.environ.get('PYTHONPATH', '')])
 
 def is_test_name(f):
   return f.startswith('gyptest') and f.endswith('.py')
@@ -77,8 +79,6 @@ def main(argv=None):
       print(test)
     sys.exit(0)
 
-  os.environ['PYTHONPATH'] = os.path.abspath('testlib')
-
   if args.verbose:
     print_configuration_info()
 
@@ -122,19 +122,17 @@ def main(argv=None):
 def print_configuration_info():
   print('Test configuration:')
   if sys.platform == 'darwin':
-    sys.path.append(os.path.abspath('test/lib'))
     print('  Mac %s %s' % (platform.mac_ver()[0], platform.mac_ver()[2]))
     try:
-      import TestMac
-      print('  Xcode %s' % TestMac.Xcode.Version())
+      from XCodeDetect import XCodeDetect
+      print('  Xcode %s' % XCodeDetect.Version())
     except:
       pass
   elif sys.platform == 'win32':
-    sys.path.append(os.path.abspath('pylib'))
     print('  Win %s %s\n' % platform.win32_ver()[0:2])
     try:
-      import gyp.MSVS.MSVSVersion
-      version = gyp.MSVS.MSVSVersion.SelectVisualStudioVersion()
+      from MSVS import MSVSVersion
+      version = MSVSVersion.SelectVisualStudioVersion()
       print('  MSVS %s' % version.description)
     except Exception:
       pass

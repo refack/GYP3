@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-
-# Copyright (c) 2014 Google Inc. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 """
 Verifies that ios watch extensions and apps are built correctly.
 """
@@ -11,34 +5,21 @@ Verifies that ios watch extensions and apps are built correctly.
 from __future__ import print_function
 
 import TestGyp
-import TestMac
+from XCodeDetect import XCodeDetect
 
-import sys
+test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'], disable="This test is currently disabled: https://crbug.com/483696.")
 
-if sys.platform == 'darwin':
-  print("This test is currently disabled: https://crbug.com/483696.")
-  sys.exit(0)
+if XCodeDetect.Version() < '0620':
+  test.skip_test('Skip test on XCode < 0620')
 
+test.run_gyp('watch.gyp', chdir='watch')
 
-if sys.platform == 'darwin' and TestMac.Xcode.Version() >= "0620":
-  test = TestGyp.TestGyp(formats=['ninja', 'xcode'])
+test.build(  'watch.gyp',  'WatchContainer',  chdir='watch')
 
-  test.run_gyp('watch.gyp', chdir='watch')
+# Test that the extension exists
+test.built_file_must_exist(  'WatchContainer.app/PlugIns/WatchKitExtension.appex',  chdir='watch')
 
-  test.build(
-      'watch.gyp',
-      'WatchContainer',
-      chdir='watch')
+# Test that the watch app exists
+test.built_file_must_exist(  'WatchContainer.app/PlugIns/WatchKitExtension.appex/WatchApp.app',  chdir='watch')
 
-  # Test that the extension exists
-  test.built_file_must_exist(
-      'WatchContainer.app/PlugIns/WatchKitExtension.appex',
-      chdir='watch')
-
-  # Test that the watch app exists
-  test.built_file_must_exist(
-      'WatchContainer.app/PlugIns/WatchKitExtension.appex/WatchApp.app',
-      chdir='watch')
-
-  test.pass_test()
-
+test.pass_test()
