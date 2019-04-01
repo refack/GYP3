@@ -19,11 +19,12 @@ windows-setup-steps: &windows-setup-steps
 
 osx-setup-steps: &osx-setup-steps
   os: osx
+  osx_image: xcode10.2  # provides Python 3.7.2
   language: cpp  # 'language: python' is not yet supported on macOS
   # before_install: brew upgrade python  # takes too long
   install:
     - HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
-    - pip install --upgrade pip pipenv
+    - pip3 install --upgrade pip pipenv
     - pipenv install --dev
     - pipenv install PyObjC  # This is not in the Pipfile because it breaks other platforms https://github.com/pypa/pipenv/issues/3187
 
@@ -32,30 +33,27 @@ matrix:
     - name: "Linux: test with make and ninja on Python 3.7"
       python: '3.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f make,ninja
 
     - name: "Linux: test with make and ninja on Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps
-      script: pipenv run -v test -f make,ninja
 
     - name: "Windows: test with mocks on Python 3"
       <<: *windows-setup-steps
       env:
-        - PATH=/c/Python37:$PATH
+        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
       before_install: choco install python3
-      script: python -m pipenv run -v test -f make-mock,msvs-mock
+      script: pipenv run -v test -f make-mock,msvs-mock
 
     - name: "Windows: test with mocks on Python 2"
       <<: *windows-setup-steps
       env:
-        - PATH=/c/Python27:$PATH
+        - PATH=/c/Python27:/c/Python27/Scripts:$PATH
       before_install: choco install python2
-      script: python -m pipenv run -v test -f make-mock,msvs-mock
+      script: pipenv run -v test -f make-mock,msvs-mock
 
     - name: "macOS: test with make and ninja on Python 3.7"
       <<: *osx-setup-steps
-      script: pipenv run -v test -f make,ninja
 
     - name: "lint with Python 2.7"
       python: '2.7'
@@ -67,5 +65,6 @@ matrix:
       <<: *linux-setup-steps
       script: pipenv run -v lint
 
+script: pipenv run -v test -f make,ninja
 notifications:
   slack: node4good:C2EI9vo04FY8Ce5u7kcOLlDw
