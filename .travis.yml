@@ -23,6 +23,7 @@ osx-setup-steps: &osx-setup-steps
   language: cpp  # 'language: python' is not yet supported on macOS
   # before_install: brew upgrade python  # takes too long
   install:
+    - xcode-select --install
     - HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
     - pip3 install --upgrade pip pipenv
     - pipenv install --dev
