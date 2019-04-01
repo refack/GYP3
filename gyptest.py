@@ -30,11 +30,8 @@ def find_all_gyptest_files(directory):
   return result
 
 
-def main(argv=None):
-  if argv is None:
-    argv = sys.argv
-
-  parser = argparse.ArgumentParser()
+def main(argv):
+  parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
   parser.add_argument("-a", "--all", action="store_true", help="run all tests")
   parser.add_argument("-C", "--chdir", action="store", help="change to directory")
   parser.add_argument("-f", "--format", action="store", default='', help="run tests with the specified formats")
@@ -232,4 +229,5 @@ class Runner(object):
 
 
 if __name__ == "__main__":
-  sys.exit(main())
+  ret = main(sys.argv)
+  sys.exit(ret)

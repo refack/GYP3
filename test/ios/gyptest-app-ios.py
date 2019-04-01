@@ -10,7 +10,7 @@ import XCodeDetect
 test = TestGyp.TestGyp(formats=['xcode', 'ninja'], platforms=['darwin'])
 
 if not XCodeDetect.XCodeDetect.HasIPhoneSDK():
-  test.test_skip('IPhone SDK not installed')
+  test.skip_test('IPhone SDK not installed')
 
 
 def CheckFileXMLPropertyList(file):
