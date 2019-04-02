@@ -9,7 +9,7 @@ import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['xcode', 'ninja'], platforms=['darwin'])
 
-if not XCodeDetect.XCodeDetect.HasIPhoneSDK():
+if not XCodeDetect.IPhoneSDKPath():
   test.skip_test('IPhone SDK not installed')
 
 

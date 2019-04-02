@@ -124,12 +124,32 @@
       'sources': ['hello.cc'],
     },
     {
-      'target_name': 'test_opt_neither',
+      'target_name': 'test_opt_inline_disable',
       'type': 'executable',
       'msvs_settings': {
         'VCCLCompilerTool': {
-          'FavorSizeOrSpeed': '0'
+          'InlineFunctionExpansion': '3'
         }
+      },
+      'sources': ['hello.cc'],
+    },
+    {
+      'target_name': 'test_opt_msbuild_inline_disable',
+      'type': 'executable',
+      'msbuild_settings': {
+        'ClCompile': {
+          'InlineFunctionExpansion': 'Disabled'
+        }
+      },
+      'sources': ['hello.cc'],
+    },
+    {
+      'target_name': 'test_link_msbuild_link_incremental',
+      'type': 'executable',
+      'msbuild_settings': {
+        'Link': {
+          'LinkIncremental': 'false',
+        },
       },
       'sources': ['hello.cc'],
     },

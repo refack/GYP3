@@ -196,10 +196,11 @@ class _Enumeration(_Type):
   def __init__(self, label_list, new=None):
     _Type.__init__(self)
     self._label_list = label_list
-    self._msbuild_values = set(value for value in label_list
-                               if value is not None)
+    self._label_list_new = label_list
+    self._msbuild_values = set(value for value in label_list if value is not None)
     if new is not None:
       self._msbuild_values.update(new)
+      self._label_list_new += new
 
   def ValidateMSVS(self, value):
     # Try to convert.  It will raise an exception if not valid.
@@ -211,10 +212,10 @@ class _Enumeration(_Type):
 
   def ConvertToMSBuild(self, value):
     index = int(value)
-    if index < 0 or index >= len(self._label_list):
-      raise ValueError('index value (%d) not in expected range [0, %d)' %
-                       (index, len(self._label_list)))
-    label = self._label_list[index]
+    # Conversion is done by the new list (including new values)
+    if index < 0 or index >= len(self._label_list_new):
+      raise ValueError('index value (%d) not in expected range [0, %d)' % (index, len(self._label_list_new)))
+    label = self._label_list_new[index]
     if label is None:
       raise ValueError('converted value for %s not specified.' % value)
     return label
@@ -460,27 +461,21 @@ def ConvertToMSBuildSettings(msvs_settings, stderr=sys.stderr):
   """
   msbuild_settings = {}
   for msvs_tool_name, msvs_tool_settings in msvs_settings.items():
-    if msvs_tool_name in _msvs_to_msbuild_converters:
-      msvs_tool = _msvs_to_msbuild_converters[msvs_tool_name]
-      for msvs_setting, msvs_value in msvs_tool_settings.items():
-        if msvs_setting in msvs_tool:
-          # Invoke the translation function.
-          try:
-            msvs_tool[msvs_setting](msvs_value, msbuild_settings)
-          except ValueError as e:
-            print(('Warning: while converting %s/%s to MSBuild, '
-                              '%s' % (msvs_tool_name, msvs_setting, e)),
-                              file=stderr)
-        else:
-          _ValidateExclusionSetting(msvs_setting,
-                                    msvs_tool,
-                                    ('Warning: unrecognized setting %s/%s '
-                                     'while converting to MSBuild.' %
-                                     (msvs_tool_name, msvs_setting)),
-                                    stderr)
-    else:
-      print(('Warning: unrecognized tool %s while converting to '
-                        'MSBuild.' % msvs_tool_name), file=stderr)
+    msvs_tool = _msvs_to_msbuild_converters.get(msvs_tool_name)
+    if msvs_tool is None:
+      print('Warning: unrecognized tool %s while converting to MSBuild.' % msvs_tool_name, file=stderr)
+      continue
+    for msvs_setting, msvs_value in msvs_tool_settings.items():
+      setting_converter = msvs_tool.get(msvs_setting)
+      if setting_converter is None:
+        exclusion_message = 'Warning: unrecognized setting %s/%s while converting to MSBuild.' % (msvs_tool_name, msvs_setting)
+        _ValidateExclusionSetting(msvs_setting, msvs_tool, exclusion_message, stderr)
+        continue
+      # Invoke the translation function.
+      try:
+        setting_converter(msvs_value, msbuild_settings)
+      except ValueError as e:
+        print('Warning: while converting %s/%s to MSBuild,  %s' % (msvs_tool_name, msvs_setting, e), file=stderr)
   return msbuild_settings
 
 
@@ -507,35 +502,31 @@ def ValidateMSBuildSettings(settings, stderr=sys.stderr):
 
 
 def _ValidateSettings(validators, settings, stderr):
-  """Validates that the settings are valid for MSBuild or MSVS.
+  """
+  Validates that the settings are valid for MSBuild or MSVS.
 
   We currently only validate the names of the settings, not their values.
 
   Args:
       validators: A dictionary of tools and their validators.
-      settings: A dictionary.  The key is the tool name.  The values are
-          themselves dictionaries of settings and their values.
+      settings: A dictionary.  The key is the tool name, values are dictionaries of settings and their values.
       stderr: The stream receiving the error messages.
   """
   for tool_name in settings:
-    if tool_name in validators:
-      tool_validators = validators[tool_name]
-      for setting, value in settings[tool_name].items():
-        if setting in tool_validators:
-          try:
-            tool_validators[setting](value)
-          except ValueError as e:
-            print(('Warning: for %s/%s, %s' %
-                              (tool_name, setting, e)), file=stderr)
-        else:
-          _ValidateExclusionSetting(setting,
-                                    tool_validators,
-                                    ('Warning: unrecognized setting %s/%s' %
-                                     (tool_name, setting)),
-                                    stderr)
-
-    else:
-      print(('Warning: unrecognized tool %s' % tool_name), file=stderr)
+    tool_validators = validators.get(tool_name)
+    if tool_validators is None:
+      print('Warning: unrecognized tool %s' % tool_name, file=stderr)
+      continue
+    for setting, value in settings[tool_name].items():
+      validator = tool_validators.get(setting)
+      if validator is None:
+        exclusion_message = 'Warning: unrecognized setting %s/%s' % (tool_name, setting)
+        _ValidateExclusionSetting(setting, tool_validators, exclusion_message, stderr)
+        continue
+      try:
+        validator(value)
+      except ValueError as e:
+        print('Warning: for %s/%s, %s' % (tool_name, setting, e), file=stderr)
 
 
 # MSVS and MBuild names of the tools.
@@ -879,14 +870,13 @@ _Renamed(_link, 'ErrorReporting', 'LinkErrorReporting',
                        'PromptImmediately',  # /ERRORREPORT:PROMPT
                        'QueueForNextLogin'],  # /ERRORREPORT:QUEUE
                       new=['SendErrorReport']))  # /ERRORREPORT:SEND
-_Renamed(_link, 'IgnoreDefaultLibraryNames', 'IgnoreSpecificDefaultLibraries',
-         _file_list)  # /NODEFAULTLIB
+_Renamed(_link, 'IgnoreDefaultLibraryNames', 'IgnoreSpecificDefaultLibraries', _file_list)  # /NODEFAULTLIB
 _Renamed(_link, 'ResourceOnlyDLL', 'NoEntryPoint', _boolean)  # /NOENTRY
 _Renamed(_link, 'SwapRunFromNet', 'SwapRunFromNET', _boolean)  # /SWAPRUN:NET
 
-_Moved(_link, 'GenerateManifest', '', _boolean)
-_Moved(_link, 'IgnoreImportLibrary', '', _boolean)
-_Moved(_link, 'LinkIncremental', '', _newly_boolean)
+_Moved(_link, 'GenerateManifest', 'GenerateManifest', _boolean)
+_Moved(_link, 'IgnoreImportLibrary', 'IgnoreImportLibrary', _boolean)
+_Moved(_link, 'LinkIncremental', 'LinkIncremental', _newly_boolean)
 _Moved(_link, 'LinkLibraryDependencies', 'ProjectReference', _boolean)
 _Moved(_link, 'UseLibraryDependencyInputs', 'ProjectReference', _boolean)
 

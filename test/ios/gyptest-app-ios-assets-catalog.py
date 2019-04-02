@@ -5,7 +5,7 @@ Verifies that ios app bundles are built correctly.
 import os.path
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['xcode', 'ninja'], platforms=['darwin'])
 

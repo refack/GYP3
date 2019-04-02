@@ -5,7 +5,7 @@ Verifies that ios watch extensions and apps are built correctly.
 from __future__ import print_function
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'], disable="This test is currently disabled: https://crbug.com/483696.")
 

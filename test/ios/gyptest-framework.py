@@ -3,7 +3,7 @@ Verifies that ios app frameworks are built correctly.
 """
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja'], platforms=['darwin'])
 

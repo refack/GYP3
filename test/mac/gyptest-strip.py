@@ -14,7 +14,7 @@ import re
 import subprocess
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'], disable="This test is currently disabled: https://crbug.com/483696.", platforms=['darwin'])
 

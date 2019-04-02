@@ -13,7 +13,7 @@ from __future__ import print_function
 import sys
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 # set |match| to ignore build stderr output.
 test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'], match=lambda a, b: True, platforms=['darwin'])

@@ -13,7 +13,7 @@ from __future__ import print_function
 import subprocess
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'])
 

@@ -24,12 +24,12 @@ test_cases = [
   ('Default-iphoneos', 'TestArch32Bits', ['armv7']),
 ]
 
-if XCodeDetect.XCodeDetect.Version() < '0510':
+if XCodeDetect.Version() < '0510':
   test_cases.extend([
     ('Default', 'TestNoArchs', ['i386']),
     ('Default-iphoneos', 'TestNoArchs', ['armv7'])])
 
-if XCodeDetect.XCodeDetect.Version() >= '0500':
+if XCodeDetect.Version() >= '0500':
   test_cases.extend([
     ('Default', 'TestArch64Bits', ['x86_64']),
     ('Default', 'TestMultiArchs', ['i386', 'x86_64']),
@@ -45,7 +45,7 @@ for configuration, target, archs in test_cases:
     if is_device_build:
       configuration, sdk = configuration.split('-')
       kwds['arguments'].extend(['-sdk', sdk])
-    if XCodeDetect.XCodeDetect.Version() < '0500':
+    if XCodeDetect.Version() < '0500':
       kwds['arguments'].extend(['-arch', archs[0]])
 
   test.set_configuration(configuration)

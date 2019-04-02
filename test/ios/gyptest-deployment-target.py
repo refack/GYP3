@@ -13,7 +13,7 @@ import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'], platforms=['darwin'])
 
-if not XCodeDetect.XCodeDetect.HasIPhoneSDK():
+if not XCodeDetect.IPhoneSDKPath():
   test.skip_test('IPhone SDK not installed')
 
 test.run_gyp('deployment-target.gyp', chdir='deployment-target')
