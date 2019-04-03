@@ -604,3 +604,18 @@ def CrossCompileRequested():
           os.environ.get('AR_target') or
           os.environ.get('CC_target') or
           os.environ.get('CXX_target'))
+
+
+def IsStrCanonicalInt(string):
+  """
+  Returns True if |string| is a canonical integer form str.
+  The canonical form is such that str(int(string)) == string.
+  """
+  if type(string) is not str:
+    return False
+  # noinspection PyBroadException
+  try:
+    i = int(string)
+    return str(i) == string
+  except:
+    return False

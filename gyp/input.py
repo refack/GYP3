@@ -5,20 +5,21 @@
 from __future__ import print_function
 
 import ast
-from collections import OrderedDict
 import os.path
 import re
 import shlex
-import signal
 import subprocess
 import sys
 import traceback
+from collections import OrderedDict
+
 import gyp.common
 import gyp.lib.simple_copy
 from gyp.common import GypError, OrderedSet
 
 if not 'unicode' in __builtins__:
   unicode = str
+  basestring = str
 
 # A list of types that are treated as linkable.
 linkable_types = [
@@ -434,96 +435,6 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
     return (build_file_path, dependencies)
 
 
-def CallLoadTargetBuildFile(global_flags, build_file_path, variables, includes, depth, generator_input_info):
-  """Wrapper around LoadTargetBuildFile for parallel processing.
-
-     This wrapper is used when LoadTargetBuildFile is executed in
-     a worker process.
-  """
-
-  try:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-    # Apply globals so that the worker process behaves the same.
-    for key, value in global_flags.items():
-      globals()[key] = value
-
-    SetGeneratorGlobals(generator_input_info)
-    result = LoadTargetBuildFile(build_file_path, per_process_data, per_process_aux_data, variables, includes, depth, False)
-    if not result:
-      return result
-
-    (build_file_path, dependencies) = result
-
-    # We can safely pop the build_file_data from per_process_data because it
-    # will never be referenced by this process again, so we don't need to keep
-    # it in the cache.
-    build_file_data = per_process_data.pop(build_file_path)
-
-    # This gets serialized and sent back to the main process via a pipe.
-    # It's handled in LoadTargetBuildFileCallback.
-    return (build_file_path, build_file_data, dependencies)
-  except GypError as e:
-    sys.stderr.write("gyp: %s\n" % e)
-    return None
-  except Exception as e:
-    print('Exception:', e, file=sys.stderr)
-    print(traceback.format_exc(), file=sys.stderr)
-    return None
-
-
-class ParallelProcessingError(Exception):
-  pass
-
-
-class ParallelState(object):
-  """Class to keep track of state when processing input files in parallel.
-
-  If build files are loaded in parallel, use this to keep track of
-  state during farming out and processing parallel jobs. It's stored
-  in a global so that the callback function can have access to it.
-  """
-
-  def __init__(self):
-    # The multiprocessing pool.
-    self.pool = None
-    # The condition variable used to protect this object and notify
-    # the main loop when there might be more data to process.
-    self.condition = None
-    # The "data" dict that was passed to LoadTargetBuildFileParallel
-    self.data = None
-    # The number of parallel calls outstanding; decremented when a response
-    # was received.
-    self.pending = 0
-    # The set of all build files that have been scheduled, so we don't
-    # schedule the same one twice.
-    self.scheduled = set()
-    # A list of dependency build file paths that haven't been scheduled yet.
-    self.dependencies = []
-    # Flag to indicate if there was an error in a child process.
-    self.error = False
-
-  def LoadTargetBuildFileCallback(self, result):
-    """Handle the results of running LoadTargetBuildFile in another process.
-    """
-    self.condition.acquire()
-    if not result:
-      self.error = True
-      self.condition.notify()
-      self.condition.release()
-      return
-    (build_file_path0, build_file_data0, dependencies0) = result
-    self.data[build_file_path0] = build_file_data0
-    self.data['target_build_files'].add(build_file_path0)
-    for new_dependency in dependencies0:
-      if new_dependency not in self.scheduled:
-        self.scheduled.add(new_dependency)
-        self.dependencies.append(new_dependency)
-    self.pending -= 1
-    self.condition.notify()
-    self.condition.release()
-
-
 # Look for the bracket that matches the first bracket seen in a
 # string, and return the start and end as a tuple.  For example, if
 # the input is something like "<(foo <(bar)) blah", then it would
@@ -773,30 +684,25 @@ def ExpandVariables(input, phase, variables, build_file):
         gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Executing command '%s' in directory '%s'", contents, build_file_dir)
 
         if command_string == 'pymod_do_main':
-          # <!pymod_do_main(modulename param eters) loads |modulename| as a
-          # python module and then calls that module's DoMain() function,
-          # passing ["param", "eters"] as a single list argument. For modules
-          # that don't load quickly, this can be faster than
-          # <!(python modulename param eters). Do this in |build_file_dir|.
-          oldwd = os.getcwd()  # Python doesn't like os.open('.'): no fchdir.
-          if build_file_dir is not None:  # build_file_dir may be None (see above).
-            # noinspection PyTypeChecker
-            os.chdir(build_file_dir)
+          # <!pymod_do_main(modulename foo bar) loads |modulename| as a python module and then calls that module's DoMain() function, passing ["foo", "bar"] as a single list argument.
+          # For modules that don't load quickly, this can be faster than <!(python modulename foo bar). Do this in |build_file_dir|.
+          old_cwd = os.getcwd()
+          # Wrap the following with `try` for unwinding state in `finally`
           try:
-            parsed_contents = shlex.split(contents)
+            # changing process state, to be unwind in the `finally`
+            build_file_dir and os.chdir(build_file_dir)
+            sys.path.append(os.getcwd())
+            parts = shlex.split(contents)
+            modulename, params = parts[0], parts[1:]
             try:
-              py_module = __import__(parsed_contents[0])
+              py_module = __import__(modulename)
             except ImportError as e:
-              raise GypError("Error importing pymod_do_main module (%s): %s" % (parsed_contents[0], e))
-            replacement = str(py_module.DoMain(parsed_contents[1:])).rstrip()
-          except Exception as e:
-            err_info = traceback.format_exc()
-            print(e, file=sys.stderr)
-            print(err_info, file=sys.stderr)
-
-
+              raise GypError("Error importing pymod_do_main module (%s): %s" % (modulename, e))
+            mod_ret = py_module.DoMain(params)
+            replacement = str(mod_ret).rstrip()
           finally:
-            os.chdir(oldwd)
+            sys.path.pop()
+            os.chdir(old_cwd)
           assert replacement is not None
         elif command_string:
           raise GypError("Unknown command string '%s' in '%s'." % (command_string, contents))
@@ -888,14 +794,11 @@ def ExpandVariables(input, phase, variables, build_file):
   if output == input:
     gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Found only identity matches on %r, avoiding infinite recursion.", output)
   else:
-    # Look for more matches now that we've replaced some, to deal with
-    # expanding local variables (variables defined in the same
-    # variables block as this one).
+    # Look for more matches now that we've replaced some, to deal with expanding local variables (variables defined in the same variables block as this one).
     gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Found output %r, recursing.", output)
     if type(output) is list:
       if output and type(output[0]) is list:
-        # Leave output alone if it's a list of lists.
-        # We don't want such lists to be stringified.
+        # Leave output alone if it's a list of lists. We don't want such lists to be stringified.
         pass
       else:
         new_output = []
