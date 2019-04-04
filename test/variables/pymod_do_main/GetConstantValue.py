@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Refael Ackeramnn<refack@gmail.com>. All rights reserved.
+# Copyright (c) 2019 Refael Ackermann<refack@gmail.com>. All rights reserved.
 # Use of this source code is governed by an MIT-style license.
 
 # GetConstantValue
