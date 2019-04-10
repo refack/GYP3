@@ -11,11 +11,10 @@ windows-setup-steps: &windows-setup-steps
   os: windows
   language: shell  # 'language: python' is not yet supported on Windows
   env:
-    - GYP_MSVS_VERSION=2017
     - PYTHONUNBUFFERED=1
   install:
-    - python -m pip install --upgrade pip pipenv
-    - python -m pipenv install --dev
+    - pip install --upgrade pip pipenv
+    - pipenv install --dev
 
 osx-setup-steps: &osx-setup-steps
   os: osx
@@ -39,19 +38,23 @@ matrix:
       <<: *linux-setup-steps
       script: pipenv run -v test -f make,ninja
 
-    - name: "Windows: test with mocks on Python 3"
+    - name: "Windows: test on Python 3 with VS2019 Build Tools"
       <<: *windows-setup-steps
       env:
-        - PATH=/c/Python37:$PATH
-      before_install: choco install python3
-      script: python -m pipenv run -v test -f make-mock,msvs-mock
+        - GYP_MSVS_VERSION=2019
+        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      before_install:
+        - choco install python3 visualstudio2019buildtools visualstudio2019-workload-vctools
+      script: pipenv run -v test -f msvs
 
-    - name: "Windows: test with mocks on Python 2"
+    - name: "Windows: test on Python 2 with VS2017 Build Tools"
       <<: *windows-setup-steps
       env:
-        - PATH=/c/Python27:$PATH
-      before_install: choco install python2
-      script: python -m pipenv run -v test -f make-mock,msvs-mock
+        - GYP_MSVS_VERSION=2017
+        - PATH=/c/Python27:/c/Python27/Scripts:$PATH
+      before_install:
+        - choco install python2 visualstudio2017buildtools visualstudio2017-workload-vctools
+      script: pipenv run -v test -f msvs
 
     - name: "macOS: test with make and ninja on Python 3.7"
       <<: *osx-setup-steps
