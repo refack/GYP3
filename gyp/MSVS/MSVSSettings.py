@@ -475,7 +475,7 @@ def ConvertToMSBuildSettings(msvs_settings, stderr=sys.stderr):
       try:
         setting_converter(msvs_value, msbuild_settings)
       except ValueError as e:
-        print('Warning: while converting %s/%s to MSBuild,  %s' % (msvs_tool_name, msvs_setting, e), file=stderr)
+        print('Warning: while converting %s/%s to MSBuild, %s' % (msvs_tool_name, msvs_setting, e), file=stderr)
   return msbuild_settings
 
 
@@ -874,9 +874,9 @@ _Renamed(_link, 'IgnoreDefaultLibraryNames', 'IgnoreSpecificDefaultLibraries', _
 _Renamed(_link, 'ResourceOnlyDLL', 'NoEntryPoint', _boolean)  # /NOENTRY
 _Renamed(_link, 'SwapRunFromNet', 'SwapRunFromNET', _boolean)  # /SWAPRUN:NET
 
-_Moved(_link, 'GenerateManifest', 'GenerateManifest', _boolean)
-_Moved(_link, 'IgnoreImportLibrary', 'IgnoreImportLibrary', _boolean)
-_Moved(_link, 'LinkIncremental', 'LinkIncremental', _newly_boolean)
+_Moved(_link, 'GenerateManifest', '', _boolean)
+_Moved(_link, 'IgnoreImportLibrary', '', _boolean)
+_Moved(_link, 'LinkIncremental', '', _newly_boolean)
 _Moved(_link, 'LinkLibraryDependencies', 'ProjectReference', _boolean)
 _Moved(_link, 'UseLibraryDependencyInputs', 'ProjectReference', _boolean)
 
