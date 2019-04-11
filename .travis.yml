@@ -63,6 +63,17 @@ matrix:
       <<: *osx-setup-steps
       script: pipenv run -v test -f make,ninja
 
+    - name: "macOS: XCode10.2 test with make and ninja on Python 3.7"
+      os: osx
+      osx_image: xcode10.2  # provides Python 3.7.2
+      language: cpp  # 'language: python' is not yet supported on macOS
+      install:
+        - HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
+        - pip3 install --upgrade pip pipenv
+        - pipenv install --dev
+        - pipenv install PyObjC  # This is not in the Pipfile because it breaks other platforms https://github.com/pypa/pipenv/issues/3187
+      script: pipenv run -v test -f make,ninja
+      
     - name: "lint with Python 2.7"
       python: '2.7'
       <<: *linux-setup-steps
