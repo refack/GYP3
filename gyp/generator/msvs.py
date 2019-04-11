@@ -1383,7 +1383,9 @@ def _GetMSVSAttributes(config, config_type):
 
 
 def _AddNormalizedSources(sources_set, sources_array):
-  sources_set.update(_NormalizedSource(s) for s in sources_array)
+  sources_list = [_NormalizedSource(s) for s in sources_array]
+  sources_list = sorted(sources_list, key=lambda s: os.path.basename(s))
+  sources_set.update(sources_list)
 
 
 def _PrepareListOfSources(spec, generator_flags, gyp_file):
@@ -2072,7 +2074,7 @@ def _MapFileToMsBuildSourceType(source, rule_dependencies, extension_to_rule_nam
   elif ext == '.rc':
     group = 'resource'
     element = 'ResourceCompile'
-  elif ext == '.asm':
+  elif ext in ('.asm', '.s', '.S'):
     group = 'masm'
     element = 'MASM'
     for platform in platforms:
@@ -2565,7 +2567,7 @@ def _GenerateMSBuildRuleXmlFile(xml_path, msbuild_rules):
 
 def _GetConfigurationAndPlatform(name, settings):
   configuration = name.rsplit('_', 1)[0]
-  platform = settings.get('msvs_configuration_platform', 'x64')
+  platform = settings.get('msvs_configuration_platform', 'Win32')
   return configuration, platform
 
 

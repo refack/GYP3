@@ -42,14 +42,14 @@ required2 = '''\
     <ClCompile Include="..\\folder1\\nested\\a.c">
       <Filter>folder1\\nested</Filter>
     </ClCompile>
-    <ClCompile Include="..\\folder2\\d.c">
-      <Filter>folder2</Filter>
-    </ClCompile>
     <ClCompile Include="..\\folder1\\nested\\b.c">
       <Filter>folder1\\nested</Filter>
     </ClCompile>
     <ClCompile Include="..\\folder1\\other\\c.c">
       <Filter>folder1\\other</Filter>
+    </ClCompile>
+    <ClCompile Include="..\\folder2\\d.c">
+      <Filter>folder2</Filter>
     </ClCompile>
   </ItemGroup>
 '''.splitlines()
