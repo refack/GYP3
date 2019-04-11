@@ -626,12 +626,14 @@ class TestGypMake(TestGypBase):
   format = 'make'
   build_tool_list = ['make']
   ALL = 'all'
-  def build(self, gyp_file, target=None, **kw):
+  def build(self, gyp_file, target=None, verbose=False, **kw):
     """
     Runs a Make build using the Makefiles generated from the specified
     gyp_file.
     """
     arguments = kw.get('arguments', [])[:]
+    if verbose:
+      arguments.insert(0, 'V=1')
     if self.configuration:
       arguments.append('BUILDTYPE=' + self.configuration)
     if target not in (None, self.DEFAULT):
@@ -913,8 +915,10 @@ class TestGypNinja(TestGypOnMSToolchain):
     """
     TestGypBase.run_gyp(self, gyp_file, *args, **kw)
 
-  def build(self, gyp_file, target=None, **kw):
+  def build(self, gyp_file, target=None, verbose=False, **kw):
     arguments = kw.get('arguments', [])[:]
+    if verbose:
+      arguments.insert(0, '-v')
 
     # Add a -C output/path to the command line.
     arguments.append('-C')
@@ -1422,7 +1426,7 @@ def TestGyp(**kw):
     platform_mismatch = ''
     if platform in excluded_platforms:
       platform_mismatch = 'Test excluded for platform %s' % platform
-    if platform not in explicit_platforms:
+    if explicit_platforms and platform not in explicit_platforms:
       platform_mismatch = 'Test not explicitly included for platforms %s' % platform
     if platform_mismatch:
       print(platform_mismatch)
