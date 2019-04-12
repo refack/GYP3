@@ -132,7 +132,7 @@ def print_configuration_info():
   if sys.platform == 'darwin':
     print('  Mac %s %s' % (platform.mac_ver()[0], platform.mac_ver()[2]))
     try:
-      from XCodeDetect import XCodeDetect
+      import XCodeDetect
       print('  Xcode %s' % XCodeDetect.Version())
     except:
       pass

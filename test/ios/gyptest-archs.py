@@ -8,16 +8,13 @@
 Verifies that device and simulator bundles are built correctly.
 """
 
-import collections
-
 import TestGyp
 import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'])
 
-if test.format == 'xcode':
-  # This test appears to hang flakily.
-  test.skip_test()  # bug=532
+if not XCodeDetect.IPhoneSDKPath():
+  test.skip_test('Skip test when no IPhone SDK')
 
 test_cases = [
   ('Default', 'TestArch32Bits', ['i386']),
@@ -40,7 +37,7 @@ test.run_gyp('test-archs.gyp', chdir='app-bundle')
 for configuration, target, archs in test_cases:
   is_device_build = configuration.endswith('-iphoneos')
 
-  kwds = collections.defaultdict(list)
+  kwds = {}
   if test.format == 'xcode':
     if is_device_build:
       configuration, sdk = configuration.split('-')

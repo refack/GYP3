@@ -10,18 +10,11 @@ Verifies that MACOSX_DEPLOYMENT_TARGET works.
 
 import TestGyp
 
-import sys
+test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'], platforms=['darwin'])
 
-if sys.platform == 'darwin':
-  test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'])
+test.run_gyp('deployment-target.gyp', chdir='deployment-target')
 
-  if test.format == 'make':
-    # This is failing because of a deprecation warning for libstdc++.
-    test.skip_test()  # bug=533
+test.build('deployment-target.gyp', test.ALL, chdir='deployment-target')
 
-  test.run_gyp('deployment-target.gyp', chdir='deployment-target')
-
-  test.build('deployment-target.gyp', test.ALL, chdir='deployment-target')
-
-  test.pass_test()
+test.pass_test()
 

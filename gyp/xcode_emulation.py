@@ -529,7 +529,8 @@ class XcodeSettings(object):
     self._Appendf(lst, 'MACOSX_DEPLOYMENT_TARGET', '-mmacosx-version-min=%s')
     if 'IPHONEOS_DEPLOYMENT_TARGET' in self._Settings():
       # TODO: Implement this better?
-      sdk_path_basename = os.path.basename(self._SdkPath())
+      skd_path = self._SdkPath()
+      sdk_path_basename = os.path.basename(skd_path)
       if sdk_path_basename.lower().startswith('iphonesimulator'):
         self._Appendf(lst, 'IPHONEOS_DEPLOYMENT_TARGET', '-mios-simulator-version-min=%s')
       else:
@@ -1420,8 +1421,12 @@ def _GetXcodeEnv(xcode_settings, built_products_dir, srcroot, configuration, add
     'TEMP_DIR': '${TMPDIR}',
     'XCODE_VERSION_ACTUAL': XCodeDetect.Version(),
   }
-  if xcode_settings.GetPerConfigSetting('SDKROOT', configuration):
-    env['SDKROOT'] = xcode_settings._SdkPath(configuration)
+  wanted_sdk = xcode_settings.GetPerConfigSetting('SDKROOT', configuration)
+  if wanted_sdk:
+    sdk_root = xcode_settings._SdkPath(configuration)
+    if sdk_root is None:
+      raise GypError('Could not find `%s` SDK' % wanted_sdk)
+    env['SDKROOT'] = sdk_root
   else:
     env['SDKROOT'] = ''
 

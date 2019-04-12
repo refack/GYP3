@@ -13,6 +13,9 @@ test = TestGyp.TestGyp(formats=['xcode', 'ninja'], platforms=['darwin'])
 if XCodeDetect.Version() < '0600':
   test.skip_test('Skip test on XCode < 0600')
 
+if not XCodeDetect.IPhoneSDKPath():
+  test.skip_test('Skip test when no IPhone SDK')
+
 test_gyp_path = 'test-assets-catalog.gyp'
 test_app_path = 'Test App Assets Catalog Gyp.app'
 test.run_gyp(test_gyp_path, chdir='app-bundle')

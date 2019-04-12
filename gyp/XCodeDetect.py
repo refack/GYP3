@@ -36,7 +36,10 @@ def GetSdkVersionInfoItem(sdk, item):
   # Since the CLT has no SDK paths anyway, returning None is the most sensible route and should still do the right thing.
   try:
     return run('xcrun', '--sdk', sdk, item)
-  except subprocess.CalledProcessError:
+  except subprocess.CalledProcessError as e:
+    stdout = e.output
+    status = e.returncode
+    cmd = ' '.join(e.cmd)
     return None
 
 
