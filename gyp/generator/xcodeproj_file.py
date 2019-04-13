@@ -2576,6 +2576,7 @@ class PBXProject(XCContainerPortal):
     'buildConfigurationList': [0, XCConfigurationList, 1, 1, XCConfigurationList()],
     'compatibilityVersion':   [0, str,                 0, 1, 'Xcode 3.2'],
     'hasScannedForEncodings': [0, int,                 0, 1, 1],
+    'knownRegions':           [0, list,                0, 1, ['en', 'Base']],
     'mainGroup':              [0, PBXGroup,            1, 1, PBXGroup()],
     'projectDirPath':         [0, str,                 0, 1, ''],
     'projectReferences':      [1, dict,                0, 0],
