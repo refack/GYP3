@@ -36,6 +36,7 @@ def main(argv):
   parser.add_argument("-a", "--all", action="store_true", help="run all tests")
   parser.add_argument("-C", "--chdir", action="store", help="change to directory")
   parser.add_argument("-f", "--format", action="store", default='', help="run tests with the specified formats")
+  parser.add_argument("--fast-fail", action="store_true", help="run tests until first fail")
   parser.add_argument("-G", '--gyp_option', action="append", default=[], help="Add -G options to the gyp command line")
   parser.add_argument("-l", "--list", action="store_true", help="list available tests and exit")
   parser.add_argument("-n", "--no-exec", action="store_true", help="no execute, just print the command line")
@@ -113,7 +114,7 @@ def main(argv):
   for option in args.gyp_option:
     gyp_options += ['-G', option]
 
-  runner = Runner(format_list, tests, gyp_options, args.verbose)
+  runner = Runner(format_list, tests, gyp_options, args.verbose, args.fast_fail)
   runner.run()
 
   if not args.quiet:
@@ -125,6 +126,7 @@ def main(argv):
     return 0
 
 
+# noinspection PyBroadException
 def print_configuration_info():
   print('Test configuration:')
   if sys.platform == 'darwin':
@@ -140,13 +142,12 @@ def print_configuration_info():
       from MSVS import MSVSVersion
       version = MSVSVersion.SelectVisualStudioVersion()
       print('  MSVS %s' % version.description)
-    except Exception:
+    except:
       pass
   elif sys.platform in ('linux', 'linux2'):
-    # noinspection PyBroadException
     try:
-      with open('/etc/lsb-release', mode='r', encoding='utf-8') as f:
-        dist = f.read().strip()
+      with open('/etc/lsb-release', mode='r') as f:
+        dist = f.read().decode('utf-8').strip()
       print('  Linux %s' % dist)
     except:
       pass
@@ -157,8 +158,9 @@ def print_configuration_info():
 
 
 class Runner(object):
-  def __init__(self, formats, tests, gyp_options, verbose):
+  def __init__(self, formats, tests, gyp_options, verbose, fast_fail=False):
     self.formats = formats
+    self.fast_fail = fast_fail
     self.tests = tests
     self.verbose = verbose
     self.gyp_options = gyp_options
@@ -179,7 +181,7 @@ class Runner(object):
     for i, (test, fmt) in enumerate(tests, 1):
       if self.verbose:
         print('# %s %s' % (test, fmt))
-      res, took, stdout, stderr = self.run_test(test, fmt)
+      passed, res, took, stdout, stderr = self.run_test(test, fmt)
       print(res % (i, test + ' ' + fmt))
       print('  ---')
       print('  duration_ms: %.3f' % took)
@@ -193,6 +195,9 @@ class Runner(object):
         for l in stderr_lines:
           print('   ', l)
       print('  ...')
+      if not passed and self.fast_fail:
+        self.num_tests = i
+        break
 
     self.took = time.time() - run_start
 
@@ -216,12 +221,15 @@ class Runner(object):
 
     if proc.returncode == 2:
       res = 'not ok %d # skip %s'
+      passed = True
     elif proc.returncode:
       res = 'not ok %d %s'
       self.failures.append('(%s) %s' % (test, fmt))
+      passed = False
     else:
       res = 'ok %d %s'
-    return res, took, stdout, stderr
+      passed = True
+    return passed, res, took, stdout, stderr,
 
   def print_results(self):
     num_failures = len(self.failures)
