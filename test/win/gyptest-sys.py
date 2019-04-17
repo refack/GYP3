@@ -8,16 +8,10 @@
 Verifies that Windows drivers are built correctly.
 """
 
-import sys
-
-if sys.platform != 'win32':
-  print("Test only for Windows")
-  sys.exit(2)
-
 import TestGyp
 from SConsLib import TestCmd
 
-test = TestGyp.TestGyp(formats=['msvs'])
+test = TestGyp.TestGyp(formats=['msvs'], platforms=['win32'], disable='Fix WindowsKernelModeDriver detection')
 
 CHDIR = 'win-driver-target-type'
 test.run_gyp('win-driver-target-type.gyp', chdir=CHDIR)

@@ -1,8 +1,13 @@
-// Copyright (c) 2012 Google Inc. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// C4269.cpp
+// compile with: /c /LD /W1
+class X {
+public:
+   int m_data;
+};
+
+void g() {
+   const X x1;   // C4269
+};
 
 int main() {
-  int export; // Cause a level 1 warning (C4237).
-  return 0;
 }

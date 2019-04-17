@@ -46,7 +46,7 @@
       'msvs_settings': {
         'VCCLCompilerTool': {
           'WarningLevel': '2',
-          'WarnAsError': 'true',
+          'WarnAsError': 'false',
         }
       },
       'sources': ['warning-level3.cc'],
@@ -70,7 +70,7 @@
       'msvs_settings': {
         'VCCLCompilerTool': {
           'WarningLevel': '3',
-          'WarnAsError': 'true',
+          'WarnAsError': 'false',
         }
       },
       'sources': ['warning-level4.cc'],

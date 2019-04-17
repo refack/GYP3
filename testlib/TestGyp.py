@@ -17,11 +17,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import json
 import traceback
 
 from contextlib import contextmanager
 
+from gyp.MSVS import FindVisualStudioInstallation
 from SConsLib import TestCommon
 from SConsLib.TestCmd import IS_PY3, is_List, match_re as test_cmd_match_re
 
@@ -43,15 +43,18 @@ def remove_debug_line_numbers(contents):
   lines = [l[-1] for l in lines if len(l) > 3]
   matches = [eval(l.split(':', 1)[1]) for l in lines if l.startswith('ExpandVariables Matches')]
   matches = sorted([
-    ' '.join(["%s=%s" % (k, d[k]) for k in sorted(d.keys())])
-    for d in matches
+    ' '.join(
+      ["%s=%s" % (k, d[k]) for k in sorted(d.keys())]
+    ) for d in matches
   ])
   found_output = sorted([l for l in lines if l.startswith('ExpandVariables Found output')])
   return '\n'.join(matches + found_output)
 
 
 def match_modulo_line_numbers(contents_a, contents_b):
-  """File contents matcher that ignores line numbers."""
+  """
+  The name of this function is used to differentiate.
+  """
   return TestCommon.match_exact(contents_a, contents_b)
 
 
@@ -419,8 +422,7 @@ class TestGypBase(TestCommon.TestCommon):
 
   def set_configuration(self, configuration):
     """
-    Sets the configuration, to be used for invoking the build
-    tool and testing potential built output.
+    Sets the configuration, to be used for invoking the build tool and testing potential built output.
     """
     self.configuration = configuration
 
@@ -661,12 +663,16 @@ class TestGypMake(TestGypBase):
     kw['match'] = test_cmd_match_re
     return self.build(gyp_file, target, **kw)
 
+  def build_out_dir(self):
+    configuration = self.configuration_dirname()
+    out_dir = os.path.join('out', configuration)
+    return out_dir
+
   def run_built_executable(self, name, *args, **kw):
     """
     Runs an executable built by Make.
     """
-    configuration = self.configuration_dirname()
-    libdir = os.path.join('out', configuration, 'lib')
+    libdir = os.path.join(self.build_out_dir(), 'lib')
     # TODO(piman): when everything is cross-compile safe, remove lib.target
     if sys.platform == 'darwin':
       # Mac puts target shared libraries right in the product directory.
@@ -712,13 +718,6 @@ class TestGypMake(TestGypBase):
     result.append(self.built_file_basename(name, type, **kw))
     return self.workpath(*result)
 
-def ConvertToCygpath(path):
-  """Convert to cygwin path if we are using cygwin."""
-  if sys.platform == 'cygwin':
-    p = subprocess.Popen(['cygpath', path], stdout=subprocess.PIPE)
-    path = p.communicate()[0].strip()
-  return path
-
 
 def MakeDirs(new_dir):
   """A wrapper around os.makedirs() that emulates "mkdir -p"."""
@@ -734,131 +733,8 @@ def GetDefaultKeychainPath():
   # Format is:
   # $ security default-keychain
   #     "/Some/Path/To/default.keychain"
-  path = subprocess.check_output(['security', 'default-keychain']).decode(
-      'utf-8', 'ignore').strip()
+  path = subprocess.check_output(['security', 'default-keychain']).decode('utf-8', 'ignore').strip()
   return path[1:-1]
-
-def FindMSBuildInstallation(msvs_version = 'auto'):
-  """Returns path to MSBuild for msvs_version or latest available.
-
-  Looks in the registry to find install location of MSBuild.
-  MSBuild before v4.0 will not build c++ projects, so only use newer versions.
-  """
-  from gyp.MSVS.MSVSVersion import TryQueryRegistryValue
-
-  msvs_to_msbuild = {
-    '2015': '14.0',
-    '2013': '12.0',
-    '2012': '4.0',  # Really v4.0.30319 which comes with .NET 4.5.
-    '2010': '4.0'
-  }
-
-  msbuild_base_key = r'SOFTWARE\Microsoft\MSBuild\ToolsVersions'
-  if not TryQueryRegistryValue(msbuild_base_key):
-    print('Error: could not find MSBuild base registry entry')
-    return None
-
-  msbuild_key = ''
-  found_msbuild_ver = ''
-  if msvs_version in msvs_to_msbuild:
-    msbuild_test_version = msvs_to_msbuild[msvs_version]
-    msbuild_key = msbuild_base_key + '\\' + msbuild_test_version
-    if TryQueryRegistryValue(msbuild_key):
-      found_msbuild_ver = msbuild_test_version
-    else:
-      print('Warning: Environment variable GYP_MSVS_VERSION specifies "%s" but corresponding MSBuild "%s" was not found.' % (msvs_version, found_msbuild_ver))
-  if not found_msbuild_ver:
-    for msvs_version in sorted(msvs_to_msbuild.keys(), reverse=True):
-      msbuild_test_version = msvs_to_msbuild[msvs_version]
-      msbuild_key = msbuild_base_key + '\\' + msbuild_test_version
-      if TryQueryRegistryValue(msbuild_key):
-        found_msbuild_ver = msbuild_test_version
-        break
-  if not found_msbuild_ver:
-    print('Error: could not find am MSBuild registry entry')
-    return None
-
-  msbuild_path = TryQueryRegistryValue(msbuild_key, 'MSBuildToolsPath')
-  if not msbuild_path:
-    print('Error: could not get MSBuildToolsPath registry entry value for MSBuild version %s' % found_msbuild_ver)
-    return None
-
-  return os.path.join(msbuild_path, 'MSBuild.exe')
-
-
-def FindVisualStudioInstallation():
-  """
-  Returns appropriate values for .build_tool and .uses_msbuild fields
-  of TestGypBase for Visual Studio.
-
-  We use the value specified by GYP_MSVS_VERSION.  If not specified, we
-  search for likely deployment paths.
-  """
-  override_build_tool = os.environ.get('GYP_BUILD_TOOL')
-  if override_build_tool:
-    return override_build_tool, True, override_build_tool
-
-  msvs_version = 'auto'
-  for flag in (f for f in sys.argv if f.startswith('msvs_version=')):
-    msvs_version = flag.split('=')[-1]
-  msvs_version = os.environ.get('GYP_MSVS_VERSION', msvs_version)
-
-  if msvs_version == 'auto' or msvs_version >= '2017':
-    msbuild_exes = []
-    try:
-      args1 = [
-        r'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe',
-        '-latest', '-products', '*', '-prerelease', '-format', 'json',
-        '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
-      ]
-      vswhere_json = subprocess.check_output(args1)
-      vswhere_infos = json.loads(vswhere_json)
-      if len(vswhere_infos) == 0:
-        raise IOError("vswhere did not find any MSVS instances.")
-      top_vs_info = vswhere_infos[0]
-      if top_vs_info:
-        inst_path = top_vs_info['installationPath']
-        args2 = ['cmd.exe', '/d', '/c',
-                 'cd', '/d', inst_path,
-                 '&', 'dir', '/b', '/s', 'msbuild.exe']
-        msbuild_exes = subprocess.check_output(args2).strip().splitlines()
-      if len(msbuild_exes):
-        msbuild_path = str(msbuild_exes[0].decode('utf-8'))
-        os.environ['GYP_MSVS_VERSION'] = str(top_vs_info['catalog']['productLineVersion'])
-        os.environ['GYP_BUILD_TOOL'] = msbuild_path
-        return msbuild_path, True, msbuild_path
-    except Exception as e:
-      traceback.print_exc(file=sys.stderr)
-      print(e, file=sys.stderr)
-      pass
-
-  possible_roots = ['%s:\\Program Files%s' % (chr(drive), suffix)
-                    for drive in range(ord('C'), ord('Z') + 1)
-                    for suffix in ['', ' (x86)']]
-  possible_paths = {
-    '2015': r'Microsoft Visual Studio 14.0\Common7\IDE\devenv.com',
-    '2013': r'Microsoft Visual Studio 12.0\Common7\IDE\devenv.com',
-    '2012': r'Microsoft Visual Studio 11.0\Common7\IDE\devenv.com',
-    '2010': r'Microsoft Visual Studio 10.0\Common7\IDE\devenv.com',
-    '2008': r'Microsoft Visual Studio 9.0\Common7\IDE\devenv.com',
-    '2005': r'Microsoft Visual Studio 8\Common7\IDE\devenv.com'}
-
-  possible_roots = [ConvertToCygpath(r) for r in possible_roots]
-
-  # Check that the path to the specified GYP_MSVS_VERSION exists.
-  if msvs_version in possible_paths:
-    path = possible_paths[msvs_version]
-    for r in possible_roots:
-      build_tool = os.path.join(r, path)
-      if os.path.exists(build_tool):
-        uses_msbuild = msvs_version >= '2010'
-        msbuild_path = FindMSBuildInstallation(msvs_version)
-        return build_tool, uses_msbuild, msbuild_path
-    else:
-      print('Warning: Environment variable GYP_MSVS_VERSION specifies "%s" '
-            'but corresponding "%s" was not found.' % (msvs_version, path))
-  print('Error: could not find MSVS version %s' % msvs_version)
-  sys.exit(1)
 
 
 class TestGypOnMSToolchain(TestGypBase):
@@ -883,7 +759,7 @@ class TestGypOnMSToolchain(TestGypBase):
     super(TestGypOnMSToolchain, self).initialize_build_tool()
     if sys.platform in ('win32', 'cygwin'):
       build_tools = FindVisualStudioInstallation()
-      self.devenv_path, self.uses_msbuild, self.msbuild_path = build_tools
+      self.devenv_path, self.uses_msbuild, self.msbuild_path, _ = build_tools
       self.vsvars_path = TestGypOnMSToolchain._ComputeVsvarsPath(self.devenv_path)
 
   def run_dumpbin(self, *dumpbin_args):
@@ -966,9 +842,7 @@ class TestGypMSVS(TestGypOnMSToolchain):
   Subclass for testing the GYP Visual Studio generator.
   """
   format = 'msvs'
-
-  u = r'=== Build: 0 succeeded, 0 failed, (\d+) up-to-date, 0 skipped ==='
-  up_to_date_re = re.compile(u, re.M)
+  up_to_date_re = re.compile(r'=== Build: 0 succeeded, 0 failed, (\d+) up-to-date, 0 skipped ===', re.M)
 
   # Initial None element will indicate to our .initialize_build_tool()
   # method below that 'devenv' was not found on %PATH%.
@@ -978,9 +852,12 @@ class TestGypMSVS(TestGypOnMSToolchain):
   build_tool_list = [None]
 
   def __init__(self, gyp=None, **kw):
-    super(TestGypMSVS, self).__init__(gyp=None, **kw)
-    self.is_new_msbuild = '15.0' in self.build_tool or 'Current' in self.build_tool
-    self.msbuild_binlog_path = ''
+    super(TestGypMSVS, self).__init__(gyp=gyp, **kw)
+    self.is_new_msbuild = True
+    if self.build_tool is None or not ('15.0' in self.build_tool or 'Current' in self.build_tool):
+      self.is_new_msbuild = False
+    self.binlog_filename = '%s.binlog' % self.description.replace(os.path.sep, '_').replace('.', '_')
+
 
   def initialize_build_tool(self):
     super(TestGypMSVS, self).initialize_build_tool()
@@ -991,33 +868,39 @@ class TestGypMSVS(TestGypOnMSToolchain):
     Runs a Visual Studio build using the configuration generated
     from the specified gyp_file.
     """
-    arguments = kw.get('arguments', [])[:]
+    arguments = kw.setdefault('arguments', [])
+    # The Visual Studio generator doesn't add an explicit 'all' target, so we just treat it the same as 'Default'.
+    has_explicit_target = target not in (None, self.ALL, self.DEFAULT)
     if self.is_new_msbuild:
-      binlog_filename = '%s.binlog' % self.description.replace(os.path.sep, '_').replace('.', '_')
-      self.msbuild_binlog_path = os.path.join(kw.get('chdir', ''), binlog_filename)
-      arguments.append('-binaryLogger:ProjectImports=None;LogFile=%s' % binlog_filename)
+      arguments.append('-p:Configuration=%s' % self.configuration_dirname())
+      platform = self.configuration_platform()
+      if platform:
+        arguments.append('-p:Platform=%s' % platform)
+      arguments.append('-maxcpucount:1')
+      arguments.append('-nologo')
+      # arguments.append('-consoleloggerparameters:ErrorsOnly')
+      arguments.append('-binaryLogger:ProjectImports=None;LogFile=%s' % self.binlog_filename)
 
-      configuration = '-p:Configuration=' + (
-        self.configuration or self.configuration_buildname())
-
-      build_target = ''
-      if target not in (None, self.ALL, self.DEFAULT):
-        build_target += ':' + target
+      target_parts = []
+      if has_explicit_target:
+        target_parts.append(target)
       if clean:
-        build_target += ':Clean'
+        target_parts.append('Clean')
       elif rebuild:
-        build_target += ':Rebuild'
-      elif ':' not in build_target:
-        build_target += ':Build'
-      build = '-t%s' % build_target
+        target_parts.append('Rebuild')
+      # If not other targets set, use default 'Build'.
+      if len(target_parts) == 0:
+        target_parts.append('Build')
+      arguments.append('-t:' + ':'.join(target_parts))
+      arguments.append(gyp_file.replace('.gyp', '.sln'))
     else:
       if self.configuration:
         arguments.extend(['/ProjectConfig', self.configuration])
 
-      if target not in (None, self.ALL, self.DEFAULT):
+      if has_explicit_target:
         arguments.extend(['/Project', target])
 
-      configuration = self.configuration_buildname()
+      arguments.extend(gyp_file.replace('.gyp', '.sln'))
 
       if clean:
         build = '/Clean'
@@ -1025,10 +908,11 @@ class TestGypMSVS(TestGypOnMSToolchain):
         build = '/Rebuild'
       else:
         build = '/Build'
-      # Note:  the Visual Studio generator doesn't add an explicit 'all'
-      # target, so we just treat it the same as the default.
-    arguments.extend([gyp_file.replace('.gyp', '.sln'), build, configuration])
-    kw['arguments'] = arguments
+
+      arguments.extend(build)
+
+      arguments.extend(self.configuration_buildname())
+
     return self.run(program=self.build_tool, **kw)
 
   def up_to_date(self, gyp_file, target=None, **kw):
@@ -1049,11 +933,9 @@ class TestGypMSVS(TestGypOnMSToolchain):
     result = self.build(gyp_file, target, **kw)
     if not result:
       if self.is_new_msbuild:
-        with gzip.open(self.msbuild_binlog_path, 'r') as f:
-          content = f.read()
-          if 'is newer than' in content:
-            self.report_not_up_to_date()
-            self.fail_test()
+        if self.check_log(lambda c: 'is newer than' in c, kw.get('chdir')):
+          self.report_not_up_to_date()
+          self.fail_test()
       else:
         stdout = self.stdout()
 
@@ -1063,6 +945,15 @@ class TestGypMSVS(TestGypOnMSToolchain):
           self.report_not_up_to_date()
           self.fail_test()
     return result
+
+  def check_log(self, check, chdir=None):
+    file_path_parts = [self.binlog_filename]
+    if chdir:
+      file_path_parts.insert(0, chdir)
+    file_path = os.path.join(*file_path_parts)
+    with gzip.open(file_path, 'r') as f:
+      content = f.read().decode('utf-8', 'ignore')
+      return check(content)
 
   def built_file_path(self, name, type=None, **kw):
     """
@@ -1435,7 +1326,8 @@ def TestGyp(**kw):
   """
   disable = kw.pop('disable', None)
   if disable:
-    print("This test is currently disabled: https://crbug.com/483696.")
+    msg = disable if isinstance(disable, str) else "This test is currently disabled: https://crbug.com/483696."
+    print(msg)
     sys.exit(2)
   platforms = kw.pop('platforms', None)
   if platforms:

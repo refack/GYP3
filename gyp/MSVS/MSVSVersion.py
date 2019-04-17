@@ -6,7 +6,7 @@
 
 import os
 import glob
-from gyp.MSVS.MSVSUtil import TryQueryRegistryValue
+from gyp.MSVS import TryQueryRegistryValue
 
 msvs_version_map = {
   'auto': ('16.0', '15.0', '14.0', '12.0', '10.0', '9.0', '8.0', '11.0'),

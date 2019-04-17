@@ -2,19 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from __future__ import with_statement
+from __future__ import print_function
 
 import collections
 import errno
 import filecmp
+import os
 import os.path
 import re
 import tempfile
 import sys
 
 
-# A minimal memoizing decorator. It'll blow up if the args aren't immutable,
-# among other "problems".
+# A minimal memoizing decorator. It'll blow up if the args aren't immutable, among other "problems".
 class memoize(object):
   def __init__(self, func):
     self.func = func

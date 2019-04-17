@@ -9,13 +9,13 @@ Verifies build of an executable for ARM64 configurations.
 """
 
 import TestGyp
+from gyp.MSVS import VSSetup_PowerShell
 
-import sys
+test = TestGyp.TestGyp(formats=['msvs','ninja'], platforms=['win32'])
 
-formats = ['msvs']
-if sys.platform == 'win32':
-  formats += ['ninja']
-test = TestGyp.TestGyp(formats=formats)
+vs = VSSetup_PowerShell()
+if not any('VC.Tools.ARM64' in p for p in vs['Packages']):
+  test.skip_test("Skip because some machines don't have arm64")
 
 test.run_gyp('configurations.gyp')
 test.set_configuration('Debug|ARM64')

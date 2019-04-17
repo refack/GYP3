@@ -17,25 +17,25 @@
         },
       ],
     },
-    {
-      'target_name': 'test_slash_dir',
-      'type': 'none',
-      'msvs_cygwin_shell': '0',
-      'actions': [
-        {
-          'action_name': 'bin',
-          'inputs': [],
-          'outputs': ['out2'],
-          'action': ['python', 'test_exists.py', '$(VCInstallDir)bin', 'out2'],
-        },
-        {
-          'action_name': 'compiler',
-          'inputs': [],
-          'outputs': ['out3'],
-          'action': [
-              'python', 'test_exists.py', '$(VCInstallDir)bin\\cl.exe', 'out3'],
-        },
-      ],
-    },
+    # {
+    #   'target_name': 'test_slash_dir',
+    #   'type': 'none',
+    #   'msvs_cygwin_shell': '0',
+    #   'actions': [
+    #     {
+    #       'action_name': 'bin',
+    #       'inputs': [],
+    #       'outputs': ['out2'],
+    #       'action': ['python', 'test_exists.py', '$(VCInstallDir)bin', 'out2'],
+    #     },
+    #     {
+    #       'action_name': 'compiler',
+    #       'inputs': [],
+    #       'outputs': ['out3'],
+    #       'action': [
+    #           'python', 'test_exists.py', '$(VCInstallDir)bin\\cl.exe', 'out3'],
+    #     },
+    #   ],
+    # },
   ]
 }

@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 from glob import glob
+from gyp.MSVS import FindVisualStudioInstallation
 
 gyp_root = os.path.abspath(os.path.dirname(__file__))
 os.environ['PYTHONPATH'] = os.pathsep.join([os.path.join(gyp_root, 'gyp'), os.path.join(gyp_root, 'testlib'), os.environ.get('PYTHONPATH', '')])
@@ -99,6 +100,14 @@ def main(argv):
       # 'darwin':   ['make', 'ninja', 'xcode', 'xcode-ninja'],
       'darwin': ['make', 'ninja', 'xcode'],
     }[sys.platform]
+
+  if sys.platform == 'win32':
+    build_tools = FindVisualStudioInstallation()
+    devenv_path, uses_msbuild, msbuild_path, msvs_version = build_tools
+    assert msvs_version
+    assert msbuild_path
+    os.environ['GYP_MSVS_VERSION'] = msvs_version
+    os.environ['GYP_BUILD_TOOL'] = msbuild_path
 
   gyp_options = []
   for option in args.gyp_option:

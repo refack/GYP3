@@ -5,11 +5,7 @@ AdditionalManifestFiles is tested too.
 
 import TestGyp
 
-import sys
-
-if not sys.platform == 'win32':
-  print('Only for Windows')
-  sys.exit(2)
+test = TestGyp.TestGyp(formats=['msvs', 'ninja'], platforms=['win32'], disable='Need to solve win32api.LoadLibrary problems')
 
 import pywintypes
 import win32api
@@ -45,7 +41,6 @@ def extract_manifest(path, resource_name):
       else:
         raise
 
-test = TestGyp.TestGyp(formats=['msvs', 'ninja'])
 CHDIR = 'linker-flags'
 test.run_gyp('embed-manifest.gyp', chdir=CHDIR)
 test.build('embed-manifest.gyp', test.ALL, chdir=CHDIR)

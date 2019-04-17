@@ -203,8 +203,8 @@ class MSVSSolution(object):
     # Open file and print header
     f = writer(self.path)
     f.write(
-      'Microsoft Visual Studio Solution File, Format Version %s\r\n'
-      '# %s\r\n' % (self.version.solution_version, self.version.description)
+      'Microsoft Visual Studio Solution File, Format Version %s\n'
+      '# %s\n' % (self.version.solution_version, self.version.description)
     )
 
     # Project entries
@@ -214,44 +214,44 @@ class MSVSSolution(object):
       # msbuild does not accept an empty folder_name.
       # use '.' in case relative_path is empty.
       folder_name = relative_path.replace('/', '\\') or '.'
-      f.write('Project("%s") = "%s", "%s", "%s"\r\n' % (
+      f.write('Project("%s") = "%s", "%s", "%s"\n' % (
           e.entry_type_guid,          # Entry type GUID
           e.name,                     # Folder name
           folder_name,                # Folder name (again)
-          e.guid,               # Entry GUID
+          e.guid,                     # Entry GUID
       ))
 
       # TODO(rspangler): Need a way to configure this stuff
       if self.websiteProperties:
-        f.write('\tProjectSection(WebsiteProperties) = preProject\r\n'
-                '\t\tDebug.AspNetCompiler.Debug = "True"\r\n'
-                '\t\tRelease.AspNetCompiler.Debug = "False"\r\n'
-                '\tEndProjectSection\r\n')
+        f.write('\tProjectSection(WebsiteProperties) = preProject\n'
+                '\t\tDebug.AspNetCompiler.Debug = "True"\n'
+                '\t\tRelease.AspNetCompiler.Debug = "False"\n'
+                '\tEndProjectSection\n')
 
       if isinstance(e, MSVSFolderEntry):
         if e.items:
-          f.write('\tProjectSection(SolutionItems) = preProject\r\n')
+          f.write('\tProjectSection(SolutionItems) = preProject\n')
           for i in sorted(e.items):
-            f.write('\t\t%s = %s\r\n' % (i, i))
-          f.write('\tEndProjectSection\r\n')
+            f.write('\t\t%s = %s\n' % (i, i))
+          f.write('\tEndProjectSection\n')
 
       if isinstance(e, MSVSProjectEntry):
         if e.dependencies:
-          f.write('\tProjectSection(ProjectDependencies) = postProject\r\n')
+          f.write('\tProjectSection(ProjectDependencies) = postProject\n')
           for d in sorted(e.dependencies):
-            f.write('\t\t%s = %s\r\n' % (d.guid, d.guid))
-          f.write('\tEndProjectSection\r\n')
+            f.write('\t\t%s = %s\n' % (d.guid, d.guid))
+          f.write('\tEndProjectSection\n')
 
-      f.write('EndProject\r\n')
+      f.write('EndProject\n')
 
     # Global section
-    f.write('Global\r\n')
+    f.write('Global\n')
 
     # Configurations (variants)
-    f.write('\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\r\n')
+    f.write('\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\n')
     for v in sorted(self.variants):
-      f.write('\t\t%s = %s\r\n' % (v, v))
-    f.write('\tEndGlobalSection\r\n')
+      f.write('\t\t%s = %s\n' % (v, v))
+    f.write('\tEndGlobalSection\n')
 
     # Sort config guids for easier diffing of solution changes.
     config_guids = []
@@ -262,43 +262,43 @@ class MSVSSolution(object):
         config_guids_overrides[e.guid] = e.config_platform_overrides
     config_guids.sort()
 
-    f.write('\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\r\n')
+    f.write('\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\n')
     for g in config_guids:
       for v in sorted(self.variants):
         nv = config_guids_overrides[g].get(v, v)
         # Pick which project configuration to build for this solution
         # configuration.
-        f.write('\t\t%s.%s.ActiveCfg = %s\r\n' % (
+        f.write('\t\t%s.%s.ActiveCfg = %s\n' % (
             g,              # Project GUID
             v,              # Solution build configuration
             nv,             # Project build config for that solution config
         ))
 
         # Enable project in this solution configuration.
-        f.write('\t\t%s.%s.Build.0 = %s\r\n' % (
+        f.write('\t\t%s.%s.Build.0 = %s\n' % (
             g,              # Project GUID
             v,              # Solution build configuration
             nv,             # Project build config for that solution config
         ))
-    f.write('\tEndGlobalSection\r\n')
+    f.write('\tEndGlobalSection\n')
 
     # TODO(rspangler): Should be able to configure this stuff too (though I've
     # never seen this be any different)
-    f.write('\tGlobalSection(SolutionProperties) = preSolution\r\n')
-    f.write('\t\tHideSolutionNode = FALSE\r\n')
-    f.write('\tEndGlobalSection\r\n')
+    f.write('\tGlobalSection(SolutionProperties) = preSolution\n')
+    f.write('\t\tHideSolutionNode = FALSE\n')
+    f.write('\tEndGlobalSection\n')
 
     # Folder mappings
     # Omit this section if there are no folders
     if any([e.entries for e in all_entries if isinstance(e, MSVSFolderEntry)]):
-      f.write('\tGlobalSection(NestedProjects) = preSolution\r\n')
+      f.write('\tGlobalSection(NestedProjects) = preSolution\n')
       for e in all_entries:
         if not isinstance(e, MSVSFolderEntry):
           continue        # Does not apply to projects, only folders
         for subentry in e.entries:
-          f.write('\t\t%s = %s\r\n' % (subentry.guid, e.guid))
-      f.write('\tEndGlobalSection\r\n')
+          f.write('\t\t%s = %s\n' % (subentry.guid, e.guid))
+      f.write('\tEndGlobalSection\n')
 
-    f.write('EndGlobal\r\n')
+    f.write('EndGlobal\n')
 
     f.close()

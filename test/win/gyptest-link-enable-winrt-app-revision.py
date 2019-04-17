@@ -8,20 +8,19 @@
 Make sure msvs_application_type_revision works correctly.
 """
 
-from __future__ import print_function
-
 import TestGyp
-
-import os
-import sys
-
-CHDIR = 'winrt-app-type-revision'
-
-if sys.platform != 'win32' and os.environ.get('GYP_MSVS_VERSION', '0') < '2013':
-  print('Only for Windows')
-  sys.exit(2)
+from gyp.MSVS import VSSetup_PowerShell
 
 test = TestGyp.TestGyp(formats=['msvs'])
+
+vs = VSSetup_PowerShell()
+if not any('UWP.Support' in p for p in vs['Packages']):
+  test.skip_test("Skip because some machines don't have UWP tools")
+
+if vs['CatalogVersion'] < '2013':
+  test.skip_test('For MSVS version >= 2013')
+
+CHDIR = 'winrt-app-type-revision'
 
 test.run_gyp('winrt-app-type-revision.gyp', chdir=CHDIR)
 

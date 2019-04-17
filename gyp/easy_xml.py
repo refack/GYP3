@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import re
-import os
 import locale
 
 if 'reduce' not in __builtins__:
@@ -117,9 +116,6 @@ def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False, win32=False
     win32: True if we want \r\n as line terminator.
   """
   xml_string = XmlToString(content, encoding, pretty)
-  if win32 and os.linesep != '\r\n':
-    xml_string = xml_string.replace('\n', '\r\n')
-
   default_encoding = locale.getdefaultlocale()[1]
   if default_encoding and default_encoding.upper() != encoding.upper():
     if hasattr(xml_string, 'decode'):
@@ -127,8 +123,8 @@ def WriteXmlIfChanged(content, path, encoding='utf-8', pretty=False, win32=False
 
   # Get the old content
   try:
-    with open(path, 'r', encoding=encoding) as f:
-      existing = f.read()
+    with open(path, 'r') as f:
+      existing = f.read().decode(encoding, 'ignore')
   except:
     existing = None
 

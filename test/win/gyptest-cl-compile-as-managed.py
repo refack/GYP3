@@ -10,15 +10,14 @@ Make sure compile as managed (clr) settings are extracted properly.
 
 import TestGyp
 
-import sys
+test = TestGyp.TestGyp(platforms=['win32'])
 
-if sys.platform == 'win32':
-  test = TestGyp.TestGyp()
+test.skip_test('Skipping C++/CLI test')
 
-  CHDIR = 'compiler-flags'
-  test.run_gyp('compile-as-managed.gyp', chdir=CHDIR)
-  test.build('compile-as-managed.gyp', "test-compile-as-managed", chdir=CHDIR)
-  # Must fail.
-  test.build('compile-as-managed.gyp', "test-compile-as-unmanaged",
-    chdir=CHDIR, status=1)
-  test.pass_test()
+CHDIR = 'compiler-flags'
+test.run_gyp('compile-as-managed.gyp', chdir=CHDIR)
+test.build('compile-as-managed.gyp', "test-compile-as-managed", chdir=CHDIR)
+# Must fail.
+test.build('compile-as-managed.gyp', "test-compile-as-unmanaged",
+  chdir=CHDIR, status=1)
+test.pass_test()

@@ -12,7 +12,7 @@
           'WarnAsError': 'false'
         }
       },
-      'sources': ['warning-as-error.cc']
+      'sources': ['warning-level1.cc']
     },
     {
       'target_name': 'test_warn_as_error_true',
@@ -22,16 +22,17 @@
           'WarnAsError': 'true'
         }
       },
-      'sources': ['warning-as-error.cc']
+      'sources': ['warning-level1.cc']
     },
     {
       'target_name': 'test_warn_as_error_unset',
       'type': 'executable',
       'msvs_settings': {
         'VCCLCompilerTool': {
+          'WarningLevel': '1',
         }
       },
-      'sources': ['warning-as-error.cc']
+      'sources': ['warning-level1.cc']
     },
   ]
 }

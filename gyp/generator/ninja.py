@@ -16,9 +16,9 @@ import gyp
 import gyp.common
 import gyp.msvs_emulation
 import gyp.xcode_emulation
+import gyp.MSVS as MSVS
 from gyp.common import GetEnvironFallback
 from gyp.lib import ninja_syntax
-from gyp.MSVS import MSVSUtil
 
 try:
   # noinspection PyCompatibility
@@ -100,7 +100,7 @@ def CalculateVariables(default_variables, params):
     global generator_extra_sources_for_rules
     generator_extra_sources_for_rules = getattr(xcode_generator, 'generator_extra_sources_for_rules', [])
   elif flavor == 'win':
-    exts = MSVSUtil.TARGET_TYPE_EXT
+    exts = MSVS.TARGET_TYPE_EXT
     default_variables.setdefault('OS', 'win')
     default_variables['EXECUTABLE_SUFFIX'] = '.' + exts['executable']
     default_variables['STATIC_LIB_PREFIX'] = ''
@@ -792,8 +792,8 @@ def PerformBuild(_, configurations, params):
 def GenerateOutput(target_list, target_dicts, data, params):
   user_config = params['generator_flags'].get('config', None)
   if gyp.common.GetFlavor(params) == 'win':
-    target_list, target_dicts = MSVSUtil.ShardTargets(target_list, target_dicts)
-    target_list, target_dicts = MSVSUtil.InsertLargePdbShims(target_list, target_dicts, generator_default_variables)
+    target_list, target_dicts = MSVS.ShardTargets(target_list, target_dicts)
+    target_list, target_dicts = MSVS.InsertLargePdbShims(target_list, target_dicts, generator_default_variables)
   elif gyp.common.GetFlavor(params) == 'mac':
     # Update target_dicts for iOS device builds.
     target_dicts = gyp.xcode_emulation.CloneConfigurationForDeviceAndEmulator(target_dicts)

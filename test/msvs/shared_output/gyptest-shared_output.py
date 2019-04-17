@@ -23,12 +23,12 @@ test.run_gyp('hello.gyp')
 test.set_configuration('Baz')
 
 test.build('there/there.gyp', test.ALL)
-test.must_exist(test.built_file_path('foo/there.exe'))
-test.must_exist(test.built_file_path('foo/bar/there.obj'))
+test.must_exist(os.path.join('foo', 'there.exe'))
+test.must_exist(os.path.join('foo', 'bar', 'there.obj'))
 
 test.build('hello.gyp', test.ALL)
-test.must_exist(test.built_file_path('foo/hello.exe'))
-test.must_exist(test.built_file_path('foo/bar/hello.obj'))
+test.must_exist(os.path.join('foo', 'hello.exe'))
+test.must_exist(os.path.join('foo', 'bar', 'hello.obj'))
 
 if test.format == 'msvs':
   if test.uses_msbuild:

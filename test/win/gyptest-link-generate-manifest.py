@@ -5,18 +5,13 @@ handling AdditionalManifestFiles.
 
 import TestGyp
 
-import sys
-
-if not sys.platform == 'win32':
-  print('Only for Windows')
-  sys.exit(2)
+test = TestGyp.TestGyp(formats=['msvs', 'ninja'], platform=['win32'], disable='Need to solve win32api.LoadLibrary problems')
 
 import pywintypes
 import win32api
 import winerror
 
 RT_MANIFEST = 24
-
 
 class LoadLibrary(object):
   """Context manager for loading and releasing binaries in Windows.
@@ -46,8 +41,6 @@ def extract_manifest(path, resource_name):
       else:
         raise
 
-
-test = TestGyp.TestGyp(formats=['msvs', 'ninja'])
 
 CHDIR = 'linker-flags'
 test.run_gyp('generate-manifest.gyp', chdir=CHDIR)

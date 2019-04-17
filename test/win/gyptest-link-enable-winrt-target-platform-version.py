@@ -8,22 +8,19 @@
 Make sure msvs_target_platform_version works correctly.
 """
 
-from __future__ import print_function
-
 import TestGyp
-
-import os
-import sys
-import struct
-
-CHDIR = 'winrt-target-platform-version'
-
-
-if sys.platform != 'win32' and os.environ.get('GYP_MSVS_VERSION', '0') < '2015':
-  print('Only for Windows')
-  sys.exit(2)
+from gyp.MSVS import VSSetup_PowerShell
 
 test = TestGyp.TestGyp(formats=['msvs'])
+
+vs = VSSetup_PowerShell()
+if not any('UWP.Support' in p for p in vs['Packages']):
+  test.skip_test("Skip because some machines don't have UWP tools")
+
+if vs['CatalogVersion'] < '2015':
+  test.skip_test('For MSVS version >= 2015')
+
+CHDIR = 'winrt-target-platform-version'
 
 test.run_gyp('winrt-target-platform-version.gyp', chdir=CHDIR)
 

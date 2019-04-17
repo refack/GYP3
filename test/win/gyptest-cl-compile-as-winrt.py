@@ -2,19 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
+
 import TestGyp
 
-import os
-import sys
+test = TestGyp.TestGyp(formats=['msvs'])
 
-if (sys.platform == 'win32' and
-    int(os.environ.get('GYP_MSVS_VERSION', 0)) >= 2015):
-  test = TestGyp.TestGyp(formats=['msvs'])
+test.skip_test('Skipping C++/CLI test')
 
-  CHDIR = 'compiler-flags'
+if os.environ.get('GYP_MSVS_VERSION', 0) < 2015:
+  test.skip_test('Skipping test for MSVS < 2015')
 
-  test.run_gyp('compile-as-winrt.gyp', chdir=CHDIR)
+CHDIR = 'compiler-flags'
 
-  test.build('compile-as-winrt.gyp', 'test-compile-as-winrt', chdir=CHDIR)
+test.run_gyp('compile-as-winrt.gyp', chdir=CHDIR)
 
-  test.pass_test()
+test.build('compile-as-winrt.gyp', 'test-compile-as-winrt', chdir=CHDIR)
+
+test.pass_test()

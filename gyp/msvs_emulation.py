@@ -21,8 +21,7 @@ from tempfile import gettempdir
 
 from gyp import DebugOutput, DEBUG_GENERAL
 from gyp.common import EnsureDirExists, WriteOnDiff, memoize
-from gyp.MSVS.MSVSUtil import TARGET_TYPE_EXT, TryQueryRegistryValue
-
+from gyp.MSVS import TARGET_TYPE_EXT, TryQueryRegistryValue
 
 if 'basestring' not in __builtins__:
   basestring = str

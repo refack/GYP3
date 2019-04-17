@@ -10,7 +10,6 @@ import gyp
 from gyp import msvs_emulation, xcode_emulation
 from gyp.generator.ninja import generator_default_variables, OpenOutput, GetWinLinkRuleNameSuffix, CalculateVariables
 from gyp.lib import ninja_syntax
-from gyp.MSVS import MSVSUtil
 
 
 class Target(object):

@@ -9,20 +9,24 @@ Handle default .idl build rules.
 """
 
 import TestGyp
+from gyp.MSVS import VSSetup_PowerShell
 
-import sys
+test = TestGyp.TestGyp(formats=['msvs', 'ninja'], platforms=['win32'])
 
-if sys.platform == 'win32':
-  test = TestGyp.TestGyp(formats=['msvs', 'ninja'])
+CHDIR = 'idl-rules'
+target_platforms = ['Win32', 'x64']
 
-  CHDIR = 'idl-rules'
-  test.run_gyp('basic-idl.gyp', chdir=CHDIR)
-  for platform in ['Win32', 'x64', 'ARM64']:
-    test.set_configuration('Debug|%s' % platform)
-    test.build('basic-idl.gyp', test.ALL, chdir=CHDIR)
+vs = VSSetup_PowerShell()
+if any('VC.Tools.ARM64' in p for p in vs['Packages']):
+  target_platforms.append('ARM64')
 
-    # Make sure ninja win_tool.py filters out noisy lines.
-    if test.format == 'ninja' and 'Processing' in test.stdout():
-      test.fail_test()
+test.run_gyp('basic-idl.gyp', chdir=CHDIR)
+for platform in target_platforms:
+  test.set_configuration('Debug|%s' % platform)
+  test.build('basic-idl.gyp', test.ALL, chdir=CHDIR)
 
-  test.pass_test()
+  # Make sure ninja win_tool.py filters out noisy lines.
+  if test.format == 'ninja' and 'Processing' in test.stdout():
+    test.fail_test()
+
+test.pass_test()

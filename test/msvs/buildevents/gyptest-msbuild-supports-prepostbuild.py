@@ -13,10 +13,6 @@ import TestGyp
 
 test = TestGyp.TestGyp(formats=['msvs'], workdir='workarea_all')
 
-test.run_gyp('buildevents.gyp', '-G', 'msvs_version=2008')
-test.must_contain('main.vcproj', 'Name="VCPreBuildEventTool"')
-test.must_contain('main.vcproj', 'Name="VCPostBuildEventTool"')
-
 test.run_gyp('buildevents.gyp', '-G', 'msvs_version=2010')
 test.must_contain('main.vcxproj', '<PreBuildEvent>')
 test.must_contain('main.vcxproj', '<PostBuildEvent>')
