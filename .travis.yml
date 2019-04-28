@@ -13,7 +13,7 @@ windows-setup-steps: &windows-setup-steps
   env:
     - PYTHONUNBUFFERED=1
   install:
-    - pip install --upgrade pip pipenv
+    - pip install --user --upgrade pip pipenv
     - pipenv install --dev
 
 osx-setup-steps: &osx-setup-steps
@@ -42,19 +42,22 @@ matrix:
       <<: *windows-setup-steps
       env:
         - GYP_MSVS_VERSION=2019
-        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        - PATH=/c/Python37:/c/Python37/Scripts:/C/Users/travis/AppData/Roaming/Python/Python37/Scripts:$PATH
       before_install:
         - choco install python3 visualstudio2019buildtools visualstudio2019-workload-vctools
       script: pipenv run -v test -f msvs
 
-    - name: "Windows: test on Python 2 with VS2017 Build Tools"
-      <<: *windows-setup-steps
-      env:
-        - GYP_MSVS_VERSION=2017
-        - PATH=/c/Python27:/c/Python27/Scripts:$PATH
-      before_install:
-        - choco install python2 visualstudio2017buildtools visualstudio2017-workload-vctools
-      script: pipenv run -v test -f msvs
+#    - name: "Windows: test on Python 2 with VS2017 Build Tools"
+#      <<: *windows-setup-steps
+#      env:
+#        - GYP_MSVS_VERSION=2017
+#        - GYP_BUILD_TOOL=C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe
+#        - PATH=/c/Python27:/c/Python27/Scripts:/C/Users/travis/AppData/Roaming/Python/Scripts:$PATH
+#      before_install:
+#        - choco install python2 visualstudio2017buildtools visualstudio2017-workload-vctools
+#      script:
+#        - ls -la tools/vssetup.powershell
+#        - pipenv run -v test -f msvs
 
     - name: "macOS: test with make and ninja on Python 3.7"
       <<: *osx-setup-steps
