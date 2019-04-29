@@ -1,5 +1,6 @@
 """Simplify access to Xcode information."""
 import subprocess
+
 from gyp.common import memoize, DebugOutput, DEBUG_GENERAL
 
 
@@ -70,7 +71,8 @@ def GetIOSCodeSignIdentityKey(identity):
   output = run('security', 'find-identity', '-p', 'codesigning', '-v')
   output_lines = output.splitlines()
   match_lines = [line for line in output_lines if identity in line]
-  assert len(match_lines) == 1, ("Not exactly one codesigning fingerprints for identity: %s \n%s" % (identity, output))
+  if len(match_lines) != 1:
+    DebugOutput(DEBUG_GENERAL, 'Not exactly one codesigning fingerprints for identity: %s\n output=\n%s' % (identity, output))
   fingerprint = match_lines[0].split()[1]
   return fingerprint
 
