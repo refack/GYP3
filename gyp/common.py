@@ -622,7 +622,7 @@ def IsStrCanonicalInt(string):
 
 
 # Default debug modes for GYP
-debug_modes = {}
+debug_modes = set()
 
 # List of "official" debug modes, but you can use anything you like.
 DEBUG_GENERAL = 'general'

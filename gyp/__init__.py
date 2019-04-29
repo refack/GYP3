@@ -313,7 +313,8 @@ def gyp_main(args):
     if g_o:
       options.generator_output = g_o
 
-  debug_modes.update(options.debug)
+  if options.debug:
+    debug_modes.update(options.debug)
 
   # Do an extra check to avoid work when we're not debugging.
   if DEBUG_GENERAL in debug_modes:
