@@ -3,15 +3,15 @@ Verifies that ios app frameworks are built correctly.
 """
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja'], platforms=['darwin'])
 
 if XCodeDetect.Version() < '0700':
   test.skip_test('Skip test on XCode < 0700')
 
-if test.format == 'xcode-ninja':
-  test.skip_test()
+if not XCodeDetect.IPhoneSDKPath():
+  test.skip_test('Skip test when no IPhone SDK')
 
 test.run_gyp('framework.gyp', chdir='framework')
 

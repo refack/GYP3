@@ -644,24 +644,15 @@ class TestSequenceFunctions(unittest.TestCase):
     actual_msbuild_settings = MSVSSettings.ConvertToMSBuildSettings(msvs_settings, self.stderr)
     self.assertEqual(expected_msbuild_settings, actual_msbuild_settings)
     self._ExpectedWarnings([
-        'Warning: while converting VCCLCompilerTool/BasicRuntimeChecks to '
-        'MSBuild, index value (12) not in expected range [0, 4)',
-        'Warning: while converting VCCLCompilerTool/BrowseInformation to '
-        'MSBuild, index value (21) not in expected range [0, 3)',
-        'Warning: while converting VCCLCompilerTool/UsePrecompiledHeader to '
-        'MSBuild, index value (13) not in expected range [0, 3)',
-        'Warning: while converting VCCLCompilerTool/GeneratePreprocessedFile to '
-        'MSBuild, value must be one of [0, 1, 2]; got 14',
-
-        'Warning: while converting VCLinkerTool/Driver to '
-        'MSBuild, index value (10) not in expected range [0, 4)',
-        'Warning: while converting VCLinkerTool/LinkTimeCodeGeneration to '
-        'MSBuild, index value (31) not in expected range [0, 5)',
-        'Warning: while converting VCLinkerTool/ErrorReporting to '
-        'MSBuild, index value (21) not in expected range [0, 3)',
-        'Warning: while converting VCLinkerTool/FixedBaseAddress to '
-        'MSBuild, index value (6) not in expected range [0, 3)',
-        ])
+      'Warning: while converting VCCLCompilerTool/BasicRuntimeChecks to MSBuild, index value (12) not in expected range [0, 4)',
+      'Warning: while converting VCCLCompilerTool/BrowseInformation to MSBuild, index value (21) not in expected range [0, 3)',
+      'Warning: while converting VCCLCompilerTool/GeneratePreprocessedFile to MSBuild, value must be one of [0, 1, 2]; got 14',
+      'Warning: while converting VCCLCompilerTool/UsePrecompiledHeader to MSBuild, index value (13) not in expected range [0, 3)',
+      'Warning: while converting VCLinkerTool/Driver to MSBuild, index value (10) not in expected range [0, 4)',
+      'Warning: while converting VCLinkerTool/ErrorReporting to MSBuild, index value (21) not in expected range [0, 4)',
+      'Warning: while converting VCLinkerTool/FixedBaseAddress to MSBuild, index value (6) not in expected range [0, 3)',
+      'Warning: while converting VCLinkerTool/LinkTimeCodeGeneration to MSBuild, index value (31) not in expected range [0, 5)',
+    ])
 
   def testConvertToMSBuildSettings_full_synthetic(self):
     """Tests conversion of all the MSBuild settings."""

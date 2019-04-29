@@ -8,10 +8,10 @@ import collections
 import errno
 import filecmp
 import os
-import os.path
 import re
-import tempfile
 import sys
+import tempfile
+import traceback
 
 
 # A minimal memoizing decorator. It'll blow up if the args aren't immutable, among other "problems".
@@ -619,3 +619,35 @@ def IsStrCanonicalInt(string):
     return str(i) == string
   except:
     return False
+
+
+# Default debug modes for GYP
+debug_modes = set()
+
+# List of "official" debug modes, but you can use anything you like.
+DEBUG_GENERAL = 'general'
+DEBUG_VARIABLES = 'variables'
+DEBUG_INCLUDES = 'includes'
+
+def DebugOutput(mode, message, *args):
+  if 'all' in debug_modes or mode in debug_modes:
+    ctx = ('unknown', 0, 'unknown')
+    try:
+      f = traceback.extract_stack(limit=2)
+      if f:
+        ctx = f[0][:3]
+    except:
+      pass
+    if args:
+      message %= args
+    print('%s:%s:%d:%s %s' % (mode.upper(), os.path.basename(ctx[0]), ctx[1], ctx[2], message))
+
+
+def FindBuildFiles():
+  extension = '.gyp'
+  files = os.listdir(os.getcwd())
+  build_files = []
+  for file in files:
+    if file.endswith(extension):
+      build_files.append(file)
+  return build_files

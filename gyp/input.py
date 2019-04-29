@@ -15,7 +15,7 @@ from collections import OrderedDict
 
 import gyp.common
 import gyp.lib.simple_copy
-from gyp.common import GypError, OrderedSet
+from gyp.common import GypError, OrderedSet, DebugOutput, DEBUG_INCLUDES, DEBUG_VARIABLES
 
 if not 'unicode' in __builtins__:
   unicode = str
@@ -271,7 +271,7 @@ def LoadBuildFileIncludesIntoDict(subdict, subdict_path, data, aux_data, include
       aux_data[subdict_path]['included'] = []
     aux_data[subdict_path]['included'].append(include)
 
-    gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Included File: '%s'", include)
+    DebugOutput(DEBUG_INCLUDES, "Loading Included File: '%s'", include)
 
     MergeDicts(subdict, LoadOneBuildFile(include, data, aux_data, None), subdict_path, include)
 
@@ -356,7 +356,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
       return False
     data['target_build_files'].add(build_file_path)
 
-  gyp.DebugOutput(gyp.DEBUG_INCLUDES, "Loading Target Build File '%s'", build_file_path)
+  DebugOutput(DEBUG_INCLUDES, "Loading Target Build File '%s'", build_file_path)
 
   build_file_data = LoadOneBuildFile(build_file_path, data, aux_data, includes)
 
@@ -432,7 +432,7 @@ def LoadTargetBuildFile(build_file_path, data, aux_data, variables, includes, de
         gyp.common.ExceptionAppend(e, 'while loading dependencies of %s' % build_file_path)
         raise
   else:
-    return (build_file_path, dependencies)
+    return build_file_path, dependencies
 
 
 # Look for the bracket that matches the first bracket seen in a
@@ -559,7 +559,7 @@ def ExpandVariables(input, phase, variables, build_file):
   matches.reverse()
   for match_group in matches:
     match = match_group.groupdict()
-    gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Matches: %r", match)
+    DebugOutput(DEBUG_VARIABLES, "Matches: %r", match)
     # match['replace'] is the substring to look for, match['type']
     # is the character code for the replacement type (< > <! >! <| >| <@
     # >@ <!@ >!@), match['is_array'] contains a '[' for command
@@ -681,7 +681,7 @@ def ExpandVariables(input, phase, variables, build_file):
       cache_key = (str(contents), build_file_dir)
       cached_value = cached_command_results.get(cache_key, None)
       if cached_value is None:
-        gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Executing command '%s' in directory '%s'", contents, build_file_dir)
+        DebugOutput(DEBUG_VARIABLES, "Executing command '%s' in directory '%s'", contents, build_file_dir)
 
         if command_string == 'pymod_do_main':
           # <!pymod_do_main(modulename foo bar) loads |modulename| as a python module and then calls that module's DoMain() function, passing ["foo", "bar"] as a single list argument.
@@ -730,7 +730,7 @@ def ExpandVariables(input, phase, variables, build_file):
 
         cached_command_results[cache_key] = replacement
       else:
-        gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Had cache value for command '%s' in directory '%s'", contents, build_file_dir)
+        DebugOutput(DEBUG_VARIABLES, "Had cache value for command '%s' in directory '%s'", contents, build_file_dir)
         replacement = cached_value
 
     else:
@@ -792,10 +792,10 @@ def ExpandVariables(input, phase, variables, build_file):
     input_str = output
 
   if output == input:
-    gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Found only identity matches on %r, avoiding infinite recursion.", output)
+    DebugOutput(DEBUG_VARIABLES, "Found only identity matches on %r, avoiding infinite recursion.", output)
   else:
     # Look for more matches now that we've replaced some, to deal with expanding local variables (variables defined in the same variables block as this one).
-    gyp.DebugOutput(gyp.DEBUG_VARIABLES, "Found output %r, recursing.", output)
+    DebugOutput(DEBUG_VARIABLES, "Found output %r, recursing.", output)
     if type(output) is list:
       if output and type(output[0]) is list:
         # Leave output alone if it's a list of lists. We don't want such lists to be stringified.

@@ -11,7 +11,7 @@ Tests things related to ARCHS.
 import subprocess
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'], platforms=['darwin'])
 
@@ -20,7 +20,7 @@ test.build('test-no-archs.gyp', test.ALL, chdir='archs')
 result_file = test.built_file_path('Test', chdir='archs')
 test.must_exist(result_file)
 
-if XCodeDetect.XCodeDetect.Version() >= '0500':
+if XCodeDetect.Version() >= '0500':
   expected_type = ['x86_64']
 else:
   expected_type = ['i386']

@@ -5,13 +5,16 @@ Verifies that ios app bundles are built correctly.
 import os.path
 
 import TestGyp
-from XCodeDetect import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['xcode', 'ninja'], platforms=['darwin'])
 
 # Xcode supports for assets catalog was introduced in Xcode 6.0
 if XCodeDetect.Version() < '0600':
   test.skip_test('Skip test on XCode < 0600')
+
+if not XCodeDetect.IPhoneSDKPath():
+  test.skip_test('Skip test when no IPhone SDK')
 
 test_gyp_path = 'test-assets-catalog.gyp'
 test_app_path = 'Test App Assets Catalog Gyp.app'
