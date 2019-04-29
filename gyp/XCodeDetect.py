@@ -1,6 +1,6 @@
 """Simplify access to Xcode information."""
 import subprocess
-from common import memoize
+from gyp.common import memoize, DebugOutput, DEBUG_GENERAL
 
 
 def run(*cmd_args):
@@ -37,9 +37,7 @@ def GetSdkVersionInfoItem(sdk, item):
   try:
     return run('xcrun', '--sdk', sdk, item)
   except subprocess.CalledProcessError as e:
-    stdout = e.output
-    status = e.returncode
-    cmd = ' '.join(e.cmd)
+    DebugOutput(DEBUG_GENERAL, 'cmd=%s\nstatus=%s\noutput=%s' % (' '.join(e.cmd), e.returncode, e.output))
     return None
 
 

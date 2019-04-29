@@ -13,45 +13,15 @@ import os.path
 import re
 import shlex
 import sys
-import traceback
 from collections import OrderedDict
-from gyp.common import GypError
 
-if not 'basestring' in __builtins__:
+from gyp.common import debug_modes, GypError, DebugOutput, FindBuildFiles, DEBUG_GENERAL
+
+try:
+  # noinspection PyUnresolvedReferences,PyUnboundLocalVariable
+  basestring
+except NameError:
   basestring = str
-
-# Default debug modes for GYP
-debug = {}
-
-# List of "official" debug modes, but you can use anything you like.
-DEBUG_GENERAL = 'general'
-DEBUG_VARIABLES = 'variables'
-DEBUG_INCLUDES = 'includes'
-
-
-def DebugOutput(mode, message, *args):
-  if 'all' in gyp.debug or mode in gyp.debug:
-    ctx = ('unknown', 0, 'unknown')
-    try:
-      f = traceback.extract_stack(limit=2)
-      if f:
-        ctx = f[0][:3]
-    except:
-      pass
-    if args:
-      message %= args
-    print('%s:%s:%d:%s %s' % (mode.upper(), os.path.basename(ctx[0]), ctx[1], ctx[2], message))
-
-
-def FindBuildFiles():
-  extension = '.gyp'
-  files = os.listdir(os.getcwd())
-  build_files = []
-  for file in files:
-    if file.endswith(extension):
-      build_files.append(file)
-  return build_files
-
 
 def Load(build_files, output_format, default_variables, includes, params, depth):
   """
@@ -197,8 +167,7 @@ def RegenerateFlags(options):
       return os.path.curdir
     return path
 
-  def Noop(value):
-    return value
+  Noop = lambda x: x
 
   # We always want to ignore the environment when regenerating, to avoid
   # duplicate or changed flags in the environment at the time of regeneration.
@@ -217,7 +186,7 @@ def RegenerateFlags(options):
       elif options.use_environment and env_name and os.environ.get(env_name):
         flags.append(FormatOpt(opt, value_predicate(os.environ.get(env_name))))
     elif action in ('store_true', 'store_false'):
-      if ((action == 'store_true' and value) or (action == 'store_false' and not value)):
+      if (action == 'store_true' and value) or (action == 'store_false' and not value):
         flags.append(opt)
       elif options.use_environment and env_name:
         print('Warning: environment regeneration unimplemented for %s flag %r env_name %r' % (action, opt, env_name), file=sys.stderr)
@@ -250,13 +219,13 @@ class RegeneratableOptionParser(optparse.OptionParser):
 
       # The path type is needed for regenerating, for optparse we can just treat
       # it as a string.
-      type = kw.get('type')
-      if type == 'path':
+      type_arg = kw.get('type')
+      if type_arg == 'path':
         kw['type'] = 'string'
 
       self.__regeneratable_options[dest] = {
         'action': kw.get('action'),
-        'type': type,
+        'type': type_arg,
         'env_name': env_name,
         'opt': args[0],
       }
@@ -325,9 +294,9 @@ def gyp_main(args):
     # If no output_format was given on the command line, then check the env variable.
     generate_formats = []
     if options.use_environment:
-      generate_formats = os.environ.get('GYP_GENERATORS', [])
-    if generate_formats:
-      generate_formats = re.split(r'[\s,]', generate_formats)
+      env_generator_formats = os.environ.get('GYP_GENERATORS')
+      if env_generator_formats:
+        generate_formats = re.split(r'[\s,]', env_generator_formats)
     if generate_formats:
       options.formats = generate_formats
     else:
@@ -344,11 +313,10 @@ def gyp_main(args):
     if g_o:
       options.generator_output = g_o
 
-  for mode in options.debug:
-    gyp.debug[mode] = 1
+  debug_modes.update(options.debug)
 
   # Do an extra check to avoid work when we're not debugging.
-  if DEBUG_GENERAL in gyp.debug:
+  if DEBUG_GENERAL in debug_modes:
     DebugOutput(DEBUG_GENERAL, 'running with these options:')
     for option, value in sorted(options.__dict__.items()):
       if option[0] == '_':
@@ -404,7 +372,7 @@ def gyp_main(args):
   if options.defines:
     defines += options.defines
   cmdline_default_variables = NameValueListToDict(defines)
-  if DEBUG_GENERAL in gyp.debug:
+  if DEBUG_GENERAL in gyp.debug_modes:
     DebugOutput(DEBUG_GENERAL, "cmdline_default_variables: %s", cmdline_default_variables)
 
   # Set up includes.
@@ -430,7 +398,7 @@ def gyp_main(args):
   if options.generator_flags:
     gen_flags += options.generator_flags
   generator_flags = NameValueListToDict(gen_flags)
-  if DEBUG_GENERAL in gyp.debug:
+  if DEBUG_GENERAL in gyp.debug_modes:
     DebugOutput(DEBUG_GENERAL, "generator_flags: %s", generator_flags)
 
   # Generate all requested formats (use a set in case we got one output_format request twice)
