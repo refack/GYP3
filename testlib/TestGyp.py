@@ -140,7 +140,7 @@ class TestGypBase(TestCommon.TestCommon):
       bt = [t[0] for t in traceback.extract_stack() if 'gyptest' in t[0]]
       kw['description'] = bt and bt.pop()
     # kw_workdir = kw.get('workdir')
-    kw['workdir'] = mk_temp_dir(kw['description'])
+    kw['workdir'] = mk_temp_dir(self.format + '_' + kw['description'])
     kw_formats = kw.pop('formats', [])
 
     if not gyp:
