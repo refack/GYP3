@@ -143,16 +143,16 @@
       },
       'sources': ['hello.cc'],
     },
-    {
-      'target_name': 'test_link_msbuild_link_incremental',
-      'type': 'executable',
-      'msbuild_settings': {
-        'Link': {
-          'LinkIncremental': 'false',
-        },
-      },
-      'sources': ['hello.cc'],
-    },
+    # {
+    #   'target_name': 'test_link_msbuild_link_incremental',
+    #   'type': 'executable',
+    #   'msbuild_settings': {
+    #     'Link': {
+    #       'LinkIncremental': 'false',
+    #     },
+    #   },
+    #   'sources': ['hello.cc'],
+    # },
     {
       'target_name': 'test_opt_speed',
       'type': 'executable',

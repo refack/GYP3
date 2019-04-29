@@ -10,7 +10,7 @@ Make sure optimization settings are extracted properly.
 
 import TestGyp
 
-test = TestGyp.TestGyp(platforms=['win32'])
+test = TestGyp.TestGyp(formats=['ninja'], platforms=['win32'])
 
 CHDIR = 'compiler-flags'
 test.run_gyp('optimizations.gyp', chdir=CHDIR)
@@ -60,10 +60,6 @@ test.must_contain(ninja_file, '/Ob1')
 
 ninja_file = test.built_file_path('obj/test_opt_inline_auto.ninja', chdir=CHDIR)
 test.must_contain(ninja_file, '/Ob2')
-
-ninja_file = test.built_file_path('obj/test_opt_neither.ninja', chdir=CHDIR)
-test.must_not_contain(ninja_file, '/Os')
-test.must_not_contain(ninja_file, '/Ot')
 
 ninja_file = test.built_file_path('obj/test_opt_size.ninja', chdir=CHDIR)
 test.must_contain(ninja_file, '/Os')
