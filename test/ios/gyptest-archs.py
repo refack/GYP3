@@ -9,7 +9,7 @@ Verifies that device and simulator bundles are built correctly.
 """
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'])
 

@@ -11,7 +11,7 @@ Tests things related to ARCHS.
 import subprocess
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'], platforms=['darwin'])
 

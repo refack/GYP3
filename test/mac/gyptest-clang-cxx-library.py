@@ -9,7 +9,7 @@ Verifies that CLANG_CXX_LIBRARY works.
 """
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'], platforms=['darwin'])
 # Xcode 4.2 on OS X 10.6 doesn't install the libc++ headers, don't run this test there.

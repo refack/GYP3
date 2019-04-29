@@ -9,7 +9,7 @@ Verifies that IPHONEOS_DEPLOYMENT_TARGET works.
 """
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['make', 'ninja', 'xcode'], platforms=['darwin'])
 

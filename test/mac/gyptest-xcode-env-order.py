@@ -8,7 +8,7 @@
 Verifies that dependent Xcode settings are processed correctly.
 """
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'make', 'xcode'], disable="This test is currently disabled: https://crbug.com/483696.", platforms=['darwin'])
 

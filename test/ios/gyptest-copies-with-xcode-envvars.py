@@ -11,7 +11,7 @@ Xcode's PBXCopyFilesBuildPhase.
 """
 
 import TestGyp
-import XCodeDetect
+from gyp import XCodeDetect
 
 test = TestGyp.TestGyp(formats=['ninja', 'xcode'], platforms=['darwin'])
 

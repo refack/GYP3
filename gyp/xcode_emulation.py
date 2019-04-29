@@ -15,8 +15,8 @@ import os.path
 import re
 import shlex
 
+from gyp import XCodeDetect
 from gyp.common import GypError, TopologicallySorted, EncodePOSIXShellList, CycleError, memoize
-import XCodeDetect
 
 
 @memoize
