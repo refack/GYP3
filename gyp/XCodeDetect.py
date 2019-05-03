@@ -58,8 +58,8 @@ class XCodeDetect(object):
 
     if 'HasIPhoneSDK' not in XCodeDetect._cache:
       try:
-        out = run('xcrun', '--sdk', 'iphoneos', '--show-sdk-path')
+        run('xcrun', '--sdk', 'iphoneos', '--show-sdk-path')
+        XCodeDetect._cache['HasIPhoneSDK'] = True
       except subprocess.CalledProcessError:
-        out = 1
-      XCodeDetect._cache['HasIPhoneSDK'] = out == 0
+        XCodeDetect._cache['HasIPhoneSDK'] = False
     return XCodeDetect._cache['HasIPhoneSDK']
