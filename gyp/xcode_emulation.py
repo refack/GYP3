@@ -1779,6 +1779,7 @@ def _AddIOSDeviceConfigurations(targets):
     configs = target_dict['configurations']
 
     for config_name, simulator_config_dict in dict(configs).items():
+      simulator_config_dict = copy.deepcopy(simulator_config_dict)
       iphoneos_config_dict = copy.deepcopy(simulator_config_dict)
       configs[config_name + '-iphoneos'] = iphoneos_config_dict
       configs[config_name + '-iphonesimulator'] = simulator_config_dict
