@@ -20,19 +20,19 @@ if test.format == 'xcode':
   test.skip_test()  # bug=532
 
 test_cases = [
-  ('Default', 'TestArch32Bits', ['i386']),
+  ('Default-iphonesimulator', 'TestArch32Bits', ['i386']),
   ('Default-iphoneos', 'TestArch32Bits', ['armv7']),
 ]
 
 if XCodeDetect.XCodeDetect.Version() < '0510':
   test_cases.extend([
-    ('Default', 'TestNoArchs', ['i386']),
+    ('Default-iphonesimulator', 'TestNoArchs', ['i386']),
     ('Default-iphoneos', 'TestNoArchs', ['armv7'])])
 
 if XCodeDetect.XCodeDetect.Version() >= '0500':
   test_cases.extend([
-    ('Default', 'TestArch64Bits', ['x86_64']),
-    ('Default', 'TestMultiArchs', ['i386', 'x86_64']),
+    ('Default-iphonesimulator', 'TestArch64Bits', ['x86_64']),
+    ('Default-iphonesimulator', 'TestMultiArchs', ['i386', 'x86_64']),
     ('Default-iphoneos', 'TestArch64Bits', ['arm64']),
     ('Default-iphoneos', 'TestMultiArchs', ['armv7', 'arm64'])])
 
