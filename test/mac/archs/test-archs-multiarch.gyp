@@ -9,7 +9,7 @@
       'type': 'static_library',
       'sources': [ 'my_file.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -17,7 +17,7 @@
       'type': 'shared_library',
       'sources': [ 'my_file.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -27,7 +27,7 @@
       'mac_bundle': 1,
       'sources': [ 'my_file.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -35,7 +35,7 @@
       'type': 'loadable_module',
       'sources': [ 'my_file.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -45,7 +45,7 @@
       'mac_bundle': 1,
       'sources': [ 'my_file.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -53,7 +53,7 @@
       'type': 'executable',
       'sources': [ 'empty_main.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     {
@@ -63,7 +63,7 @@
       'mac_bundle': 1,
       'sources': [ 'empty_main.cc' ],
       'xcode_settings': {
-        'ARCHS': [ 'i386', 'x86_64' ],
+        'ARCHS': [ 'x86_64' ],
       },
     },
     # This only needs to compile.
@@ -85,7 +85,7 @@
       ],
       'sources': [],
       'xcode_settings': {
-        'ARCHS': ['i386', 'x86_64'],
+        'ARCHS': ['x86_64'],
       },
     },
   ]

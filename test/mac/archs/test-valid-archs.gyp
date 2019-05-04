@@ -10,7 +10,7 @@
     'type': 'static_library',
     'sources': [ 'my_file.cc' ],
     'xcode_settings': {
-      'ARCHS': ['i386', 'x86_64', 'unknown-arch'],
+      'ARCHS': ['x86_64', 'unknown-arch'],
       'VALID_ARCHS': ['x86_64'],
     },
   },
@@ -21,7 +21,7 @@
     'dependencies': [ 'lib' ],
     'sources': [ 'my_main_file.cc' ],
     'xcode_settings': {
-      'ARCHS': ['i386', 'x86_64', 'unknown-arch'],
+      'ARCHS': ['x86_64', 'unknown-arch'],
       'VALID_ARCHS': ['x86_64'],
     },
   }]
