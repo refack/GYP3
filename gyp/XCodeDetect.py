@@ -69,6 +69,7 @@ def GetIOSCodeSignIdentityKey(identity):
   if not identity:
     return None
   output = run('security', 'find-identity', '-p', 'codesigning', '-v')
+  # TODO(refack):could also be '0 valid identities found'
   output_lines = output.splitlines()
   match_lines = [line for line in output_lines if identity in line]
   if len(match_lines) != 1:
