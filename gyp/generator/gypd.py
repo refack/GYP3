@@ -32,7 +32,12 @@ to change.
 
 
 import gyp.common
-import pprint
+
+try:
+  import pprintpp as pprint
+except ImportError:
+  import pprint
+
 
 
 # These variables should just be spit back out as variable references.
