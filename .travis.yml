@@ -18,6 +18,7 @@ windows-setup-steps: &windows-setup-steps
 
 osx-setup-steps: &osx-setup-steps
   os: osx
+  osx_image: xcode11
   language: cpp  # 'language: python' is not yet supported on macOS
   # before_install: brew upgrade python  # takes too long
   install:
