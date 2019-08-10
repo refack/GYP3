@@ -53,7 +53,7 @@ test.must_contain('relocate/src/output2.txt', 'hello there')
 test.must_contain('relocate/src/output3.txt', 'hello there')
 test.must_contain('relocate/src/output4.txt', 'hello there')
 
-# Test that process_outputs_as_sources works in conjuction with merged
+# Test that process_outputs_as_sources works in conjunction with merged
 # actions.
 test.run_built_executable(
     'multiple_action_source_filter',

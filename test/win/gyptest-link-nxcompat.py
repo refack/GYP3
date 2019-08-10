@@ -26,7 +26,7 @@ if sys.platform == 'win32':
   if 'NX compatible' not in GetHeaders('test_nxcompat_default.exe'):
     test.fail_test()
 
-  # Explicitly off, should not be marked NX compatiable.
+  # Explicitly off, should not be marked NX compatible.
   if 'NX compatible' in GetHeaders('test_nxcompat_no.exe'):
     test.fail_test()
 

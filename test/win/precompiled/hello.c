@@ -2,7 +2,7 @@
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file. */
 
-// Note the abscence of a stdio.h include.  This will be inserted because of the
+// Note the absence of a stdio.h include.  This will be inserted because of the
 // precompiled header.
 
 extern int hello2();

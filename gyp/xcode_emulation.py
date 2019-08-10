@@ -848,7 +848,7 @@ class XcodeSettings(object):
         product_dir: The directory where products such static and dynamic
             libraries are placed. This is added to the library search path.
         gyp_to_build_path: A function that converts paths relative to the
-            current gyp file to paths relative to the build direcotry.
+            current gyp file to paths relative to the build directory.
     """
     self.configname = configname
     ldflags = []
@@ -994,7 +994,7 @@ class XcodeSettings(object):
 
   def _GetStripPostbuilds(self, configname, output_binary, quiet):
     """Returns a list of shell commands that contain the shell commands
-    neccessary to strip this target's binary. These should be run as postbuilds
+    necessary to strip this target's binary. These should be run as postbuilds
     before the actual postbuilds run."""
     self.configname = configname
 
@@ -1029,7 +1029,7 @@ class XcodeSettings(object):
 
   def _GetDebugInfoPostbuilds(self, configname, output, output_binary, quiet):
     """Returns a list of shell commands that contain the shell commands
-    neccessary to massage this target's debug information. These should be run
+    necessary to massage this target's debug information. These should be run
     as postbuilds before the actual postbuilds run."""
     self.configname = configname
 
@@ -1167,7 +1167,7 @@ class XcodeSettings(object):
     # "/usr/lib" libraries, is do "-L/usr/lib -lname" which is dependent on the
     # library order and cause collision when building Chrome.
     #
-    # Instead substitude ".tbd" to ".dylib" in the generated project when the
+    # Instead substitute ".tbd" to ".dylib" in the generated project when the
     # following conditions are both true:
     # - library is referenced in the gyp file as "$(SDKROOT)/**/*.dylib",
     # - the ".dylib" file does not exists but a ".tbd" file do.
@@ -1461,7 +1461,7 @@ def GetStdout(cmdlist, with_stderr=False):
 def MergeGlobalXcodeSettingsToSpec(global_dict, spec):
   """Merges the global xcode_settings dictionary into each configuration of the
   target represented by spec. For keys that are both in the global and the local
-  xcode_settings dict, the local key gets precendence.
+  xcode_settings dict, the local key gets precedence.
   """
   # The xcode generator special-cases global xcode_settings and does something
   # that amounts to merging in the global xcode_settings into each local
@@ -1507,7 +1507,7 @@ def GetMacBundleResources(product_dir, xcode_settings, resources):
     output = dest
 
     # The make generator doesn't support it, so forbid it everywhere
-    # to keep the generators more interchangable.
+    # to keep the generators more interchangeable.
     assert ' ' not in res, (
       "Spaces in resource filenames not supported (%s)"  % res)
 
@@ -1544,14 +1544,14 @@ def GetMacInfoPlist(product_dir, xcode_settings, gyp_path_to_build_path):
   Args:
       product_dir: Path to the directory containing the output bundle, relative to the build directory.
       xcode_settings: The XcodeSettings of the current target.
-      gyp_path_to_build_path: A function that converts paths relative to the current gyp file to paths relative to the build direcotry.
+      gyp_path_to_build_path: A function that converts paths relative to the current gyp file to paths relative to the build directory.
   """
   info_plist = xcode_settings.GetPerTargetSetting('INFOPLIST_FILE')
   if not info_plist:
     return None, None, [], {}
 
   # The make generator doesn't support it, so forbid it everywhere
-  # to keep the generators more interchangable.
+  # to keep the generators more interchangeable.
   assert ' ' not in info_plist, (
     "Spaces in Info.plist filenames not supported (%s)"  % info_plist)
 

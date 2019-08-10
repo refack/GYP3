@@ -22,7 +22,7 @@ if sys.platform == 'win32':
   def GetHeaders(exe):
     return test.run_dumpbin('/headers', test.built_file_path(exe, chdir=CHDIR))
 
-  # Explicitly off, should not be marked NX compatiable.
+  # Explicitly off, should not be marked NX compatible.
   if 'Terminal Server Aware' in GetHeaders('test_tsaware_no.exe'):
     test.fail_test()
 

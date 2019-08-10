@@ -636,7 +636,7 @@ $(obj).$(TOOLSET)/$(TARGET)/%%.o: $(obj)/%%%s FORCE_DO_CMD
     bundle_resources = gyp.xcode_emulation.GetMacBundleResources(product_dir, self.xcode_settings, sources)
     for output, res in bundle_resources:
       _, ext = os.path.splitext(output)
-      # TODO(refack): actualy figure this out for `copy-bundle-resource`
+      # TODO(refack): actually figure this out for `copy-bundle-resource`
       # is_binary = xcode_emulation.IsBinaryOutputFormat(output)
       if ext != '.xcassets':
         # Make does not supports '.xcassets' emulation.
