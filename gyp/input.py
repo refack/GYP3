@@ -192,7 +192,7 @@ def CheckedEval(file_contents):
 def CheckNode(node, keypath):
   if isinstance(node, ast.Dict):
     dict = {}
-    for key, value in zip(node.keys, node.values):
+    for key, value in node.items():
       assert isinstance(key, ast.Str)
       key = key.s
       if key in dict:
