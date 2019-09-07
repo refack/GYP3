@@ -64,18 +64,18 @@ for target in targets:
 
 result_file = test.built_file_path('static_32_64', chdir='archs', type=test.STATIC_LIB)
 test.must_exist(result_file)
-TestGyp.CheckFileType_macOS(test, result_file, ['i386', 'x86_64'])
+TestGyp.CheckFileType_macOS(test, result_file, ['x86_64'])
 
 result_file = test.built_file_path('shared_32_64', chdir='archs', type=test.SHARED_LIB)
 test.must_exist(result_file)
-TestGyp.CheckFileType_macOS(test, result_file, ['i386', 'x86_64'])
+TestGyp.CheckFileType_macOS(test, result_file, ['x86_64'])
 
 result_file = test.built_file_path('My Framework.framework/My Framework',
                                    chdir='archs')
 test.must_exist(result_file)
-TestGyp.CheckFileType_macOS(test, result_file, ['i386', 'x86_64'])
+TestGyp.CheckFileType_macOS(test, result_file, ['x86_64'])
 # Check that symbol "_x" made it into both versions of the binary:
-for arch in ['i386', 'x86_64']:
+for arch in ['x86_64']:
   out = subprocess.check_output(['nm', '-arch', arch, result_file]).decode('utf-8')
   if not 'D _x' in out:
     # This can only flakily fail, due to process ordering issues. If this
@@ -85,9 +85,9 @@ for arch in ['i386', 'x86_64']:
 result_file = test.built_file_path(
   'exe_32_64', chdir='archs', type=test.EXECUTABLE)
 test.must_exist(result_file)
-TestGyp.CheckFileType_macOS(test, result_file, ['i386', 'x86_64'])
+TestGyp.CheckFileType_macOS(test, result_file, ['x86_64'])
 
 result_file = test.built_file_path('Test App.app/Contents/MacOS/Test App',
                                    chdir='archs')
 test.must_exist(result_file)
-TestGyp.CheckFileType_macOS(test, result_file, ['i386', 'x86_64'])
+TestGyp.CheckFileType_macOS(test, result_file, ['x86_64'])

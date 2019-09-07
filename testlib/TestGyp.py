@@ -1360,13 +1360,14 @@ def CheckFileType_macOS(test, file, archs):
   proc = subprocess.Popen(['lipo', '-info', file], stdout=subprocess.PIPE)
   o = proc.communicate()[0].decode('utf-8').strip()
   assert not proc.returncode
-  if len(archs) == 1:
-    pattern = re.compile('^Non-fat file: (.*) is architecture: (.*)$')
-  else:
-    pattern = re.compile('^Architectures in the fat file: (.*) are: (.*)$')
+  pattern = re.compile('^Non-fat file: (.*) is architecture: (.*)$')
   match = pattern.match(o)
   if match is None:
+    pattern = re.compile('^Architectures in the fat file: (.*) are: (.*)$')
+    match = pattern.match(o)
+  if match is None:
     print('Output does not match expected pattern: %s' % pattern.pattern)
+    print('Output: %s' % o)
     test.fail_test()
   else:
     found_file, found_archs = match.groups()
