@@ -1450,6 +1450,9 @@ def GetStdout(cmdlist, with_stderr=False):
   """
   job = subprocess.Popen(cmdlist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   out, err = job.communicate()
+  if bytes != str:  # if Python 3
+    out = out.decode('utf-8')
+    err = err.decode('utf-8')
   if job.returncode != 0:
     if with_stderr:
       print(out, file=sys.stderr)
