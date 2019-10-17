@@ -872,7 +872,7 @@ def EvalSingleCondition(cond_expr, true_dict, false_dict, phase, variables, buil
     else:
       ast_code = compile(cond_expr_expanded, '<string>', 'eval')
       cached_conditions_asts[cond_expr_expanded] = ast_code
-    if eval(ast_code, {'__builtins__': None}, variables):
+    if eval(ast_code, {'__builtins__': {}}, variables):
       return true_dict
     return false_dict
   except SyntaxError as e:
