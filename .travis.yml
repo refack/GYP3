@@ -1,5 +1,4 @@
 linux-setup-steps: &linux-setup-steps
-  dist: xenial  # required for Python >= 3.7 (travis-ci/travis-ci#9069)
   os: linux
   language: python
   install:
@@ -28,8 +27,8 @@ osx-setup-steps: &osx-setup-steps
 
 matrix:
   include:
-    - name: "Linux: test with make and ninja on Python 3.7"
-      python: '3.7'
+    - name: "Linux: test with make and ninja on Python 3.8"
+      python: '3.8'
       <<: *linux-setup-steps
       script: pipenv run -v test -f make,ninja
 
@@ -42,7 +41,7 @@ matrix:
       <<: *windows-setup-steps
       env:
         - GYP_MSVS_VERSION=2019
-        - PATH=/c/Python37:/c/Python37/Scripts:/C/Users/travis/AppData/Roaming/Python/Python37/Scripts:$PATH
+        - PATH=/c/Python38:/c/Python38/Scripts:/C/Users/travis/AppData/Roaming/Python/Python38/Scripts:$PATH
       before_install:
         - choco install python3 visualstudio2019buildtools visualstudio2019-workload-vctools
       script: pipenv run -v test -f msvs
@@ -68,8 +67,8 @@ matrix:
       <<: *linux-setup-steps
       script: pipenv run -v lint
 
-    - name: "lint with Python 3.7"
-      python: '3.7'
+    - name: "lint with Python 3.8"
+      python: '3.8'
       <<: *linux-setup-steps
       script: pipenv run -v lint
 
