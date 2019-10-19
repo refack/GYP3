@@ -41,9 +41,10 @@ matrix:
       <<: *windows-setup-steps
       env:
         - GYP_MSVS_VERSION=2019
-        - PATH=/c/Python38:/c/Python38/Scripts:/C/Users/travis/AppData/Roaming/Python/Python38/Scripts:$PATH
+        - PATH=/c/Python37:/c/Python37/Scripts:/C/Users/travis/AppData/Roaming/Python/Python37/Scripts:$PATH
       before_install:
-        - choco install python3 visualstudio2019buildtools visualstudio2019-workload-vctools
+        - choco install python3 --version=3.7.5
+        - choco install visualstudio2019buildtools visualstudio2019-workload-vctools
       script: pipenv run -v test -f msvs
 
 #    - name: "Windows: test on Python 2 with VS2017 Build Tools"
